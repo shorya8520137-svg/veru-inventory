@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Orders with Your Token</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .result { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .product-names { background: #e8f5e8; color: #27ae60; font-weight: bold; padding: 8px; border-radius: 4px; margin: 5px 0; }
+        .item-count { background: #fdf2f2; color: #e74c3c; font-style: italic; padding: 8px; border-radius: 4px; margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; font-weight: bold; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 5px; }
+        .btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Orders with Your JWT Token</h1>
+        
+        <button class="btn" onclick="testAPI()">🚀 Test API with Your Token</button>
+        <button class="btn" onclick="clearResults()">🗑️ Clear Results</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://api.giftgala.in/api/website/orders';
+        // Get token from localStorage or use provided token
+        let YOUR_TOKEN = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZ…W0ifQ.KVg2VToxHyoeB27HmgRelfHWmkaHMirCfF6RC5qYJQA';
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="result">🔄 Testing API with your token...</div>';
+
+            try {
+                // Get token from localStorage or use provided token
+                let token = localStorage.getItem('token') || YOUR_TOKEN;
+                
+                // Clean the token to remove any non-ASCII characters
+                const cleanToken = token.replace(/[^\x00-\x7F]/g, "");
+                
+                console.log('🌐 Making API request...');
+                console.log('🔑 Original token length:', token.length);
+                console.log('🔑 Clean token length:', cleanToken.length);
+                console.log('🔑 Using clean token:', cleanToken.substring(0, 30) + '...');
+                
+                const response = await fetch(`${API_URL}?page=1&limit=10`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${cleanToken}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                console.log('📦 Full API Response:', data);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+
+                if (!data.success) {
+                    resultDiv.innerHTML = `<div class="result error">❌ API Error: ${data.message || 'Unknown error'}</div>`;
+                    return;
+                }
+
+                const orders = data.data?.orders || data.orders || [];
+                console.log(`✅ Loaded ${orders.length} orders`);
+                
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="result error">📭 No orders found</div>';
+                    return;
+                }
+
+                // Count orders with/without products
+                let ordersWithProducts = 0;
+                let ordersWithoutProducts = 0;
+                let totalProducts = 0;
+
+                orders.forEach(order => {
+                    console.log(`📋 Order: ${order.order_number}`);
+                    console.log(`   - Item count: ${order.item_count}`);
+                    console.log(`   - Products array exists: ${!!order.products}`);
+                    console.log(`   - Products length: ${order.products?.length || 0}`);
+                    
+                    if (order.products && order.products.length > 0) {
+                        ordersWithProducts++;
+                        totalProducts += order.products.length;
+                        order.products.forEach((product, index) => {
+                            console.log(`   - Product ${index + 1}: ${product.product_name}`);
+                        });
+                    } else {
+                        ordersWithoutProducts++;
+                        console.log(`   - NO PRODUCTS FOUND!`);
+                    }
+                });
+
+                let html = `
+                    <div class="result success">
+                        ✅ SUCCESS! API working perfectly with your token<br>
+                        📊 Found ${orders.length} orders<br>
+                        🛍️ ${ordersWithProducts} orders WITH products | ${ordersWithoutProducts} orders WITHOUT products<br>
+                        📦 Total products: ${totalProducts}
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Customer</th>
+                                <th>Products Display</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                orders.forEach(order => {
+                    const productDisplay = order.products && order.products.length > 0 
+                        ? order.products.map(p => p.product_name).join(', ')
+                        : `${order.item_count || 0} item(s)`;
+                    
+                    const productClass = order.products && order.products.length > 0 ? 'product-names' : 'item-count';
+                    
+                    html += `
+                        <tr>
+                            <td><strong>${order.order_number}</strong></td>
+                            <td>${order.customer_name || 'N/A'}</td>
+                            <td><div class="${productClass}">${productDisplay}</div></td>
+                            <td><strong>${order.currency || '$'}${order.total_amount}</strong></td>
+                            <td>${order.status}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                // Special focus on your specific order
+                const yourOrder = orders.find(o => o.order_number === 'ORD-2026-258958');
+                if (yourOrder) {
+                    html += `
+                        <div class="result success">
+                            🎯 <strong>YOUR SPECIFIC ORDER FOUND!</strong><br>
+                            Order: ${yourOrder.order_number}<br>
+                            Products: ${yourOrder.products?.length || 0}<br>
+                            ${yourOrder.products ? yourOrder.products.map(p => `• ${p.product_name}`).join('<br>') : 'No products'}
+                        </div>
+                    `;
+                }
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        ❌ Error: ${error.message}
+                        <br><small>Check browser console for details</small>
+                    </div>
+                `;
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('result').innerHTML = '';
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Test page loaded with your token');
+            testAPI();
+        });
+    </script>
+</body>
+</html>

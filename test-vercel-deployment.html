@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Vercel Deployment</title>
+</head>
+<body>
+    <h1>InventoryGPT Deployment Test</h1>
+    <button onclick="testEndpoints()">Test API Endpoints</button>
+    <pre id="results"></pre>
+
+    <script>
+        async function testEndpoints() {
+            const results = document.getElementById('results');
+            results.textContent = 'Testing...\n';
+            
+            const apiBase = 'https://13.212.51.226:8443';
+            
+            // Test old endpoints
+            results.textContent += '\n=== Testing OLD endpoints ===\n';
+            try {
+                const res1 = await fetch(`${apiBase}/api/products`);
+                results.textContent += `/api/products: ${res1.status} ${res1.statusText}\n`;
+            } catch (e) {
+                results.textContent += `/api/products: ERROR - ${e.message}\n`;
+            }
+            
+            try {
+                const res2 = await fetch(`${apiBase}/api/categories`);
+                results.textContent += `/api/categories: ${res2.status} ${res2.statusText}\n`;
+            } catch (e) {
+                results.textContent += `/api/categories: ERROR - ${e.message}\n`;
+            }
+            
+            // Test new endpoints
+            results.textContent += '\n=== Testing NEW endpoints ===\n';
+            try {
+                const res3 = await fetch(`${apiBase}/api/website/products`);
+                results.textContent += `/api/website/products: ${res3.status} ${res3.statusText}\n`;
+                if (res3.ok) {
+                    const data = await res3.json();
+                    results.textContent += `  Products count: ${data.products?.length || 0}\n`;
+                }
+            } catch (e) {
+                results.textContent += `/api/website/products: ERROR - ${e.message}\n`;
+            }
+            
+            try {
+                const res4 = await fetch(`${apiBase}/api/website/categories`);
+                results.textContent += `/api/website/categories: ${res4.status} ${res4.statusText}\n`;
+                if (res4.ok) {
+                    const data = await res4.json();
+                    results.textContent += `  Categories count: ${data.categories?.length || 0}\n`;
+                }
+            } catch (e) {
+                results.textContent += `/api/website/categories: ERROR - ${e.message}\n`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+{
+  "summary": {
+    "totalTests": 10,
+    "passed": 2,
+    "failed": 8,
+    "successRate": "20.00%",
+    "timestamp": "2026-02-02T18:50:10.679Z"
+  },
+  "testResults": [
+    {
+      "test": "Server Health Check",
+      "success": true,
+      "details": "Server is running and responding",
+      "timestamp": "2026-02-02T18:50:00.219Z"
+    },
+    {
+      "test": "User Authentication",
+      "success": false,
+      "details": "Login failed: {\"success\":false,\"message\":\"Invalid credentials\"}",
+      "timestamp": "2026-02-02T18:50:01.351Z"
+    },
+    {
+      "test": "Create Order",
+      "success": false,
+      "details": "No authentication token available",
+      "timestamp": "2026-02-02T18:50:02.367Z"
+    },
+    {
+      "test": "Get User Orders",
+      "success": false,
+      "details": "No authentication token available",
+      "timestamp": "2026-02-02T18:50:03.369Z"
+    },
+    {
+      "test": "Get Order Details",
+      "success": false,
+      "details": "No authentication token or order ID available",
+      "timestamp": "2026-02-02T18:50:04.384Z"
+    },
+    {
+      "test": "Track Order",
+      "success": false,
+      "details": "No authentication token or order ID available",
+      "timestamp": "2026-02-02T18:50:05.397Z"
+    },
+    {
+      "test": "Update Order Status",
+      "success": false,
+      "details": "No authentication token or order ID available",
+      "timestamp": "2026-02-02T18:50:06.401Z"
+    },
+    {
+      "test": "Cancel Order",
+      "success": false,
+      "details": "No authentication token or order ID available",
+      "timestamp": "2026-02-02T18:50:07.405Z"
+    },
+    {
+      "test": "Error Handling",
+      "success": false,
+      "details": "No authentication token available",
+      "timestamp": "2026-02-02T18:50:08.417Z"
+    },
+    {
+      "test": "Unauthorized Access",
+      "success": true,
+      "details": "Properly rejected unauthorized request",
+      "timestamp": "2026-02-02T18:50:09.673Z"
+    }
+  ],
+  "configuration": {
+    "baseUrl": "https://54.169.31.95:8443",
+    "testUser": "ordertest"
+  }
+}

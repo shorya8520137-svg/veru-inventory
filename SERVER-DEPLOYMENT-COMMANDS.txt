@@ -1,0 +1,177 @@
+========================================
+🚀 SERVER DEPLOYMENT COMMANDS
+========================================
+
+Run these commands on AWS server (SSH: ubuntu@54.254.184.54)
+
+IMPORTANT: Server directory is ~/inventoryfullstack (NOT ~/hunyhunydump/inventoryfullstack)
+
+========================================
+STEP 1: Pull Latest Code
+========================================
+
+cd ~/inventoryfullstack
+git fetch origin
+git pull origin stocksphere-phase-1-complete
+
+# If pull fails, use hard reset:
+git fetch origin
+git reset --hard origin/stocksphere-phase-1-complete
+
+========================================
+STEP 2: Create Database Table
+========================================
+
+cd ~/inventoryfullstack
+mysql -u root -p inventory_db < website-customers-schema.sql
+
+# Or manually in MySQL:
+mysql -u root -p inventory_db
+
+Then run:
+CREATE TABLE IF NOT EXISTS website_customers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    google_id VARCHAR(255) UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL,
+    INDEX idx_email (email),
+    INDEX idx_phone (phone)
+);
+
+DESCRIBE website_customers;
+exit;
+
+========================================
+STEP 3: COMPLETE PM2 RESTART (CRITICAL!)
+========================================
+
+IMPORTANT: Must do COMPLETE restart, not just "pm2 restart"
+This is required to load new routes!
+
+pm2 stop all
+pm2 delete all
+pm2 start server.js --name dashboard-api-1
+pm2 save
+
+========================================
+STEP 4: Verify Server Started
+========================================
+
+pm2 status
+pm2 logs dashboard-api-1 --lines 50
+
+You should see:
+✅ "🚀 Inventory Backend Started"
+✅ "🌍 Port: 8443"
+
+========================================
+STEP 5: Test API Endpoints
+========================================
+
+# Get your JWT token from browser localStorage
+# Then test:
+
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  https://54.254.184.54:8443/api/website-customers/stats
+
+Expected response:
+{
+  "success": true,
+  "data": {
+    "total_customers": 0,
+    "active_customers": 0,
+    "suspended_customers": 0,
+    ...
+  }
+}
+
+# Test get all customers:
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  "https://54.254.184.54:8443/api/website-customers?page=1&limit=10"
+
+========================================
+TROUBLESHOOTING
+========================================
+
+❌ If you get 401 Unauthorized:
+1. Check if JWT token is valid (try logging in again)
+2. Verify token is being sent in Authorization header
+3. Check server logs: pm2 logs dashboard-api-1
+
+❌ If you get 404 Not Found:
+1. Verify routes are loaded: pm2 logs dashboard-api-1 | grep "website-customers"
+2. Make sure you did COMPLETE restart (stop, delete, start)
+3. Check server.js has the route at line 173
+
+❌ If you get 500 Internal Server Error:
+1. Check database table exists: mysql -u root -p inventory_db -e "SHOW TABLES LIKE 'website_customers';"
+2. Check server logs: pm2 logs dashboard-api-1 --lines 100
+3. Verify database connection is working
+
+❌ If PM2 shows "errored" status:
+1. Check logs: pm2 logs dashboard-api-1
+2. Check if port 8443 is already in use: netstat -tulpn | grep 8443
+3. Try killing the process: sudo kill -9 $(lsof -t -i:8443)
+4. Restart PM2: pm2 delete all && pm2 start server.js --name dashboard-api-1
+
+========================================
+QUICK COMMANDS
+========================================
+
+# View server status
+pm2 status
+
+# View logs (live)
+pm2 logs dashboard-api-1
+
+# View last 100 lines
+pm2 logs dashboard-api-1 --lines 100
+
+# Restart server
+pm2 stop all && pm2 delete all && pm2 start server.js --name dashboard-api-1
+
+# Check database table
+mysql -u root -p inventory_db -e "DESCRIBE website_customers;"
+
+# Test API
+curl -H "Authorization: Bearer YOUR_TOKEN" https://54.254.184.54:8443/api/website-customers/stats
+
+========================================
+FILES DEPLOYED
+========================================
+
+✅ controllers/websiteCustomersController.js (NEW)
+✅ routes/websiteCustomersRoutes.js (NEW)
+✅ website-customers-schema.sql (NEW)
+✅ server.js (MODIFIED - line 173)
+✅ src/app/website-customers/page.jsx (NEW - frontend)
+✅ src/components/ui/sidebar.jsx (MODIFIED - added menu item)
+
+========================================
+COMMITS PUSHED
+========================================
+
+Commit 1: 5e78e1b - Add Website Customers Management System
+Commit 2: da6c90f - Add Website Customers to sidebar navigation
+Commit 3: a6db68d - Add Website Customers deployment guide
+
+Branch: stocksphere-phase-1-complete
+
+========================================
+FRONTEND DEPLOYMENT
+========================================
+
+Frontend auto-deploys via Vercel when code is pushed to GitHub.
+
+Check status: https://vercel.com/dashboard
+Access page: https://inventoryfullstack-one.vercel.app/website-customers
+
+Wait 2-5 minutes for deployment to complete.
+
+========================================

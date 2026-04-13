@@ -1,0 +1,29 @@
+{
+  "summary": {
+    "endpoint": "https://54.169.31.95:8443",
+    "testUser": "shorya.singh@hunyhuny.com",
+    "totalTests": 1,
+    "passedTests": 0,
+    "failedTests": 1,
+    "successRate": "0.0%",
+    "timestamp": "2026-01-30T13:05:16.282Z",
+    "createdItems": {
+      "returns": [],
+      "damages": [],
+      "recoveries": []
+    }
+  },
+  "tests": [
+    {
+      "test": "Authentication",
+      "passed": false,
+      "message": "Login failed",
+      "timestamp": "2026-01-30T13:05:16.256Z",
+      "statusCode": 401,
+      "responseData": {
+        "success": false,
+        "message": "Invalid credentials"
+      }
+    }
+  ]
+}

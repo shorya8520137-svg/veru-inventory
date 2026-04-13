@@ -1,0 +1,160 @@
+[
+  {
+    "name": "Return API - Create Return",
+    "endpoint": "/api/returns",
+    "method": "POST",
+    "requestBody": {
+      "order_ref": "TEST_ORDER_001",
+      "awb": "AWB123456789",
+      "product_type": "Test Product Return",
+      "warehouse": "GGM_WH",
+      "quantity": 1,
+      "barcode": "RETURN_TEST_001",
+      "has_parts": false,
+      "return_reason": "Customer return - defective",
+      "condition": "good",
+      "processed_by": "Test User"
+    },
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Return API - Get Returns",
+    "endpoint": "/api/returns",
+    "method": "GET",
+    "requestBody": null,
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Damage API - Report Damage",
+    "endpoint": "/api/damage-recovery/damage",
+    "method": "POST",
+    "requestBody": {
+      "product_type": "Test Product for Damage",
+      "barcode": "DAMAGE_TEST_001",
+      "warehouse": "GGM_WH",
+      "quantity": 2,
+      "inventory_location": "A1-B2-C3",
+      "damage_reason": "Product damaged during handling",
+      "notes": "Test damage report"
+    },
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Recovery API - Recover Stock",
+    "endpoint": "/api/damage-recovery/recover",
+    "method": "POST",
+    "requestBody": {
+      "product_type": "Test Product for Recovery",
+      "barcode": "RECOVERY_TEST_001",
+      "warehouse": "GGM_WH",
+      "quantity": 1,
+      "inventory_location": "A1-B2-C4",
+      "recovery_notes": "Stock recovered after inspection"
+    },
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Damage Recovery - Get Log",
+    "endpoint": "/api/damage-recovery/log",
+    "method": "GET",
+    "requestBody": null,
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Return API - Get Warehouses",
+    "endpoint": "/api/returns/warehouses",
+    "method": "GET",
+    "requestBody": null,
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Damage API - Get Warehouses",
+    "endpoint": "/api/damage-recovery/warehouses",
+    "method": "GET",
+    "requestBody": null,
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Return API - Product Suggestions",
+    "endpoint": "/api/returns/suggestions/products?search=test",
+    "method": "GET",
+    "requestBody": null,
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Damage API - Search Products",
+    "endpoint": "/api/damage-recovery/search-products?search=test",
+    "method": "GET",
+    "requestBody": null,
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  },
+  {
+    "name": "Return API - Bulk Returns",
+    "endpoint": "/api/returns/bulk",
+    "method": "POST",
+    "requestBody": {
+      "returns": [
+        {
+          "order_ref": "BULK_001",
+          "awb": "BULK_AWB_001",
+          "product_type": "Bulk Product 1",
+          "warehouse": "GGM_WH",
+          "quantity": 1,
+          "barcode": "BULK_BARCODE_001",
+          "condition": "good"
+        }
+      ]
+    },
+    "statusCode": 401,
+    "responseBody": {
+      "success": false,
+      "message": "Access token required",
+      "error": "NO_TOKEN"
+    }
+  }
+]

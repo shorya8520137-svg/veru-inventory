@@ -1,0 +1,214 @@
+================================================================================
+NEW FEATURES - WAREHOUSE ORDER ACTIVITY & MOVEMENT RECORDS
+================================================================================
+
+THREE NEW FEATURES:
+1. Activity Button in OrderSheet (Order page)
+2. Warehouse Order Activity Tab (Main navigation)
+3. Movement Records Tab (Inventory page)
+
+================================================================================
+FEATURE 1: ACTIVITY BUTTON IN ORDERSHEET
+================================================================================
+
+LOCATION: Order page → OrderSheet table → Activity button (each row)
+
+WHAT IT DOES:
+Opens a modal form to log warehouse activities for specific orders.
+Auto-fills order details, user selects warehouse, staff, and adds remarks.
+
+FILES:
+- Frontend: src/app/order/OrderSheet.jsx
+- Component: src/components/OrderActivityForm.jsx
+- Styles: src/components/OrderActivityForm.module.css
+
+FORM FIELDS:
+Auto-filled (read-only):
+- AWB Number
+- Order Reference
+- Customer Name
+- Product Name
+- Logistics (dropdown - can change)
+
+User Input (required):
+- Warehouse (dropdown: MUM_WH, BLR_WH, GGM_WH, AMD_WH, HYD_WH)
+- Processed By (dropdown: staff names based on selected warehouse)
+- Status (dropdown: Dispatch or Cancel)
+- Remarks (text area)
+
+API ENDPOINT:
+POST /api/warehouse-order-activity
+Body: {
+  "awb": "AWB123456",
+  "order_ref": "ORD-2024-001",
+  "customer_name": "John Doe",
+  "product_name": "Product XYZ",
+  "logistics": "Delhivery",
+  "warehouse": "MUM_WH",
+  "processed_by": "Abhishek",
+  "status": "Dispatch",
+  "remarks": "Order packed and ready"
+}
+
+================================================================================
+FEATURE 2: WAREHOUSE ORDER ACTIVITY TAB
+================================================================================
+
+LOCATION: Main navigation → Warehouse Order Activity
+
+WHAT IT DOES:
+- View all warehouse activities across all orders
+- Filter by multiple criteria
+- Export to CSV, Excel, PDF (shipping manifest)
+- Select specific items for export
+
+FILES:
+- Frontend: src/app/warehouse-order-activity/page.jsx
+- Backend: controllers/warehouseOrderActivityController.js
+- Routes: routes/warehouseOrderActivityRoutes.js
+
+FILTERS AVAILABLE:
+- Status (Dispatch/Cancel)
+- Warehouse (MUM_WH, BLR_WH, GGM_WH, AMD_WH, HYD_WH)
+- Processed By (staff names - depends on warehouse selected)
+- Customer Name (text search)
+- AWB Number (text search)
+- Logistics (Delhivery, Blue Dart, Ecom Express, DTDC)
+- Date From (date picker)
+- Date To (date picker)
+
+TABLE COLUMNS DISPLAYED:
+- Checkbox (for selection)
+- ID
+- AWB
+- Order Ref
+- Customer Name
+- Product Name
+- Logistics
+- Warehouse
+- Processed By
+- Status
+- Remarks
+- Created At
+
+EXPORT OPTIONS:
+- CSV: Download selected or all filtered records
+- Excel: Download with formatted columns
+- PDF: Generate shipping manifest with company header
+
+API ENDPOINTS:
+GET /api/warehouse-order-activity
+  - Returns all activities
+  - No query params (filtering done on frontend)
+
+GET /api/warehouse-order-activity/warehouse-staff
+  - Returns warehouse staff mapping
+  - Response: { data: { "MUM_WH": ["Abhishek", "Aniket"], ... }, warehouses: [...] }
+
+GET /api/warehouse-order-activity/logistics
+  - Returns logistics list
+  - Response: { data: [{ id: 1, name: "Delhivery" }, ...] }
+
+================================================================================
+FEATURE 3: MOVEMENT RECORDS TAB
+================================================================================
+
+LOCATION: Inventory page → Movement Records tab
+
+WHAT IT DOES:
+- Shows all inventory movements (IN/OUT)
+- Track stock changes with reasons
+- Filter by date, product, warehouse, movement type
+
+FILES:
+- Frontend: src/app/inventory/movement-records/InventoryMovementRecords.jsx
+- Styles: src/app/inventory/movement-records/movementRecords.module.css
+- Backend: controllers/movementRecordsController.js
+- Routes: routes/inventoryRoutes.js
+
+FILTERS AVAILABLE:
+- Date From (date picker)
+- Date To (date picker)
+- Barcode (text search)
+- Warehouse (dropdown)
+- Movement Type (dropdown: BULK_UPLOAD, DAMAGE, RETURN, TRANSFER, etc.)
+
+TABLE COLUMNS DISPLAYED:
+- Event Time
+- Movement Type
+- Barcode
+- Product Name
+- Location Code (warehouse)
+- Quantity
+- Direction (IN/OUT)
+- Reference
+
+API ENDPOINT:
+GET /api/inventory/movement-records
+  - Query params: startDate, endDate, barcode, warehouse, movementType
+  - Returns filtered movement records
+
+================================================================================
+DATABASE TABLES
+================================================================================
+
+1. warehouse_order_activity (NEW TABLE - created by schema file)
+Columns:
+- id (int, auto_increment, primary key)
+- awb (varchar(100), indexed)
+- order_ref (varchar(100), indexed)
+- customer_name (varchar(255), indexed)
+- product_name (varchar(255))
+- logistics (varchar(100))
+- warehouse (varchar(20), indexed)
+- processed_by (varchar(100), indexed)
+- phone_number (varchar(20)) - optional
+- status (enum: 'Dispatch', 'Cancel', indexed)
+- remarks (text)
+- created_by (int, indexed)
+- created_at (timestamp, indexed)
+- updated_at (timestamp)
+
+2. inventory_ledger_base (EXISTING TABLE - no changes)
+Used for movement records
+Columns: event_time, movement_type, barcode, product_name, location_code, 
+         qty, direction, reference
+
+3. warehousestaff_processed (EXISTING TABLE - no changes)
+Used for staff dropdown
+Columns: warehouse, name
+
+4. logistics (EXISTING TABLE - no changes)
+Used for logistics dropdown
+Columns: id, name
+
+================================================================================
+DEPLOYMENT STEPS
+================================================================================
+
+1. Pull latest code:
+   git checkout stocksphere-phase-1-complete
+   git pull origin stocksphere-phase-1-complete
+
+2. Run SQL schema (creates warehouse_order_activity table):
+   sudo mysql -u root inventory_db < warehouse-order-activity-schema.sql
+
+3. Restart server:
+   pm2 restart all
+
+4. Test features:
+   - Order page → Click Activity button
+   - Warehouse Order Activity tab → View and filter
+   - Inventory → Movement Records tab
+
+================================================================================
+WAREHOUSE STAFF MAPPING
+================================================================================
+
+MUM_WH: Abhishek, Aniket, Rashid
+BLR_WH: Mandhata, Rajbhar
+GGM_WH: Pankaj Rajput, Pankaj Rawat, Nagdeo Pandey
+AMD_WH: Rushant, Vikas
+HYD_WH: Divya, Robin
+
+================================================================================

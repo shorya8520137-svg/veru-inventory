@@ -1,0 +1,704 @@
+{
+  "timestamp": "2026-01-16T04:31:51.229Z",
+  "summary": {
+    "totalFiles": 23,
+    "filesChecked": 22,
+    "filesNotFound": 1,
+    "totalFetchCalls": 63,
+    "fetchWithAuth": 49,
+    "fetchWithoutAuth": 14,
+    "apiRequestCalls": 47,
+    "issues": []
+  },
+  "results": [
+    {
+      "module": "Login",
+      "file": "src/app/login/page.jsx",
+      "fetchCalls": [
+        {
+          "line": 25,
+          "url": "${apiBase}/api/auth/login",
+          "hasAuth": false
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Products Manager",
+      "file": "src/app/products/ProductManager.jsx",
+      "fetchCalls": [
+        {
+          "line": 89,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 143,
+          "url": "${API_BASE}/api/products?${params}",
+          "hasAuth": true
+        },
+        {
+          "line": 180,
+          "url": "${API_BASE}/api/products/categories/all",
+          "hasAuth": true
+        },
+        {
+          "line": 282,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 342,
+          "url": "${API_BASE}/api/products/${productId}",
+          "hasAuth": true
+        },
+        {
+          "line": 463,
+          "url": "${API_BASE}/api/products/categories",
+          "hasAuth": true
+        },
+        {
+          "line": 503,
+          "url": "${API_BASE}/api/products/inventory/${barcode}",
+          "hasAuth": true
+        },
+        {
+          "line": 538,
+          "url": "${API_BASE}/api/products?limit=10000",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Products Page",
+      "file": "src/app/products/page.jsx",
+      "fetchCalls": [],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Transfer Form",
+      "file": "src/app/products/TransferForm.jsx",
+      "fetchCalls": [
+        {
+          "line": 49,
+          "url": "${API}/warehouses",
+          "hasAuth": true
+        },
+        {
+          "line": 54,
+          "url": "${API}/logistics",
+          "hasAuth": true
+        },
+        {
+          "line": 59,
+          "url": "${API}/processed-persons",
+          "hasAuth": true
+        },
+        {
+          "line": 64,
+          "url": "${PRODUCTS_API}/stores",
+          "hasAuth": true
+        },
+        {
+          "line": 82,
+          "url": "https://16.171.161.150.nip.io/api/product-tracking/${barcode}",
+          "hasAuth": true
+        },
+        {
+          "line": 99,
+          "url": "${API}/search-products?query=${value}",
+          "hasAuth": true
+        },
+        {
+          "line": 166,
+          "url": "https://16.171.161.150.nip.io/api/self-transfer/create",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Inventory Sheet",
+      "file": "src/app/inventory/InventorySheet.jsx",
+      "fetchCalls": [
+        {
+          "line": 103,
+          "url": "${API_BASE}/api/inventory?${params}",
+          "hasAuth": true
+        },
+        {
+          "line": 253,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 427,
+          "url": "${API_BASE}/api/inventory?${params}",
+          "hasAuth": true
+        },
+        {
+          "line": 601,
+          "url": "${API_BASE}/api/inventory/export?${params}",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Product Tracker",
+      "file": "src/app/inventory/ProductTracker.jsx",
+      "fetchCalls": [
+        {
+          "line": 82,
+          "url": "https://16.171.161.150.nip.io/api/order-tracking/${dispatchId}/timeline",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": true,
+      "issues": []
+    },
+    {
+      "module": "Self Transfer",
+      "file": "src/app/inventory/selftransfer/SelfTransfer.jsx",
+      "fetchCalls": [
+        {
+          "line": 33,
+          "url": "${API_BASE}/api/inventory-ledger",
+          "hasAuth": true
+        },
+        {
+          "line": 42,
+          "url": "${API_BASE}/api/inventory-ledger/summary",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Damage Recovery Modal",
+      "file": "src/app/inventory/selftransfer/DamageRecoveryModal.jsx",
+      "fetchCalls": [
+        {
+          "line": 39,
+          "url": "${API}/warehouses",
+          "hasAuth": true
+        },
+        {
+          "line": 78,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 116,
+          "url": "Unknown URL",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Return Modal",
+      "file": "src/app/inventory/selftransfer/ReturnModal.jsx",
+      "fetchCalls": [
+        {
+          "line": 29,
+          "url": "${API}/warehouses",
+          "hasAuth": true
+        },
+        {
+          "line": 61,
+          "url": "${API}/search-products?query=${productQuery}",
+          "hasAuth": true
+        },
+        {
+          "line": 85,
+          "url": "Unknown URL",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Store Inventory",
+      "file": "src/app/inventory/store/store.js",
+      "fetchCalls": [
+        {
+          "line": 21,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 36,
+          "url": "${INVENTORY_API}?store_id=${activeStore.id}",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Order Sheet",
+      "file": "src/app/order/OrderSheet.jsx",
+      "fetchCalls": [
+        {
+          "line": 86,
+          "url": "https://16.171.161.150.nip.io/api/order-tracking",
+          "hasAuth": true
+        },
+        {
+          "line": 153,
+          "url": "https://16.171.161.150.nip.io/api/order-tracking/${order.id}/timeline",
+          "hasAuth": true
+        },
+        {
+          "line": 328,
+          "url": "https://16.171.161.150.nip.io/api/order-tracking/${order.dispatch_id || orderId}/status",
+          "hasAuth": true
+        },
+        {
+          "line": 470,
+          "url": "https://16.171.161.150.nip.io/api/order-tracking/${dispatchId}",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Dispatch Form",
+      "file": "src/app/order/dispatch/DispatchForm.jsx",
+      "fetchCalls": [
+        {
+          "line": 48,
+          "url": "${API}/warehouses",
+          "hasAuth": true
+        },
+        {
+          "line": 61,
+          "url": "${API}/logistics",
+          "hasAuth": true
+        },
+        {
+          "line": 74,
+          "url": "${API}/processed-persons",
+          "hasAuth": true
+        },
+        {
+          "line": 99,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 99,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 164,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 259,
+          "url": "${CREATE_API}/create",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Website Order",
+      "file": "src/app/order/websiteorder/websiteorder.jsx",
+      "fetchCalls": [
+        {
+          "line": 24,
+          "url": "${API}?page=1&limit=100",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Permissions Page",
+      "file": "src/app/permissions/page.jsx",
+      "fetchCalls": [],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "Enhanced Audit Tab",
+      "file": "src/app/permissions/EnhancedAuditTab.jsx",
+      "fetchCalls": [],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": []
+    },
+    {
+      "module": "API Utils",
+      "file": "src/utils/api.js",
+      "fetchCalls": [
+        {
+          "line": 60,
+          "url": "Unknown URL",
+          "hasAuth": true
+        },
+        {
+          "line": 90,
+          "url": "${API_BASE}/api/auth/login",
+          "hasAuth": false
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": true,
+      "issues": []
+    },
+    {
+      "module": "Products API",
+      "file": "src/services/api/products.js",
+      "fetchCalls": [
+        {
+          "line": 108,
+          "url": "${API_BASE_URL}/api/products/bulk/import/progress",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": true,
+      "issues": []
+    },
+    {
+      "module": "Dispatch API",
+      "file": "src/services/api/dispatch.js",
+      "fetchCalls": [
+        {
+          "line": 23,
+          "url": "${API_BASE}/dispatch",
+          "hasAuth": true
+        },
+        {
+          "line": 49,
+          "url": "${API_BASE}/dispatch?${params}",
+          "hasAuth": false
+        },
+        {
+          "line": 66,
+          "url": "${API_BASE}/dispatch/${dispatchId}/status",
+          "hasAuth": false
+        },
+        {
+          "line": 87,
+          "url": "${API_BASE}/dispatch/suggestions/products?${params}",
+          "hasAuth": false
+        },
+        {
+          "line": 104,
+          "url": "${API_BASE}/dispatch/suggestions/warehouses",
+          "hasAuth": false
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": [
+        {
+          "line": 49,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/dispatch?${params}",
+          "fetchCall": "fetch(`${API_BASE}/dispatch?${params}`, {\r\n        method: 'GET',\r\n        headers: getAuthHeaders()..."
+        },
+        {
+          "line": 66,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/dispatch/${dispatchId}/status",
+          "fetchCall": "fetch(`${API_BASE}/dispatch/${dispatchId}/status`, {\r\n        method: 'PUT',\r\n        headers: getAu..."
+        },
+        {
+          "line": 87,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/dispatch/suggestions/products?${params}",
+          "fetchCall": "fetch(`${API_BASE}/dispatch/suggestions/products?${params}`, {\r\n        method: 'GET',\r\n        head..."
+        },
+        {
+          "line": 104,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/dispatch/suggestions/warehouses",
+          "fetchCall": "fetch(`${API_BASE}/dispatch/suggestions/warehouses`, {\r\n        method: 'GET',\r\n        headers: get..."
+        }
+      ]
+    },
+    {
+      "module": "Damage Recovery API",
+      "file": "src/services/api/damageRecovery.js",
+      "fetchCalls": [
+        {
+          "line": 23,
+          "url": "${API_BASE}/damage-recovery/damage",
+          "hasAuth": true
+        },
+        {
+          "line": 41,
+          "url": "${API_BASE}/damage-recovery/recover",
+          "hasAuth": false
+        },
+        {
+          "line": 67,
+          "url": "${API_BASE}/damage-recovery/log?${params}",
+          "hasAuth": false
+        },
+        {
+          "line": 92,
+          "url": "${API_BASE}/damage-recovery/summary?${params}",
+          "hasAuth": false
+        },
+        {
+          "line": 112,
+          "url": "${API_BASE}/damage-recovery/suggestions/products?${params}",
+          "hasAuth": false
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": false,
+      "issues": [
+        {
+          "line": 41,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/damage-recovery/recover",
+          "fetchCall": "fetch(`${API_BASE}/damage-recovery/recover`, {\r\n        method: 'POST',\r\n        headers: getAuthHea..."
+        },
+        {
+          "line": 67,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/damage-recovery/log?${params}",
+          "fetchCall": "fetch(`${API_BASE}/damage-recovery/log?${params}`, {\r\n        method: 'GET',\r\n        headers: getAu..."
+        },
+        {
+          "line": 92,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/damage-recovery/summary?${params}",
+          "fetchCall": "fetch(`${API_BASE}/damage-recovery/summary?${params}`, {\r\n        method: 'GET',\r\n        headers: g..."
+        },
+        {
+          "line": 112,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/damage-recovery/suggestions/products?${params}",
+          "fetchCall": "fetch(`${API_BASE}/damage-recovery/suggestions/products?${params}`, {\r\n        method: 'GET',\r\n     ..."
+        }
+      ]
+    },
+    {
+      "module": "Returns API",
+      "file": "src/services/api/returns.js",
+      "fetchCalls": [
+        {
+          "line": 23,
+          "url": "${API_BASE}/returns",
+          "hasAuth": true
+        },
+        {
+          "line": 49,
+          "url": "${API_BASE}/returns?${params}",
+          "hasAuth": false
+        },
+        {
+          "line": 66,
+          "url": "${API_BASE}/returns/${returnId}",
+          "hasAuth": false
+        },
+        {
+          "line": 83,
+          "url": "${API_BASE}/returns/bulk",
+          "hasAuth": false
+        },
+        {
+          "line": 103,
+          "url": "${API_BASE}/returns/suggestions/products?${params}",
+          "hasAuth": false
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": false,
+      "issues": [
+        {
+          "line": 49,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/returns?${params}",
+          "fetchCall": "fetch(`${API_BASE}/returns?${params}`, {\r\n        method: 'GET',\r\n        headers: getAuthHeaders()..."
+        },
+        {
+          "line": 66,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/returns/${returnId}",
+          "fetchCall": "fetch(`${API_BASE}/returns/${returnId}`, {\r\n        method: 'GET',\r\n        headers: getAuthHeaders(..."
+        },
+        {
+          "line": 83,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/returns/bulk",
+          "fetchCall": "fetch(`${API_BASE}/returns/bulk`, {\r\n        method: 'POST',\r\n        headers: getAuthHeaders()..."
+        },
+        {
+          "line": 103,
+          "type": "MISSING_AUTH",
+          "url": "${API_BASE}/returns/suggestions/products?${params}",
+          "fetchCall": "fetch(`${API_BASE}/returns/suggestions/products?${params}`, {\r\n        method: 'GET',\r\n        heade..."
+        }
+      ]
+    },
+    {
+      "module": "Bulk Upload API",
+      "file": "src/services/api/bulkUpload.js",
+      "fetchCalls": [
+        {
+          "line": 28,
+          "url": "${API_BASE_URL}/api/bulk-upload/progress",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": true,
+      "usesApiRequest": true,
+      "issues": []
+    },
+    {
+      "module": "Index API",
+      "file": "src/services/api/index.js",
+      "fetchCalls": [
+        {
+          "line": 31,
+          "url": "Unknown URL",
+          "hasAuth": true
+        }
+      ],
+      "hasAuth": false,
+      "usesApiRequest": true,
+      "issues": []
+    }
+  ],
+  "issues": [
+    {
+      "module": "Dashboard",
+      "severity": "WARNING",
+      "issue": "File not found",
+      "file": "src/app/dashboard/page.jsx"
+    },
+    {
+      "module": "Dispatch API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/dispatch.js",
+      "line": 49,
+      "url": "${API_BASE}/dispatch?${params}"
+    },
+    {
+      "module": "Dispatch API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/dispatch.js",
+      "line": 66,
+      "url": "${API_BASE}/dispatch/${dispatchId}/status"
+    },
+    {
+      "module": "Dispatch API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/dispatch.js",
+      "line": 87,
+      "url": "${API_BASE}/dispatch/suggestions/products?${params}"
+    },
+    {
+      "module": "Dispatch API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/dispatch.js",
+      "line": 104,
+      "url": "${API_BASE}/dispatch/suggestions/warehouses"
+    },
+    {
+      "module": "Damage Recovery API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/damageRecovery.js",
+      "line": 41,
+      "url": "${API_BASE}/damage-recovery/recover"
+    },
+    {
+      "module": "Damage Recovery API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/damageRecovery.js",
+      "line": 67,
+      "url": "${API_BASE}/damage-recovery/log?${params}"
+    },
+    {
+      "module": "Damage Recovery API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/damageRecovery.js",
+      "line": 92,
+      "url": "${API_BASE}/damage-recovery/summary?${params}"
+    },
+    {
+      "module": "Damage Recovery API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/damageRecovery.js",
+      "line": 112,
+      "url": "${API_BASE}/damage-recovery/suggestions/products?${params}"
+    },
+    {
+      "module": "Returns API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/returns.js",
+      "line": 49,
+      "url": "${API_BASE}/returns?${params}"
+    },
+    {
+      "module": "Returns API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/returns.js",
+      "line": 66,
+      "url": "${API_BASE}/returns/${returnId}"
+    },
+    {
+      "module": "Returns API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/returns.js",
+      "line": 83,
+      "url": "${API_BASE}/returns/bulk"
+    },
+    {
+      "module": "Returns API",
+      "severity": "HIGH",
+      "issue": "Fetch call without Authorization header",
+      "file": "src/services/api/returns.js",
+      "line": 103,
+      "url": "${API_BASE}/returns/suggestions/products?${params}"
+    }
+  ]
+}

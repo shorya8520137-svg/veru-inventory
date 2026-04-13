@@ -1,0 +1,170 @@
+═══════════════════════════════════════════════════════════════════
+  FIX: Website Customers Table Missing
+═══════════════════════════════════════════════════════════════════
+
+🐛 ERROR: "Database query failed - table may not exist"
+
+✅ SOLUTION: Create the website_customers table in the database
+
+═══════════════════════════════════════════════════════════════════
+
+📋 OPTION 1: Using SQL File (RECOMMENDED)
+═══════════════════════════════════════════════════════════════════
+
+On AWS server, run:
+
+cd ~/inventoryfullstack
+mysql -u inventory_user -pinventory_db < CREATE_WEBSITE_CUSTOMERS_TABLE.sql
+
+Note: No space between -p and StrongPass@123
+
+
+═══════════════════════════════════════════════════════════════════
+
+📋 OPTION 2: Using Shell Script
+═══════════════════════════════════════════════════════════════════
+
+cd ~/inventoryfullstack
+bash create-website-customers-table.sh
+
+
+═══════════════════════════════════════════════════════════════════
+
+📋 OPTION 3: Manual MySQL (MOST RELIABLE)
+═══════════════════════════════════════════════════════════════════
+
+Step 1: Connect to MySQL
+────────────────────────────────────────────────────────────────────
+mysql -u inventory_user -p inventory_db
+
+When prompted, enter password: StrongPass@123
+
+
+Step 2: Create the table (copy-paste this entire block)
+────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS website_customers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    google_id VARCHAR(255) UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL,
+    INDEX idx_email (email),
+    INDEX idx_phone (phone)
+);
+
+
+Step 3: Verify table was created
+────────────────────────────────────────────────────────────────────
+DESCRIBE website_customers;
+
+You should see 10 columns:
+- id
+- name
+- email
+- phone
+- password_hash
+- google_id
+- is_active
+- created_at
+- updated_at
+- last_login
+
+
+Step 4: Exit MySQL
+────────────────────────────────────────────────────────────────────
+exit;
+
+
+═══════════════════════════════════════════════════════════════════
+
+🔄 AFTER CREATING TABLE
+═══════════════════════════════════════════════════════════════════
+
+Restart the server:
+────────────────────────────────────────────────────────────────────
+pm2 restart dashboard-api-1
+pm2 logs dashboard-api-1 --lines 30
+
+
+═══════════════════════════════════════════════════════════════════
+
+🧪 TEST THE API
+═══════════════════════════════════════════════════════════════════
+
+Get your JWT token from browser localStorage (key: "token")
+
+Test stats endpoint:
+────────────────────────────────────────────────────────────────────
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://54.254.184.54:8443/api/website-customers/stats
+
+
+Expected response:
+────────────────────────────────────────────────────────────────────
+{
+  "success": true,
+  "data": {
+    "total_customers": 0,
+    "active_customers": 0,
+    "suspended_customers": 0,
+    "google_signups": 0,
+    "today_signups": 0,
+    "week_signups": 0,
+    "month_signups": 0
+  }
+}
+
+
+═══════════════════════════════════════════════════════════════════
+
+🔍 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+If table creation fails:
+────────────────────────────────────────────────────────────────────
+1. Check MySQL is running:
+   sudo systemctl status mysql
+
+2. Check database exists:
+   mysql -u inventory_user -p -e "SHOW DATABASES;"
+
+3. Check user permissions:
+   mysql -u root -p
+   SHOW GRANTS FOR 'inventory_user'@'localhost';
+
+4. If permission denied, grant access:
+   GRANT ALL PRIVILEGES ON inventory_db.* TO 'inventory_user'@'localhost';
+   FLUSH PRIVILEGES;
+
+
+If still getting errors after table creation:
+────────────────────────────────────────────────────────────────────
+1. Verify table exists:
+   mysql -u inventory_user -p inventory_db -e "SHOW TABLES LIKE 'website_customers';"
+
+2. Check table structure:
+   mysql -u inventory_user -p inventory_db -e "DESCRIBE website_customers;"
+
+3. Check PM2 logs for specific error:
+   pm2 logs dashboard-api-1 --lines 100
+
+
+═══════════════════════════════════════════════════════════════════
+
+✅ SUCCESS CHECKLIST
+═══════════════════════════════════════════════════════════════════
+
+[ ] Table created in database
+[ ] DESCRIBE shows 10 columns
+[ ] PM2 server restarted
+[ ] No errors in PM2 logs
+[ ] Stats API returns success
+[ ] Frontend page loads without errors
+
+
+═══════════════════════════════════════════════════════════════════

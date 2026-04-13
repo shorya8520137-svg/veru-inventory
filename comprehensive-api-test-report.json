@@ -1,0 +1,289 @@
+{
+  "testSummary": {
+    "endpoint": "https://54.169.31.95:8443",
+    "testUser": "admin@company.com",
+    "timestamp": "2026-01-30T13:14:23.160Z",
+    "totalTests": 16,
+    "successful": 1,
+    "authRequired": 14,
+    "permissionErrors": 0,
+    "clientErrors": 15,
+    "serverErrors": 0
+  },
+  "testResults": [
+    {
+      "name": "Authentication - Initial Login",
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "description": "Tests login with username/password - should return 2FA requirement",
+      "requestBody": {
+        "email": "admin@company.com",
+        "password": "Admin@123"
+      },
+      "statusCode": 200,
+      "responseBody": {
+        "success": false,
+        "requires_2fa": true,
+        "user_id": 1,
+        "message": "Two-factor authentication required"
+      },
+      "timestamp": "2026-01-30T13:14:21.552Z"
+    },
+    {
+      "name": "Authentication - 2FA Verification",
+      "endpoint": "/api/auth/verify-2fa",
+      "method": "POST",
+      "description": "Tests 2FA verification with sample token - will fail with invalid token",
+      "requestBody": {
+        "user_id": 1,
+        "token": "123456"
+      },
+      "statusCode": 404,
+      "responseBody": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/auth/verify-2fa</pre>\n</body>\n</html>\n",
+      "timestamp": "2026-01-30T13:14:21.648Z"
+    },
+    {
+      "name": "Return API - Create Return",
+      "endpoint": "/api/returns",
+      "method": "POST",
+      "description": "Creates a new return entry - requires authentication",
+      "requestBody": {
+        "order_ref": "TEST_ORDER_001",
+        "awb": "AWB123456789",
+        "product_type": "Samsung Galaxy S21",
+        "warehouse": "GGM_WH",
+        "quantity": 1,
+        "barcode": "RETURN_TEST_001",
+        "has_parts": false,
+        "return_reason": "Customer return - defective screen",
+        "condition": "damaged",
+        "processed_by": "Test User"
+      },
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:21.748Z"
+    },
+    {
+      "name": "Return API - Get All Returns",
+      "endpoint": "/api/returns",
+      "method": "GET",
+      "description": "Retrieves all returns with pagination - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:21.840Z"
+    },
+    {
+      "name": "Return API - Get Returns with Warehouse Filter",
+      "endpoint": "/api/returns?warehouse=GGM_WH&page=1&limit=10",
+      "method": "GET",
+      "description": "Retrieves returns filtered by warehouse - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:21.940Z"
+    },
+    {
+      "name": "Return API - Get Return by ID",
+      "endpoint": "/api/returns/1",
+      "method": "GET",
+      "description": "Retrieves specific return by ID - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.032Z"
+    },
+    {
+      "name": "Return API - Bulk Returns",
+      "endpoint": "/api/returns/bulk",
+      "method": "POST",
+      "description": "Processes multiple returns in one request - requires authentication",
+      "requestBody": {
+        "returns": [
+          {
+            "order_ref": "BULK_001",
+            "awb": "BULK_AWB_001",
+            "product_type": "iPhone 13",
+            "warehouse": "GGM_WH",
+            "quantity": 1,
+            "barcode": "BULK_BARCODE_001",
+            "condition": "good"
+          },
+          {
+            "order_ref": "BULK_002",
+            "awb": "BULK_AWB_002",
+            "product_type": "iPad Air",
+            "warehouse": "GGM_WH",
+            "quantity": 1,
+            "barcode": "BULK_BARCODE_002",
+            "condition": "damaged"
+          }
+        ]
+      },
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.126Z"
+    },
+    {
+      "name": "Return API - Product Suggestions",
+      "endpoint": "/api/returns/suggestions/products?search=samsung",
+      "method": "GET",
+      "description": "Gets product suggestions for return form - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.257Z"
+    },
+    {
+      "name": "Return API - Get Warehouses",
+      "endpoint": "/api/returns/warehouses",
+      "method": "GET",
+      "description": "Gets available warehouses for returns - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.366Z"
+    },
+    {
+      "name": "Damage API - Report Damage",
+      "endpoint": "/api/damage-recovery/damage",
+      "method": "POST",
+      "description": "Reports damaged inventory - requires authentication",
+      "requestBody": {
+        "product_type": "MacBook Pro 16\"",
+        "barcode": "DAMAGE_TEST_001",
+        "warehouse": "GGM_WH",
+        "quantity": 1,
+        "inventory_location": "A1-B2-C3",
+        "damage_reason": "Screen cracked during shipping",
+        "notes": "Visible crack on top-left corner of screen"
+      },
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.462Z"
+    },
+    {
+      "name": "Damage API - Get Damage Log",
+      "endpoint": "/api/damage-recovery/log",
+      "method": "GET",
+      "description": "Retrieves damage and recovery history - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.590Z"
+    },
+    {
+      "name": "Damage API - Get Damage Log with Filters",
+      "endpoint": "/api/damage-recovery/log?warehouse=GGM_WH&type=damage&page=1&limit=10",
+      "method": "GET",
+      "description": "Retrieves filtered damage log - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.689Z"
+    },
+    {
+      "name": "Damage API - Search Products",
+      "endpoint": "/api/damage-recovery/search-products?search=macbook",
+      "method": "GET",
+      "description": "Searches products for damage reporting - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.781Z"
+    },
+    {
+      "name": "Damage API - Get Warehouses",
+      "endpoint": "/api/damage-recovery/warehouses",
+      "method": "GET",
+      "description": "Gets available warehouses for damage reporting - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.881Z"
+    },
+    {
+      "name": "Damage API - Get Summary",
+      "endpoint": "/api/damage-recovery/summary?warehouse=GGM_WH",
+      "method": "GET",
+      "description": "Gets damage/recovery summary by warehouse - requires authentication",
+      "requestBody": null,
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:22.973Z"
+    },
+    {
+      "name": "Recovery API - Recover Stock",
+      "endpoint": "/api/damage-recovery/recover",
+      "method": "POST",
+      "description": "Recovers stock back to inventory - requires authentication",
+      "requestBody": {
+        "product_type": "Dell XPS 13",
+        "barcode": "RECOVERY_TEST_001",
+        "warehouse": "GGM_WH",
+        "quantity": 2,
+        "inventory_location": "A1-B2-C4",
+        "recovery_notes": "Items were misplaced, found in wrong location and recovered"
+      },
+      "statusCode": 401,
+      "responseBody": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-01-30T13:14:23.069Z"
+    }
+  ]
+}

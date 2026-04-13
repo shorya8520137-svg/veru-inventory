@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel Cache Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .btn { padding: 10px 20px; margin: 5px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #2980b9; }
+        .btn.danger { background: #e74c3c; }
+        .btn.success { background: #27ae60; }
+        .result { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <h1>🔍 Vercel Cache Debug Tool</h1>
+            <p>This tool helps diagnose and fix Vercel caching issues that prevent React updates from deploying.</p>
+        </div>
+
+        <div class="grid">
+            <div class="section">
+                <h2>🌐 Test Vercel URLs</h2>
+                <button class="btn" onclick="testVercelUrls()">Test All Vercel URLs</button>
+                <button class="btn" onclick="testWithCacheBusting()">Test with Cache Busting</button>
+                <div id="url-results"></div>
+            </div>
+
+            <div class="section">
+                <h2>📦 JavaScript Bundle Analysis</h2>
+                <button class="btn" onclick="analyzeJSBundles()">Analyze JS Bundles</button>
+                <button class="btn" onclick="checkBuildHashes()">Check Build Hashes</button>
+                <div id="bundle-results"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 Cache Headers Analysis</h2>
+            <button class="btn" onclick="analyzeCacheHeaders()">Analyze Cache Headers</button>
+            <button class="btn" onclick="testServiceWorker()">Test Service Worker</button>
+            <div id="cache-results"></div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 React Component Test</h2>
+            <button class="btn" onclick="testReactComponent()">Test React Orders Page</button>
+            <button class="btn" onclick="compareWithHTML()">Compare React vs HTML</button>
+            <div id="react-results"></div>
+        </div>
+
+        <div class="section">
+            <h2>🛠️ Cache Busting Solutions</h2>
+            <button class="btn success" onclick="generateCacheBustURL()">Generate Cache-Bust URL</button>
+            <button class="btn danger" onclick="clearAllCaches()">Clear All Caches</button>
+            <button class="btn" onclick="forceHardRefresh()">Force Hard Refresh</button>
+            <div id="solutions-results"></div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Debug Summary</h2>
+            <div id="debug-summary"></div>
+        </div>
+    </div>
+
+    <script>
+        const VERCEL_URLS = [
+            'https://inventoryfullstack-one.vercel.app',
+            'https://inventoryfullstack-1nrovddte-test-tests-projects-d6b8ba0b.vercel.app'
+        ];
+
+        const debugResults = {
+            urls: {},
+            bundles: {},
+            cache: {},
+            react: {},
+            timestamp: new Date().toISOString()
+        };
+
+        async function testVercelUrls() {
+            const resultDiv = document.getElementById('url-results');
+            resultDiv.innerHTML = '<div class="result info">🔄 Testing Vercel URLs...</div>';
+
+            let html = '<div class="result info">🌐 Vercel URL Test Results:</div>';
+
+            for (const url of VERCEL_URLS) {
+                try {
+                    console.log(`Testing URL: ${url}`);
+                    const startTime = Date.now();
+                    
+                    const response = await fetch(url, {
+                        method: 'HEAD',
+                        cache: 'no-cache'
+                    });
+                    
+                    const loadTime = Date.now() - startTime;
+                    const status = response.status;
+                    const headers = {};
+                    
+                    response.headers.forEach((value, key) => {
+                        headers[key] = value;
+                    });
+
+                    debugResults.urls[url] = { status, loadTime, headers };
+
+                    html += `
+                        <div class="result ${status === 200 ? 'success' : 'error'}">
+                            📍 ${url}
+                            Status: ${status}
+                            Load Time: ${loadTime}ms
+                            Cache-Control: ${headers['cache-control'] || 'Not set'}
+                            ETag: ${headers['etag'] || 'Not set'}
+                            Last-Modified: ${headers['last-modified'] || 'Not set'}
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `
+                        <div class="result error">
+                            ❌ ${url}
+                            Error: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        async function testWithCacheBusting() {
+            const resultDiv = document.getElementById('url-results');
+            const timestamp = Date.now();
+            
+            let html = '<div class="result info">🔄 Testing with cache busting...</div>';
+
+            for (const baseUrl of VERCEL_URLS) {
+                const cacheBustUrl = `${baseUrl}?cb=${timestamp}&v=${Math.random()}`;
+                
+                try {
+                    const response = await fetch(cacheBustUrl, {
+                        method: 'HEAD',
+                        cache: 'no-cache',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0'
+                        }
+                    });
+
+                    html += `
+                        <div class="result ${response.status === 200 ? 'success' : 'warning'}">
+                            🔄 Cache-bust URL: ${response.status}
+                            ${cacheBustUrl}
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `
+                        <div class="result error">
+                            ❌ Cache-bust failed: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            resultDiv.innerHTML += html;
+        }
+
+        async function analyzeJSBundles() {
+            const resultDiv = document.getElementById('bundle-results');
+            resultDiv.innerHTML = '<div class="result info">🔄 Analyzing JavaScript bundles...</div>';
+
+            let html = '<div class="result info">📦 JavaScript Bundle Analysis:</div>';
+
+            for (const url of VERCEL_URLS) {
+                try {
+                    // Fetch the main page to get script tags
+                    const response = await fetch(url);
+                    const htmlContent = await response.text();
+                    
+                    // Extract script tags
+                    const scriptRegex = /<script[^>]*src="([^"]*)"[^>]*>/g;
+                    const scripts = [];
+                    let match;
+                    
+                    while ((match = scriptRegex.exec(htmlContent)) !== null) {
+                        scripts.push(match[1]);
+                    }
+
+                    html += `
+                        <div class="result success">
+                            📍 ${url}
+                            Found ${scripts.length} script tags:
+                            ${scripts.map(script => `  • ${script}`).join('\n')}
+                        </div>
+                    `;
+
+                    // Test if scripts contain our debug code
+                    for (const scriptSrc of scripts.slice(0, 3)) { // Test first 3 scripts
+                        if (scriptSrc.startsWith('/_next/static/')) {
+                            try {
+                                const scriptUrl = scriptSrc.startsWith('http') ? scriptSrc : `${url}${scriptSrc}`;
+                                const scriptResponse = await fetch(scriptUrl);
+                                const scriptContent = await scriptResponse.text();
+                                
+                                const hasDebugCode = scriptContent.includes('FRONTEND DEBUG') || 
+                                                   scriptContent.includes('Order products for') ||
+                                                   scriptContent.includes('Cache bust:');
+                                
+                                html += `
+                                    <div class="result ${hasDebugCode ? 'success' : 'error'}">
+                                        ${hasDebugCode ? '✅' : '❌'} ${scriptSrc}
+                                        Debug code present: ${hasDebugCode}
+                                        Size: ${(scriptContent.length / 1024).toFixed(2)}KB
+                                    </div>
+                                `;
+                            } catch (e) {
+                                html += `
+                                    <div class="result warning">
+                                        ⚠️ Could not analyze: ${scriptSrc}
+                                    </div>
+                                `;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    html += `
+                        <div class="result error">
+                            ❌ Failed to analyze bundles for ${url}: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        async function analyzeCacheHeaders() {
+            const resultDiv = document.getElementById('cache-results');
+            resultDiv.innerHTML = '<div class="result info">🔄 Analyzing cache headers...</div>';
+
+            let html = '<div class="result info">🔄 Cache Headers Analysis:</div>';
+
+            for (const url of VERCEL_URLS) {
+                try {
+                    const response = await fetch(`${url}/order/websiteorder`, {
+                        method: 'HEAD',
+                        cache: 'no-cache'
+                    });
+
+                    const cacheHeaders = {
+                        'cache-control': response.headers.get('cache-control'),
+                        'etag': response.headers.get('etag'),
+                        'last-modified': response.headers.get('last-modified'),
+                        'expires': response.headers.get('expires'),
+                        'x-vercel-cache': response.headers.get('x-vercel-cache'),
+                        'x-vercel-id': response.headers.get('x-vercel-id'),
+                        'age': response.headers.get('age')
+                    };
+
+                    html += `
+                        <div class="result info">
+                            📍 ${url}/order/websiteorder
+                            ${Object.entries(cacheHeaders)
+                                .filter(([key, value]) => value !== null)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join('\n')}
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `
+                        <div class="result error">
+                            ❌ Failed to get cache headers for ${url}: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        async function testReactComponent() {
+            const resultDiv = document.getElementById('react-results');
+            resultDiv.innerHTML = '<div class="result info">🔄 Testing React component...</div>';
+
+            const token = localStorage.getItem('token');
+            let html = '<div class="result info">🧪 React Component Test:</div>';
+
+            if (!token) {
+                html += '<div class="result warning">⚠️ No JWT token found in localStorage</div>';
+            }
+
+            for (const url of VERCEL_URLS) {
+                try {
+                    // Test the orders API through React app
+                    const apiUrl = `${url}/api/website/orders?page=1&limit=5`;
+                    
+                    html += `
+                        <div class="result info">
+                            🧪 Testing React API call to: ${apiUrl}
+                        </div>
+                    `;
+
+                    // This would normally be blocked by CORS, but we can try
+                    try {
+                        const response = await fetch(apiUrl, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
+                        
+                        html += `
+                            <div class="result ${response.ok ? 'success' : 'error'}">
+                                ${response.ok ? '✅' : '❌'} API Response: ${response.status}
+                            </div>
+                        `;
+                    } catch (corsError) {
+                        html += `
+                            <div class="result warning">
+                                ⚠️ CORS blocked (expected): ${corsError.message}
+                            </div>
+                        `;
+                    }
+
+                    // Test if we can access the React page
+                    const pageResponse = await fetch(`${url}/order/websiteorder`);
+                    const pageContent = await pageResponse.text();
+                    
+                    const hasReactContent = pageContent.includes('websiteorder') || 
+                                          pageContent.includes('Website Order') ||
+                                          pageContent.includes('_next');
+                    
+                    html += `
+                        <div class="result ${hasReactContent ? 'success' : 'error'}">
+                            ${hasReactContent ? '✅' : '❌'} React page accessible
+                            Contains React content: ${hasReactContent}
+                        </div>
+                    `;
+
+                } catch (error) {
+                    html += `
+                        <div class="result error">
+                            ❌ React test failed for ${url}: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        async function compareWithHTML() {
+            const resultDiv = document.getElementById('react-results');
+            const token = localStorage.getItem('token');
+            
+            let html = '<div class="result info">🔄 Comparing React vs HTML...</div>';
+
+            if (!token) {
+                html += '<div class="result error">❌ Need JWT token for comparison</div>';
+                resultDiv.innerHTML += html;
+                return;
+            }
+
+            try {
+                // Test direct API call (like HTML does)
+                const apiResponse = await fetch('http://api.giftgala.in/api/website/orders?page=1&limit=3', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const apiData = await apiResponse.json();
+                const orders = apiData.data?.orders || [];
+
+                html += `
+                    <div class="result success">
+                        ✅ Direct API Call (HTML method):
+                        Status: ${apiResponse.status}
+                        Orders: ${orders.length}
+                        First order products: ${orders[0]?.products?.length || 0}
+                        ${orders[0]?.products ? orders[0].products.map(p => `  • ${p.product_name}`).join('\n') : '  • No products'}
+                    </div>
+                `;
+
+                // Compare with what React should get
+                html += `
+                    <div class="result info">
+                        🔍 Expected React behavior:
+                        • Should fetch from same API endpoint
+                        • Should get same data structure
+                        • Should display product names in green boxes
+                        • Should NOT show "X item(s)" for orders with products
+                    </div>
+                `;
+
+                html += `
+                    <div class="result warning">
+                        ⚠️ Vercel Caching Issue:
+                        • HTML works = API is perfect
+                        • React doesn't work = JavaScript is cached
+                        • Solution: Force cache invalidation or use HTML version
+                    </div>
+                `;
+
+            } catch (error) {
+                html += `
+                    <div class="result error">
+                        ❌ Comparison failed: ${error.message}
+                    </div>
+                `;
+            }
+
+            resultDiv.innerHTML += html;
+        }
+
+        function generateCacheBustURL() {
+            const resultDiv = document.getElementById('solutions-results');
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
+            
+            let html = '<div class="result success">🔄 Cache-Busting URLs Generated:</div>';
+            
+            VERCEL_URLS.forEach(url => {
+                const cacheBustUrl = `${url}/order/websiteorder?cb=${timestamp}&v=${random}&nocache=true`;
+                html += `
+                    <div class="result info">
+                        🔗 <a href="${cacheBustUrl}" target="_blank">${cacheBustUrl}</a>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="result warning">
+                    ⚠️ Instructions:
+                    1. Click the links above to test cache-busted versions
+                    2. Open browser console to check for debug logs
+                    3. If still no logs, the caching is at CDN level
+                </div>
+            `;
+
+            resultDiv.innerHTML = html;
+        }
+
+        function clearAllCaches() {
+            const resultDiv = document.getElementById('solutions-results');
+            
+            let html = '<div class="result info">🧹 Clearing all caches...</div>';
+            
+            // Clear localStorage
+            try {
+                localStorage.clear();
+                html += '<div class="result success">✅ localStorage cleared</div>';
+            } catch (e) {
+                html += '<div class="result error">❌ Could not clear localStorage</div>';
+            }
+
+            // Clear sessionStorage
+            try {
+                sessionStorage.clear();
+                html += '<div class="result success">✅ sessionStorage cleared</div>';
+            } catch (e) {
+                html += '<div class="result error">❌ Could not clear sessionStorage</div>';
+            }
+
+            // Clear service worker cache
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    registrations.forEach(registration => {
+                        registration.unregister();
+                    });
+                    html += '<div class="result success">✅ Service workers unregistered</div>';
+                });
+            }
+
+            // Clear cache API
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                    html += '<div class="result success">✅ Cache API cleared</div>';
+                });
+            }
+
+            html += `
+                <div class="result warning">
+                    ⚠️ Manual steps required:
+                    1. Press Ctrl+Shift+R (hard refresh)
+                    2. Open DevTools → Application → Clear Storage
+                    3. Try incognito mode
+                    4. Clear browser cache completely
+                </div>
+            `;
+
+            resultDiv.innerHTML = html;
+        }
+
+        function forceHardRefresh() {
+            const resultDiv = document.getElementById('solutions-results');
+            
+            resultDiv.innerHTML = `
+                <div class="result info">
+                    🔄 Forcing hard refresh in 3 seconds...
+                    This will reload the page with cache bypass.
+                </div>
+            `;
+
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 3000);
+        }
+
+        // Auto-run basic tests on page load
+        window.addEventListener('load', () => {
+            console.log('🔍 Vercel Cache Debug Tool loaded');
+            console.log('🌐 Available Vercel URLs:', VERCEL_URLS);
+            console.log('🔑 JWT Token available:', !!localStorage.getItem('token'));
+        });
+    </script>
+</body>
+</html>

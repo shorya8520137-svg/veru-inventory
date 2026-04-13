@@ -1,0 +1,175 @@
+2FA DATABASE FIX - DEPLOYMENT GUIDE
+COMPLETE SOLUTION FOR JSON PARSING ERROR
+
+==============================================================================
+ISSUE IDENTIFIED & FIXED
+==============================================================================
+
+❌ PROBLEM: 
+- Backup codes stored as comma-separated string: "CA1EAEE4,F1228D17,..."
+- Code tries to parse as JSON: JSON.parse("CA1EAEE4,F1228D17,...")
+- Results in: SyntaxError: Unexpected token C in JSON at position 0
+
+✅ SOLUTION IMPLEMENTED:
+- Updated TwoFactorAuthService.js with safe parsing
+- Added fallback for comma-separated strings
+- Database fix commands created
+
+==============================================================================
+FILES UPDATED
+==============================================================================
+
+✅ FRONTEND FIXES:
+- src/app/login/page.jsx - Complete 2FA integration
+- src/components/TwoFactorSetup.jsx - 2FA setup component
+- .env.local - Updated API base URL to 52.221.231.85:8443
+- .env.production - Updated API base URL
+
+✅ BACKEND FIXES:
+- services/TwoFactorAuthService.js - Safe JSON parsing with fallback
+
+✅ DEPLOYMENT SCRIPTS:
+- fix-2fa-server-commands.txt - Server commands to fix database
+- fix-backup-codes.sql - SQL script for manual fix
+- test-2fa-api-complete.js - Comprehensive API testing
+
+==============================================================================
+DEPLOYMENT STEPS (RUN ON SERVER)
+==============================================================================
+
+STEP 1: UPDATE CODE ON SERVER
+```bash
+# Navigate to project directory
+cd ~/inventoryfullstack
+
+# Pull latest changes (if using git)
+git pull origin main
+
+# Or upload the updated TwoFactorAuthService.js file
+```
+
+STEP 2: FIX DATABASE
+```bash
+# Connect to MySQL and fix backup codes
+sudo mysql -e "
+USE inventory_db;
+
+-- Fix the backup codes format
+UPDATE users 
+SET two_factor_backup_codes = '[\"CA1EAEE4\",\"F1228D17\",\"D619399F\",\"2FC39886\",\"D37E6C7A\",\"A9B78C38\",\"3D2575E6\",\"B8862F4D\",\"8D9C2BFD\",\"6E383380\"]'
+WHERE id = 1 
+AND two_factor_backup_codes = 'CA1EAEE4,F1228D17,D619399F,2FC39886,D37E6C7A,A9B78C38,3D2575E6,B8862F4D,8D9C2BFD,6E383380';
+
+-- Verify the fix
+SELECT id, name, two_factor_backup_codes, JSON_VALID(two_factor_backup_codes) as is_valid 
+FROM users WHERE id = 1;
+"
+```
+
+STEP 3: RESTART SERVER
+```bash
+# Restart Node.js application
+pm2 restart all
+
+# Or if not using PM2
+pkill node
+nohup node server.js &
+```
+
+STEP 4: TEST THE FIX
+```bash
+# Test login
+curl -k -X POST https://52.221.231.85:8443/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@company.com","password":"admin@123"}'
+
+# Test 2FA status (use token from login response)
+curl -k -X GET https://52.221.231.85:8443/api/2fa/status \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+==============================================================================
+ALTERNATIVE: QUICK DATABASE RESET
+==============================================================================
+
+If you want to start fresh with 2FA:
+
+```sql
+-- Clear all 2FA data for user 1
+UPDATE users SET 
+    two_factor_enabled = 0,
+    two_factor_secret = NULL,
+    two_factor_backup_codes = NULL,
+    two_factor_setup_at = NULL
+WHERE id = 1;
+```
+
+==============================================================================
+VERIFICATION CHECKLIST
+==============================================================================
+
+After deployment, verify these work:
+
+□ Login without 2FA: Should work normally
+□ 2FA Status API: Should return JSON without errors
+□ 2FA Setup API: Should generate QR code and backup codes
+□ 2FA Verification: Should accept 6-digit codes
+□ Frontend 2FA Flow: Should show 2FA input when required
+
+==============================================================================
+EXPECTED RESULTS
+==============================================================================
+
+BEFORE FIX:
+❌ SyntaxError: Unexpected token C in JSON at position 0
+❌ 2FA APIs returning 500 errors
+❌ Frontend hanging on 2FA login
+
+AFTER FIX:
+✅ Clean JSON parsing with fallback handling
+✅ All 2FA APIs working properly
+✅ Smooth 2FA login flow in frontend
+✅ QR code generation working
+✅ Backup codes properly formatted
+
+==============================================================================
+TROUBLESHOOTING
+==============================================================================
+
+IF STILL GETTING ERRORS:
+
+1. Check server logs:
+   ```bash
+   pm2 logs
+   # or
+   tail -f /path/to/your/app.log
+   ```
+
+2. Verify database fix:
+   ```sql
+   SELECT two_factor_backup_codes, JSON_VALID(two_factor_backup_codes) 
+   FROM users WHERE id = 1;
+   ```
+
+3. Test individual APIs:
+   ```bash
+   # Test each endpoint separately
+   curl -k https://52.221.231.85:8443/api/auth/login -X POST -d '...'
+   curl -k https://52.221.231.85:8443/api/2fa/status -H "Authorization: Bearer ..."
+   ```
+
+==============================================================================
+CONTACT FOR SUPPORT
+==============================================================================
+
+If you encounter any issues during deployment:
+- Check the server logs for specific error messages
+- Verify the database changes were applied correctly
+- Ensure the updated code files are on the server
+- Restart the Node.js application after code changes
+
+The fix is comprehensive and should resolve all 2FA-related issues.
+
+==============================================================================
+END OF DEPLOYMENT GUIDE
+==============================================================================

@@ -1,0 +1,19 @@
+========================================
+QUICK FIX - Copy and paste this on your server
+========================================
+
+cd ~/inventoryfullstack && git fetch origin stocksphere-phase-1-complete && git checkout stocksphere-phase-1-complete && git pull origin stocksphere-phase-1-complete && rm -rf node_modules package-lock.json .next && npm cache clean --force && npm install --legacy-peer-deps && npm run build && pm2 restart all && pm2 list
+
+========================================
+This will:
+1. Switch to correct branch
+2. Pull latest code
+3. Remove corrupted files
+4. Clean npm cache
+5. Reinstall dependencies
+6. Build application
+7. Restart PM2
+8. Show status
+========================================
+
+Note: This will take 5-10 minutes to complete

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Orders - Product Names Fixed</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+        .header h1 { color: #2c3e50; margin-bottom: 10px; }
+        .header p { color: #7f8c8d; }
+        
+        .controls { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .control-row { display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end; margin-bottom: 15px; }
+        .token-input { width: 100%; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px; font-size: 14px; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); }
+        
+        .result { background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .loading { text-align: center; padding: 40px; color: #7f8c8d; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; margin: 20px; border-radius: 8px; }
+        .success { background: #d4edda; color: #155724; padding: 15px; margin: 20px; border-radius: 8px; }
+        
+        .table { width: 100%; border-collapse: collapse; }
+        .table th { background: #f8f9fa; padding: 15px 12px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #e1e8ed; }
+        .table td { padding: 15px 12px; border-bottom: 1px solid #e1e8ed; vertical-align: top; }
+        .table tbody tr:hover { background: #f8f9fa; }
+        
+        .product-names { background: #e8f5e8; color: #27ae60; font-weight: 600; padding: 8px; border-radius: 6px; border-left: 4px solid #27ae60; }
+        .item-count { background: #fdf2f2; color: #e74c3c; font-style: italic; padding: 8px; border-radius: 6px; border-left: 4px solid #e74c3c; }
+        
+        .status { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .status.processing { background: #cce5ff; color: #0066cc; }
+        .status.completed { background: #d4edda; color: #155724; }
+        .status.cancelled { background: #f8d7da; color: #721c24; }
+        
+        .table-scroll { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+        
+        @media (max-width: 768px) {
+            .control-row { grid-template-columns: 1fr; }
+            .table th, .table td { padding: 8px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛍️ Website Orders - Product Names Fixed</h1>
+            <p>Direct API connection - bypasses all caching issues</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-row">
+                <div>
+                    <label for="token-input" style="display: block; margin-bottom: 5px; font-weight: 600; color: #34495e;">JWT Token:</label>
+                    <input type="text" id="token-input" class="token-input" placeholder="Paste your JWT token here (auto-filled from localStorage)">
+                    <small style="color: #7f8c8d; margin-top: 5px; display: block;">
+                        Get token: Open browser console (F12) → Type: <code>localStorage.getItem('token')</code>
+                    </small>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="loadOrders()">🚀 Load Orders</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://api.giftgala.in/api/website/orders';
+
+        // Auto-fill token on page load
+        window.addEventListener('load', () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    document.getElementById('token-input').value = token;
+                    console.log('✅ Auto-filled token from localStorage');
+                    // Auto-load orders if token exists
+                    loadOrders();
+                }
+            } catch (e) {
+                console.log('ℹ️ Could not access localStorage');
+            }
+        });
+
+        async function loadOrders() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading">🔄 Loading orders...</div>';
+
+            try {
+                const token = document.getElementById('token-input').value.trim();
+                
+                console.log('🌐 Loading orders from API...');
+                console.log('🔑 Using token:', token ? token.substring(0, 20) + '...' : 'No token');
+                
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                };
+
+                if (token) {
+                    headers['Authorization'] = 'Bearer ' + token.replace(/[^\x00-\x7F]/g, "");
+                }
+                
+                const response = await fetch(`${API_URL}?page=1&limit=50`, {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                const data = await response.json();
+                
+                console.log('📦 Full API Response:', data);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+
+                if (!data.success) {
+                    resultDiv.innerHTML = `<div class="error">❌ API Error: ${data.message || 'Unknown error'}</div>`;
+                    return;
+                }
+
+                const orders = data.data?.orders || data.orders || [];
+                console.log(`✅ Loaded ${orders.length} orders`);
+                
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">📭 No orders found</div>';
+                    return;
+                }
+
+                // Count orders with/without products
+                let ordersWithProducts = 0;
+                let ordersWithoutProducts = 0;
+                let totalProducts = 0;
+
+                orders.forEach(order => {
+                    console.log(`📋 Order: ${order.order_number}`);
+                    console.log(`   - Item count: ${order.item_count}`);
+                    console.log(`   - Products array exists: ${!!order.products}`);
+                    console.log(`   - Products length: ${order.products?.length || 0}`);
+                    
+                    if (order.products && order.products.length > 0) {
+                        ordersWithProducts++;
+                        totalProducts += order.products.length;
+                        order.products.forEach((product, index) => {
+                            console.log(`   - Product ${index + 1}: ${product.product_name}`);
+                        });
+                    } else {
+                        ordersWithoutProducts++;
+                        console.log(`   - NO PRODUCTS FOUND!`);
+                    }
+                });
+
+                let html = `
+                    <div class="success">
+                        ✅ Successfully loaded ${orders.length} orders<br>
+                        📊 ${ordersWithProducts} orders WITH products | ${ordersWithoutProducts} orders WITHOUT products<br>
+                        🛍️ Total products: ${totalProducts}
+                    </div>
+                    
+                    <div class="table-scroll">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Order Number</th>
+                                    <th>Customer</th>
+                                    <th>Products</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                orders.forEach(order => {
+                    const productDisplay = order.products && order.products.length > 0 
+                        ? order.products.map(p => p.product_name).join(', ')
+                        : `${order.item_count || 0} item(s)`;
+                    
+                    const productClass = order.products && order.products.length > 0 ? 'product-names' : 'item-count';
+                    const orderDate = order.order_date || order.created_at ? new Date(order.order_date || order.created_at).toLocaleDateString() : 'N/A';
+                    
+                    html += `
+                        <tr>
+                            <td><strong>${order.order_number}</strong></td>
+                            <td>${order.customer_name || 'N/A'}</td>
+                            <td><div class="${productClass}">${productDisplay}</div></td>
+                            <td><strong>${order.currency || '$'}${order.total_amount}</strong></td>
+                            <td><span class="status ${order.status}">${order.status}</span></td>
+                            <td>${orderDate}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('❌ Error loading orders:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error: ${error.message}
+                        <br><small>Check browser console for details</small>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+.tracking-layout {
+    display: flex;
+    min-height: 100vh;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+/* LEFT */
+.left-panel {
+    width: 320px;
+    padding: 24px;
+}
+
+.progress-card,
+.warehouse-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.progress-bar {
+    background: #f1f5f9;
+    height: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar span {
+    display: block;
+    height: 100%;
+    background: #3b82f6;
+}
+
+/* RIGHT */
+.right-panel {
+    flex: 1;
+    padding: 24px;
+}
+
+/* MAP */
+.map-wrapper {
+    position: relative;
+    height: 420px;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.leaflet-map {
+    height: 100%;
+    width: 100%;
+}
+
+/* SEARCH BAR */
+.map-search {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+}
+
+.map-search input {
+    width: 280px;
+    padding: 12px 18px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    outline: none;
+    background: rgba(255, 255, 255, 0.95);
+    color: #0f172a;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+}
+
+/* ORDERS */
+.orders-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.orders-table th,
+.orders-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.status.in-transit {
+    color: #60a5fa;
+}
+
+.status.picked {
+    color: #22c55e;
+}

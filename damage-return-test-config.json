@@ -1,0 +1,107 @@
+{
+  "api": {
+    "baseUrl": "https://54.169.31.95:8443",
+    "timeout": 15000,
+    "rejectUnauthorized": false
+  },
+  "auth": {
+    "email": "admin@company.com",
+    "password": "Admin@123"
+  },
+  "testData": {
+    "damage": {
+      "valid": {
+        "product_type": "Test Product for Damage",
+        "barcode": "DAMAGE_TEST_001",
+        "warehouse": "GGM_WH",
+        "quantity": 2,
+        "inventory_location": "A1-B2-C3",
+        "damage_reason": "Product damaged during handling",
+        "notes": "Visible scratches on surface"
+      },
+      "invalid": {
+        "product_type": "Test Product"
+      }
+    },
+    "recovery": {
+      "valid": {
+        "product_type": "Test Product for Recovery",
+        "barcode": "RECOVERY_TEST_001",
+        "warehouse": "GGM_WH",
+        "quantity": 1,
+        "inventory_location": "A1-B2-C4",
+        "recovery_notes": "Stock recovered after inspection"
+      },
+      "invalid": {
+        "product_type": "Test Product"
+      }
+    },
+    "return": {
+      "valid": {
+        "order_ref": "TEST_ORDER_001",
+        "awb": "AWB123456789",
+        "product_type": "Test Product Return",
+        "warehouse": "GGM_WH",
+        "quantity": 1,
+        "barcode": "RETURN_TEST_001",
+        "has_parts": false,
+        "return_reason": "Customer return - defective",
+        "condition": "good",
+        "processed_by": "Test User"
+      },
+      "damaged": {
+        "order_ref": "TEST_ORDER_002",
+        "awb": "AWB987654321",
+        "product_type": "Test Product Return Damaged",
+        "warehouse": "GGM_WH",
+        "quantity": 1,
+        "barcode": "RETURN_TEST_002",
+        "has_parts": false,
+        "return_reason": "Product arrived damaged",
+        "condition": "damaged",
+        "processed_by": "Test User"
+      },
+      "invalid": {
+        "order_ref": "TEST_ORDER_INVALID"
+      }
+    }
+  },
+  "endpoints": {
+    "auth": {
+      "login": "/api/auth/login"
+    },
+    "damage": {
+      "report": "/api/damage-recovery/damage",
+      "recover": "/api/damage-recovery/recover",
+      "log": "/api/damage-recovery/log",
+      "warehouses": "/api/damage-recovery/warehouses",
+      "searchProducts": "/api/damage-recovery/search-products",
+      "summary": "/api/damage-recovery/summary"
+    },
+    "returns": {
+      "create": "/api/returns",
+      "list": "/api/returns",
+      "getById": "/api/returns/:id",
+      "bulk": "/api/returns/bulk",
+      "warehouses": "/api/returns/warehouses",
+      "searchProducts": "/api/returns/search-products",
+      "productSuggestions": "/api/returns/suggestions/products",
+      "warehouseSuggestions": "/api/returns/suggestions/warehouses"
+    }
+  },
+  "filters": {
+    "warehouse": "GGM_WH",
+    "searchTerm": "test",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-12-31"
+  },
+  "options": {
+    "generateDetailedReport": true,
+    "saveResponseData": false,
+    "stopOnFirstFailure": false,
+    "verboseLogging": true,
+    "testAuthentication": true,
+    "testValidation": true,
+    "testFilters": true
+  }
+}

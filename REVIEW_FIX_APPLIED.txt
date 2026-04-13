@@ -1,0 +1,11 @@
+Review Controller Fix Applied
+=============================
+
+Fixed the reviewController.js to use util.promisify() instead of async/await with callback-based mysql2.
+
+Changes:
+- Added: const util = require('util');
+- Added: const query = util.promisify(db.query).bind(db);
+- Changed all db.query() calls to use the promisified query() function
+
+This allows async/await to work with the callback-based mysql2 connection without modifying db/connection.js

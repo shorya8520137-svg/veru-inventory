@@ -1,0 +1,53 @@
+🚨 URGENT 2FA DEBUG COMMANDS
+============================
+
+The token "271743" is failing verification. Here are the commands to debug and fix:
+
+1. PULL LATEST CODE:
+   cd ~/inventoryfullstack
+   git pull origin main
+
+2. RUN DEBUG SCRIPT:
+   node debug-2fa-issue.js
+
+3. RUN FIX SCRIPT:
+   node fix-2fa-token-issue.js
+
+4. RESTART SERVER:
+   pm2 restart all
+
+5. CHECK SERVER LOGS:
+   pm2 logs
+
+POSSIBLE CAUSES:
+- Time synchronization issue between server and Google Authenticator
+- Invalid secret format in database
+- Secret not properly generated/stored
+- Time window too narrow
+
+IMMEDIATE FIX OPTIONS:
+
+Option A - Reset 2FA for user:
+sudo mysql -u inventory_user -p inventory_db
+UPDATE users SET two_factor_enabled = FALSE, two_factor_secret = NULL WHERE id = 1;
+exit
+
+Option B - Manual secret verification:
+node -e "
+const speakeasy = require('speakeasy');
+const token = '271743';
+// Get secret from database first
+console.log('Testing token:', token);
+"
+
+Option C - Generate new secret:
+The fix script will automatically generate a new secret if the current one is invalid.
+
+TESTING:
+After running the fix, try the 2FA setup again with a fresh token from Google Authenticator.
+
+The improved verification now includes:
+- 6-minute time window (was 2 minutes)
+- Time offset testing
+- Better secret validation
+- Detailed logging

@@ -1,0 +1,52 @@
+========================================
+DEPLOY TO NEW SERVER (13.212.52.15)
+========================================
+
+SSH into your server:
+ssh -i "C:\Users\Public\e2c.pem.pem" ubuntu@13.212.52.15
+
+Then run this ONE-LINE COMMAND:
+========================================
+
+cd ~/inventoryfullstack && git checkout stocksphere-phase-1-complete && git pull origin stocksphere-phase-1-complete && rm -rf node_modules package-lock.json .next && npm cache clean --force && npm install --legacy-peer-deps && npm run build && pm2 restart all && pm2 list
+
+========================================
+
+OR Step-by-Step:
+========================================
+
+cd ~/inventoryfullstack
+git checkout stocksphere-phase-1-complete
+git pull origin stocksphere-phase-1-complete
+rm -rf node_modules package-lock.json .next
+npm cache clean --force
+npm install --legacy-peer-deps
+npm run build
+pm2 restart all
+pm2 list
+
+========================================
+
+What This Does:
+========================================
+✅ Pulls latest code with Firebase removed
+✅ Updates API URL to 13.212.52.15
+✅ Fixes all syntax errors
+✅ Installs dependencies properly
+✅ Builds the application
+✅ Restarts the server
+
+========================================
+
+After Deployment:
+========================================
+Your server will be running at:
+https://13.212.52.15:8443
+
+Test it:
+curl -k https://13.212.52.15:8443/
+
+Check logs:
+pm2 logs --lines 50
+
+========================================

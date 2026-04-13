@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Product Images Parsing</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Product Images Parsing Test</h1>
+    
+    <div class="test">
+        <h3>Test 1: JSON Array String</h3>
+        <pre id="test1"></pre>
+    </div>
+
+    <div class="test">
+        <h3>Test 2: Single String</h3>
+        <pre id="test2"></pre>
+    </div>
+
+    <div class="test">
+        <h3>Test 3: Array</h3>
+        <pre id="test3"></pre>
+    </div>
+
+    <script>
+        function parseImages(additionalImages) {
+            let result = [];
+            if (additionalImages) {
+                try {
+                    if (typeof additionalImages === 'string') {
+                        const parsed = JSON.parse(additionalImages);
+                        result = Array.isArray(parsed) ? parsed : [parsed];
+                    } else if (Array.isArray(additionalImages)) {
+                        result = additionalImages;
+                    }
+                } catch (e) {
+                    if (typeof additionalImages === 'string' && additionalImages.trim()) {
+                        result = [additionalImages];
+                    }
+                }
+            }
+            return result;
+        }
+
+        // Test 1: JSON Array
+        const test1Input = '["https://example.com/img1.jpg", "https://example.com/img2.jpg"]';
+        const test1Result = parseImages(test1Input);
+        document.getElementById('test1').textContent = 
+            `Input: ${test1Input}\n\nOutput: ${JSON.stringify(test1Result, null, 2)}\n\nImages found: ${test1Result.length}`;
+
+        // Test 2: Single String
+        const test2Input = 'https://example.com/img1.jpg';
+        const test2Result = parseImages(test2Input);
+        document.getElementById('test2').textContent = 
+            `Input: ${test2Input}\n\nOutput: ${JSON.stringify(test2Result, null, 2)}\n\nImages found: ${test2Result.length}`;
+
+        // Test 3: Array
+        const test3Input = ['https://example.com/img1.jpg', 'https://example.com/img2.jpg'];
+        const test3Result = parseImages(test3Input);
+        document.getElementById('test3').textContent = 
+            `Input: ${JSON.stringify(test3Input)}\n\nOutput: ${JSON.stringify(test3Result, null, 2)}\n\nImages found: ${test3Result.length}`;
+    </script>
+</body>
+</html>

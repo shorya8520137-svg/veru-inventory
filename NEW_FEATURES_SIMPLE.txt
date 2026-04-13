@@ -1,0 +1,135 @@
+================================================================================
+NEW FEATURES IMPLEMENTATION - SIMPLE GUIDE
+================================================================================
+
+THREE NEW FEATURES ADDED:
+1. Activity Button in OrderSheet
+2. Warehouse Order Activity Tab
+3. Movement Records Tab
+
+================================================================================
+FEATURE 1: ACTIVITY BUTTON IN ORDERSHEET
+================================================================================
+
+LOCATION: Order page → OrderSheet component → Activity button
+
+WHAT IT DOES:
+- Opens a modal to log warehouse activities for specific orders
+- Records who did what, when, and for which order
+
+FILES CHANGED:
+- Frontend: src/app/order/OrderSheet.jsx
+- Component: src/components/OrderActivityForm.jsx
+- Styles: src/components/OrderActivityForm.module.css
+
+API ENDPOINT:
+POST /api/warehouse-order-activity
+Body: {
+  order_id: "ORD123",
+  activity_type: "picked",
+  staff_name: "John",
+  notes: "Order ready"
+}
+
+DATABASE TABLE: warehouse_order_activity
+Columns: id, order_id, activity_type, staff_name, notes, created_at
+
+================================================================================
+FEATURE 2: WAREHOUSE ORDER ACTIVITY TAB
+================================================================================
+
+LOCATION: Main navigation → Warehouse Order Activity (new tab)
+
+WHAT IT DOES:
+- Shows all warehouse activities across all orders
+- Filter by date, order, staff, activity type
+- View complete activity history
+
+FILES:
+- Frontend: src/app/warehouse-order-activity/page.jsx
+- Backend: controllers/warehouseOrderActivityController.js
+- Routes: routes/warehouseOrderActivityRoutes.js
+
+API ENDPOINTS:
+GET /api/warehouse-order-activity
+  - Returns all activities with filters
+  - Query params: startDate, endDate, orderId, staffName
+
+GET /api/warehouse-order-activity/staff
+  - Returns list of all staff names
+
+DATABASE TABLE: warehouse_order_activity (same as above)
+
+SQL SCHEMA FILE: warehouse-order-activity-schema.sql
+
+================================================================================
+FEATURE 3: MOVEMENT RECORDS TAB
+================================================================================
+
+LOCATION: Inventory page → Movement Records tab
+
+WHAT IT DOES:
+- Shows all inventory movements (IN/OUT)
+- Track stock changes with reasons
+- Filter by date, product, warehouse, movement type
+
+FILES:
+- Frontend: src/app/inventory/movement-records/InventoryMovementRecords.jsx
+- Styles: src/app/inventory/movement-records/movementRecords.module.css
+- Backend: controllers/movementRecordsController.js
+- Routes: routes/inventoryRoutes.js (added movement records endpoints)
+
+API ENDPOINTS:
+GET /api/inventory/movement-records
+  - Returns all movement records
+  - Query params: startDate, endDate, barcode, warehouse, movementType
+
+DATABASE TABLE: inventory_ledger_base (existing table, no changes needed)
+Columns used: event_time, movement_type, barcode, product_name, location_code, 
+              qty, direction, reference
+
+================================================================================
+DEPLOYMENT STEPS
+================================================================================
+
+1. Pull latest code from GitHub:
+   git checkout stocksphere-phase-1-complete
+   git pull origin stocksphere-phase-1-complete
+
+2. Run SQL schema (only for warehouse activity):
+   sudo mysql -u root inventory_db < warehouse-order-activity-schema.sql
+
+3. Restart server:
+   pm2 restart all
+
+4. Test:
+   - Go to Order page → Click Activity button on any order
+   - Go to Warehouse Order Activity tab → View all activities
+   - Go to Inventory → Movement Records tab → View movements
+
+================================================================================
+API SUMMARY
+================================================================================
+
+Warehouse Order Activity:
+- POST   /api/warehouse-order-activity          (Create activity)
+- GET    /api/warehouse-order-activity          (Get all activities)
+- GET    /api/warehouse-order-activity/staff    (Get staff list)
+
+Movement Records:
+- GET    /api/inventory/movement-records        (Get all movements)
+
+================================================================================
+DATABASE SUMMARY
+================================================================================
+
+New Table Created:
+- warehouse_order_activity (for activity tracking)
+
+Existing Table Used:
+- inventory_ledger_base (for movement records, no changes)
+
+SQL File to Run:
+- warehouse-order-activity-schema.sql
+
+================================================================================

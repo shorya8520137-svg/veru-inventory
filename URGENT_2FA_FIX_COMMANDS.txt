@@ -1,0 +1,106 @@
+🚨 URGENT 2FA FIX - RUN THESE COMMANDS ON SERVER
+==============================================================================
+
+The error is still happening because the server needs the updated code.
+Run these commands on your server (52.221.231.85):
+
+==============================================================================
+STEP 1: UPDATE THE CODE ON SERVER
+==============================================================================
+
+# Navigate to your project directory
+cd ~/inventoryfullstack
+
+# Backup the current file
+cp services/TwoFactorAuthService.js services/TwoFactorAuthService.js.backup
+
+# Update the TwoFactorAuthService.js file with the fix
+# Replace the getUser2FAStatus function around line 160-170
+
+# You can either:
+# Option A: Upload the fixed file from your local machine
+# Option B: Edit directly on server using nano/vim
+# Option C: Use the sed command below to fix it
+
+==============================================================================
+STEP 2: QUICK FIX USING SED COMMAND
+==============================================================================
+
+# This command will fix the JSON parsing issue directly on server
+sed -i '166s/.*/                            backupCodes = user.two_factor_backup_codes ? (function() { try { return JSON.parse(user.two_factor_backup_codes); } catch(e) { return user.two_factor_backup_codes.split(",").map(c => c.trim()); } })() : null,/' ~/inventoryfullstack/services/TwoFactorAuthService.js
+
+==============================================================================
+STEP 3: FIX THE DATABASE
+==============================================================================
+
+# Fix the backup codes in database
+sudo mysql -e "
+USE inventory_db;
+UPDATE users 
+SET two_factor_backup_codes = '[\"CA1EAEE4\",\"F1228D17\",\"D619399F\",\"2FC39886\",\"D37E6C7A\",\"A9B78C38\",\"3D2575E6\",\"B8862F4D\",\"8D9C2BFD\",\"6E383380\"]'
+WHERE id = 1 
+AND two_factor_backup_codes = 'CA1EAEE4,F1228D17,D619399F,2FC39886,D37E6C7A,A9B78C38,3D2575E6,B8862F4D,8D9C2BFD,6E383380';
+"
+
+==============================================================================
+STEP 4: RESTART THE SERVER
+==============================================================================
+
+# Restart the Node.js application
+pm2 restart all
+
+# Or if not using PM2:
+pkill node
+nohup node server.js > app.log 2>&1 &
+
+==============================================================================
+STEP 5: TEST THE FIX
+==============================================================================
+
+# Test the 2FA API
+curl -k -X POST https://52.221.231.85:8443/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@company.com","password":"admin@123"}' | jq
+
+==============================================================================
+ALTERNATIVE: MANUAL FILE EDIT
+==============================================================================
+
+If the sed command doesn't work, manually edit the file:
+
+nano ~/inventoryfullstack/services/TwoFactorAuthService.js
+
+Find line 166 (around the JSON.parse error) and replace:
+backupCodes: user.two_factor_backup_codes ? JSON.parse(user.two_factor_backup_codes) : null,
+
+With:
+backupCodes: user.two_factor_backup_codes ? (function() {
+    try {
+        return JSON.parse(user.two_factor_backup_codes);
+    } catch(e) {
+        return user.two_factor_backup_codes.split(',').map(code => code.trim());
+    }
+})() : null,
+
+==============================================================================
+VERIFICATION
+==============================================================================
+
+After running these commands, you should see:
+✅ No more JSON parsing errors in server logs
+✅ 2FA APIs returning proper responses
+✅ Login working without crashes
+
+==============================================================================
+QUICK TEST COMMAND
+==============================================================================
+
+# Run this to test if the fix worked:
+curl -k -s -X POST https://52.221.231.85:8443/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@company.com","password":"admin@123"}' \
+  | jq '.success'
+
+# Should return: true (without any JSON parsing errors in server logs)
+
+==============================================================================

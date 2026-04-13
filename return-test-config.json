@@ -1,0 +1,66 @@
+{
+  "api": {
+    "baseUrl": "http://localhost:3001",
+    "timeout": 10000
+  },
+  "auth": {
+    "email": "admin@company.com",
+    "password": "Admin@123"
+  },
+  "testData": {
+    "validReturn": {
+      "order_ref": "TEST_ORDER_001",
+      "awb": "AWB123456789",
+      "product_type": "Test Product",
+      "warehouse": "WH001",
+      "quantity": 2,
+      "barcode": "TEST_BARCODE_001",
+      "has_parts": false,
+      "return_reason": "Customer return - defective",
+      "condition": "good",
+      "processed_by": "Test User"
+    },
+    "damagedReturn": {
+      "order_ref": "TEST_ORDER_DAMAGED",
+      "awb": "AWB_DAMAGED_001",
+      "product_type": "Damaged Test Product",
+      "warehouse": "WH001",
+      "quantity": 1,
+      "barcode": "DAMAGED_BARCODE_001",
+      "condition": "damaged",
+      "return_reason": "Product arrived damaged"
+    },
+    "bulkReturns": [
+      {
+        "order_ref": "BULK_001",
+        "awb": "BULK_AWB_001",
+        "product_type": "Bulk Product 1",
+        "warehouse": "WH001",
+        "quantity": 1,
+        "barcode": "BULK_BARCODE_001",
+        "condition": "good"
+      },
+      {
+        "order_ref": "BULK_002",
+        "awb": "BULK_AWB_002",
+        "product_type": "Bulk Product 2",
+        "warehouse": "WH001",
+        "quantity": 2,
+        "barcode": "BULK_BARCODE_002",
+        "condition": "damaged"
+      }
+    ]
+  },
+  "filters": {
+    "warehouse": "WH001",
+    "searchTerm": "TEST_ORDER",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-12-31"
+  },
+  "options": {
+    "generateDetailedReport": true,
+    "saveResponseData": false,
+    "stopOnFirstFailure": false,
+    "verboseLogging": true
+  }
+}

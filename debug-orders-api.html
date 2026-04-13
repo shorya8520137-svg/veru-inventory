@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Website Orders API</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .order-card {
+            border: 2px solid #e1e8ed;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .order-card:hover {
+            border-color: #3498db;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.1);
+        }
+        .order-header {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .order-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        .products-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e8f4fd;
+        }
+        .products-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .products-title::before {
+            content: "🛍️";
+            margin-right: 8px;
+        }
+        .product-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .product-name {
+            font-weight: 600;
+            color: #27ae60;
+            font-size: 15px;
+        }
+        .product-details {
+            color: #7f8c8d;
+            font-size: 13px;
+        }
+        .no-products {
+            color: #e74c3c;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            background: #fdf2f2;
+            border-radius: 8px;
+        }
+        .json-viewer {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .summary h2 {
+            margin: 0 0 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Website Orders API</h1>
+        
+        <div class="input-group">
+            <label for="token-input">JWT Token (from browser localStorage):</label>
+            <input type="text" id="token-input" placeholder="Paste your JWT token here">
+            <small style="color: #7f8c8d; margin-top: 5px; display: block;">
+                Get token from browser console: <code>localStorage.getItem('token')</code>
+            </small>
+        </div>
+        
+        <button onclick="fetchAndDisplayOrders()" id="fetch-btn">🚀 Fetch Orders</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://api.giftgala.in/api/website/orders?page=1&limit=10';
+
+        async function fetchAndDisplayOrders() {
+            const token = document.getElementById('token-input').value.trim();
+            const resultDiv = document.getElementById('result');
+            const fetchBtn = document.getElementById('fetch-btn');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="status error">❌ Please enter a JWT token</div>';
+                return;
+            }
+
+            fetchBtn.disabled = true;
+            fetchBtn.textContent = '⏳ Loading...';
+            resultDiv.innerHTML = '<div class="status loading">🔄 Fetching orders from API...</div>';
+
+            try {
+                console.log('🌐 Making API request to:', API_URL);
+                
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response headers:', response.headers);
+
+                const data = await response.json();
+                
+                console.log('📦 Full API Response:', data);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+
+                if (!data.success) {
+                    resultDiv.innerHTML = `<div class="status error">❌ API Error: ${data.message || 'Unknown error'}</div>`;
+                    return;
+                }
+
+                const orders = data.data?.orders || data.orders || [];
+                
+                console.log('📋 Orders array:', orders);
+                console.log('📊 Number of orders:', orders.length);
+
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="status error">📭 No orders found</div>';
+                    return;
+                }
+
+                // Generate summary
+                let totalProducts = 0;
+                let ordersWithProducts = 0;
+                let ordersWithoutProducts = 0;
+
+                orders.forEach(order => {
+                    if (order.products && order.products.length > 0) {
+                        ordersWithProducts++;
+                        totalProducts += order.products.length;
+                    } else {
+                        ordersWithoutProducts++;
+                    }
+                });
+
+                let html = `
+                    <div class="summary">
+                        <h2>📊 API Response Summary</h2>
+                        <p><strong>${orders.length}</strong> orders found</p>
+                        <p><strong>${ordersWithProducts}</strong> orders with products | <strong>${ordersWithoutProducts}</strong> orders without products</p>
+                        <p><strong>${totalProducts}</strong> total products</p>
+                    </div>
+                `;
+                
+                // Display each order
+                orders.forEach((order, index) => {
+                    console.log(`🏷️ Order ${index + 1}:`, order);
+                    console.log(`🛍️ Products for order ${order.order_number}:`, order.products);
+                    
+                    html += `
+                        <div class="order-card">
+                            <div class="order-header">
+                                📦 ${order.order_number || order.id} - ${order.customer_name || 'Unknown Customer'}
+                            </div>
+                            
+                            <div class="order-info">
+                                <div class="info-item">
+                                    <div class="info-label">Customer Email</div>
+                                    <div class="info-value">${order.customer_email || 'N/A'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Phone</div>
+                                    <div class="info-value">${order.customer_phone || 'N/A'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Total Amount</div>
+                                    <div class="info-value">${order.currency || '$'}${order.total_amount || '0'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Status</div>
+                                    <div class="info-value">${order.status || 'Unknown'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Item Count</div>
+                                    <div class="info-value">${order.item_count || 0}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="products-section">
+                                <div class="products-title">Products Array</div>
+                    `;
+                    
+                    if (order.products && Array.isArray(order.products) && order.products.length > 0) {
+                        order.products.forEach((product, pIndex) => {
+                            html += `
+                                <div class="product-item">
+                                    <div>
+                                        <div class="product-name">${product.product_name || 'Unnamed Product'}</div>
+                                        <div class="product-details">ID: ${product.product_id} | Qty: ${product.quantity} | Price: $${product.unit_price}</div>
+                                    </div>
+                                    <div style="font-weight: bold; color: #27ae60;">$${product.total_price}</div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += `
+                            <div class="no-products">
+                                ❌ NO PRODUCTS ARRAY FOUND!<br>
+                                <small>Products value: ${JSON.stringify(order.products)}</small><br>
+                                <small>Products type: ${typeof order.products}</small>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                            </div>
+                            
+                            <div class="json-viewer">
+                                <strong>Raw Order JSON:</strong><br>
+                                ${JSON.stringify(order, null, 2)}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ Error: ${error.message}
+                        <br><small>Check browser console for details</small>
+                    </div>
+                `;
+            } finally {
+                fetchBtn.disabled = false;
+                fetchBtn.textContent = '🚀 Fetch Orders';
+            }
+        }
+
+        // Auto-fill token from localStorage if available
+        window.addEventListener('load', () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    document.getElementById('token-input').value = token;
+                    console.log('✅ Auto-filled token from localStorage');
+                }
+            } catch (e) {
+                console.log('ℹ️ Could not access localStorage');
+            }
+        });
+    </script>
+</body>
+</html>

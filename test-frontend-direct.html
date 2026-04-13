@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Website Orders API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .order {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .order-header {
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .product {
+            padding: 5px 0;
+            padding-left: 20px;
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 4px;
+        }
+        .success {
+            color: #155724;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 4px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #token-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Website Orders API - Product Names</h1>
+        
+        <div>
+            <label for="token-input">JWT Token (from localStorage):</label>
+            <input type="text" id="token-input" placeholder="Paste your token here">
+            <button onclick="fetchOrders()">Fetch Orders</button>
+        </div>
+        
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://api.giftgala.in/api/website/orders?page=1&limit=10';
+
+        async function fetchOrders() {
+            const token = document.getElementById('token-input').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error">Please enter a token</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div>Loading...</div>';
+
+            try {
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                console.log('Full API Response:', data);
+
+                if (!data.success) {
+                    resultDiv.innerHTML = `<div class="error">API Error: ${data.message || 'Unknown error'}</div>`;
+                    return;
+                }
+
+                const orders = data.data?.orders || [];
+                
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">No orders found</div>';
+                    return;
+                }
+
+                let html = `<div class="success">✓ Found ${orders.length} orders with product names!</div>`;
+                
+                orders.forEach(order => {
+                    html += `
+                        <div class="order">
+                            <div class="order-header">
+                                ${order.order_number} - ${order.customer_name} - $${order.total_amount}
+                            </div>
+                            <div>
+                                <strong>Products:</strong>
+                    `;
+                    
+                    if (order.products && order.products.length > 0) {
+                        order.products.forEach(product => {
+                            html += `
+                                <div class="product">
+                                    ✓ ${product.product_name} (Qty: ${product.quantity}, Price: $${product.unit_price})
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<div class="error">NO PRODUCTS ARRAY!</div>';
+                    }
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-fill token from localStorage if available
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('token-input').value = token;
+            }
+        });
+    </script>
+</body>
+</html>

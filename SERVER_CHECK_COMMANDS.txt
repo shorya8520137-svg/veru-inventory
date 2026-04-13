@@ -1,0 +1,63 @@
+SSH to your server and run these commands:
+=============================================
+
+1. Check if backend is running:
+   pm2 status
+   pm2 logs --lines 50
+
+2. If backend is not running, start it:
+   cd /path/to/your/backend
+   pm2 start server.js --name backend
+   pm2 save
+
+3. Check Nginx status:
+   sudo systemctl status nginx
+
+4. If Nginx is not running:
+   sudo systemctl start nginx
+
+5. Check if port 8443 is listening:
+   sudo netstat -tlnp | grep 8443
+
+6. Check Nginx configuration:
+   sudo nano /etc/nginx/sites-available/default
+   
+   Make sure it has:
+   server {
+       listen 8443 ssl;
+       server_name api.giftgala.in 54.251.22.246;
+       
+       ssl_certificate /path/to/cert.pem;
+       ssl_certificate_key /path/to/key.pem;
+       
+       location / {
+           proxy_pass http://localhost:5000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+
+7. Test Nginx config:
+   sudo nginx -t
+
+8. Reload Nginx:
+   sudo systemctl reload nginx
+
+9. Check firewall (if using UFW):
+   sudo ufw status
+   sudo ufw allow 8443/tcp
+   sudo ufw allow 443/tcp
+
+10. Test locally on server:
+    curl http://localhost:5000/api/website/orders
+    curl -k https://localhost:8443/api/website/orders
+
+=============================================
+After fixing, update DNS:
+- Go to your domain registrar (GoDaddy, Namecheap, etc.)
+- Update A record for api.giftgala.in
+- Point it to: 54.251.22.246
+- Wait 5-10 minutes for DNS to propagate

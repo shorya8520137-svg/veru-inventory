@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Orders API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result { margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 5px; }
+        .order { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .products { background: #e8f5e8; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; }
+        pre { background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Orders API</h1>
+        
+        <div>
+            <label>JWT Token:</label><br>
+            <input type="text" id="token" style="width: 500px; padding: 8px;" placeholder="Paste JWT token here">
+            <button onclick="testAPI()">🚀 Test API</button>
+            <button onclick="clearResults()">🗑️ Clear</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://api.giftgala.in/api/website/orders?page=1&limit=5';
+
+        // Auto-fill token from localStorage
+        window.addEventListener('load', () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    document.getElementById('token').value = token;
+                    console.log('✅ Auto-filled token from localStorage');
+                }
+            } catch (e) {
+                console.log('ℹ️ Could not access localStorage');
+            }
+        });
+
+        async function testAPI() {
+            const token = document.getElementById('token').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="result">🔄 Testing API...</div>';
+
+            try {
+                console.log('🌐 Making API request to:', API_URL);
+                
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                };
+
+                if (token) {
+                    headers['Authorization'] = 'Bearer ' + token.replace(/[^\x00-\x7F]/g, "");
+                    console.log('🔑 Using token:', token.substring(0, 20) + '...');
+                } else {
+                    console.log('⚠️ No token provided');
+                }
+                
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                const data = await response.json();
+                
+                console.log('📦 Full API Response:', data);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+
+                if (!data.success) {
+                    resultDiv.innerHTML = `<div class="error">❌ API Error: ${data.message || 'Unknown error'}</div>`;
+                    return;
+                }
+
+                const orders = data.data?.orders || data.orders || [];
+                
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">📭 No orders found</div>';
+                    return;
+                }
+
+                let html = `<div class="result">✅ Found ${orders.length} orders</div>`;
+                
+                orders.forEach((order, index) => {
+                    html += `
+                        <div class="order">
+                            <h3>Order ${index + 1}: ${order.order_number}</h3>
+                            <p><strong>Customer:</strong> ${order.customer_name || 'N/A'}</p>
+                            <p><strong>Amount:</strong> ${order.currency || '$'}${order.total_amount}</p>
+                            <p><strong>Item Count:</strong> ${order.item_count}</p>
+                            <p><strong>Status:</strong> ${order.status}</p>
+                            
+                            <div class="products">
+                                <strong>Products Analysis:</strong><br>
+                                • Products exists: ${order.products ? 'YES' : 'NO'}<br>
+                                • Products is array: ${Array.isArray(order.products) ? 'YES' : 'NO'}<br>
+                                • Products length: ${order.products?.length || 0}<br>
+                                <br>
+                                <strong>Product Names:</strong><br>
+                    `;
+                    
+                    if (order.products && order.products.length > 0) {
+                        order.products.forEach(product => {
+                            html += `• ✅ ${product.product_name} (Qty: ${product.quantity})<br>`;
+                        });
+                    } else {
+                        html += `• ❌ NO PRODUCTS FOUND - Showing: ${order.item_count} item(s)<br>`;
+                    }
+                    
+                    html += `
+                            </div>
+                            
+                            <details>
+                                <summary><strong>Raw JSON</strong></summary>
+                                <pre>${JSON.stringify(order, null, 2)}</pre>
+                            </details>
+                        </div>
+                    `;
+                });
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error: ${error.message}
+                        <br><small>Check browser console for details</small>
+                    </div>
+                `;
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('result').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

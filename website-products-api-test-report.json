@@ -1,0 +1,142 @@
+{
+  "summary": {
+    "totalTests": 13,
+    "passedTests": 3,
+    "failedTests": 10,
+    "successRate": 23.1,
+    "timestamp": "2026-02-01T11:44:46.035Z"
+  },
+  "tests": [
+    {
+      "test": "Authentication",
+      "success": true,
+      "message": "Successfully authenticated",
+      "details": null,
+      "timestamp": "2026-02-01T11:44:44.801Z"
+    },
+    {
+      "test": "Get Categories (Public)",
+      "success": false,
+      "message": "Failed to get categories",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:44.887Z"
+    },
+    {
+      "test": "Create Category",
+      "success": false,
+      "message": "Failed to create category",
+      "details": {
+        "success": false,
+        "message": "Failed to create category",
+        "error": "(intermediate value) is not iterable"
+      },
+      "timestamp": "2026-02-01T11:44:44.977Z"
+    },
+    {
+      "test": "Get Products (Public)",
+      "success": false,
+      "message": "Failed to get products",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:45.156Z"
+    },
+    {
+      "test": "Get Featured Products",
+      "success": false,
+      "message": "Failed to get featured products",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:45.256Z"
+    },
+    {
+      "test": "Create Product",
+      "success": false,
+      "message": "Failed to create product",
+      "details": {
+        "success": false,
+        "message": "Failed to create product",
+        "error": "(intermediate value) is not iterable"
+      },
+      "timestamp": "2026-02-01T11:44:45.341Z"
+    },
+    {
+      "test": "Search Products",
+      "success": false,
+      "message": "Failed to search products",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:45.427Z"
+    },
+    {
+      "test": "Filter by Category",
+      "success": false,
+      "message": "Failed to filter by category",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:45.522Z"
+    },
+    {
+      "test": "Price Range Filter",
+      "success": false,
+      "message": "Failed to filter by price range",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:45.617Z"
+    },
+    {
+      "test": "Bulk Upload Status (Not Found)",
+      "success": false,
+      "message": "Unexpected response for non-existent upload",
+      "details": {
+        "success": false,
+        "message": "Failed to fetch upload status",
+        "error": "(intermediate value) is not iterable"
+      },
+      "timestamp": "2026-02-01T11:44:45.735Z"
+    },
+    {
+      "test": "Unauthorized Access",
+      "success": true,
+      "message": "Correctly returned 401 for unauthorized request",
+      "details": null,
+      "timestamp": "2026-02-01T11:44:45.835Z"
+    },
+    {
+      "test": "Invalid Product Creation",
+      "success": true,
+      "message": "Correctly returned 400 for invalid data",
+      "details": null,
+      "timestamp": "2026-02-01T11:44:45.918Z"
+    },
+    {
+      "test": "Non-existent Product",
+      "success": false,
+      "message": "Did not properly handle non-existent product",
+      "details": {
+        "success": false,
+        "message": "Access token required",
+        "error": "NO_TOKEN"
+      },
+      "timestamp": "2026-02-01T11:44:45.998Z"
+    }
+  ]
+}

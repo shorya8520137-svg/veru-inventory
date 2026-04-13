@@ -1,0 +1,66 @@
+🔧 SERVER 2FA TESTING COMMANDS
+==============================
+
+Use this SSH command to connect to your server:
+ssh -i "C:\Users\Admin\e2c.pem" ubuntu@52.221.231.85
+
+Once connected, run these commands:
+
+1. NAVIGATE TO PROJECT:
+   cd ~/inventoryfullstack
+
+2. PULL LATEST CODE:
+   git pull origin main
+
+3. INSTALL DEPENDENCIES (if needed):
+   npm install
+
+4. RUN COMPREHENSIVE 2FA TEST:
+   node server-2fa-complete-test.js
+
+5. IF ISSUES FOUND, RUN THE FIX:
+   node fix-2fa-token-issue.js
+
+6. RESTART SERVER:
+   pm2 restart all
+
+7. CHECK SERVER LOGS:
+   pm2 logs
+
+WHAT THE TEST WILL DO:
+======================
+✅ Check database connection
+✅ Verify user data and current 2FA status
+✅ Generate fresh 2FA secret and QR code
+✅ Test token generation and validation
+✅ Test your problematic tokens (271743, 855162)
+✅ Save new setup to database
+✅ Provide QR code data URL for manual testing
+
+EXPECTED OUTPUT:
+================
+- Database connection status
+- Current user 2FA data
+- New secret generation
+- QR code data URL (copy to browser to see QR code)
+- Manual entry key for Google Authenticator
+- Current expected tokens
+- Test results for your tokens
+
+FRONTEND FIXES DEPLOYED:
+========================
+✅ Fixed QR code display (was looking for wrong property)
+✅ Added better error handling and debugging
+✅ Added fallback for missing QR codes
+✅ Improved token verification with 6-minute window
+✅ Added time offset testing for sync issues
+
+AFTER RUNNING THE TEST:
+=======================
+1. Copy the QR code data URL from terminal
+2. Paste in browser to see the QR code
+3. Scan with Google Authenticator
+4. Try the 2FA setup again with fresh token
+5. The new system handles time sync much better
+
+The comprehensive test will identify and fix the root cause of the token verification issues.

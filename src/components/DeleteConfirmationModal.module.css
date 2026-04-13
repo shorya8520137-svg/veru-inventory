@@ -1,0 +1,328 @@
+/* ================= OVERLAY ================= */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+/* ================= MODAL ================= */
+.modal {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow: hidden;
+    transform: scale(0.95);
+    animation: modalIn 0.2s ease-out forwards;
+}
+
+@keyframes modalIn {
+    to {
+        transform: scale(1);
+    }
+}
+
+/* ================= HEADER ================= */
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 24px 24px 0 24px;
+}
+
+.iconContainer {
+    flex-shrink: 0;
+}
+
+.iconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.iconWrapper.destructive {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.iconWrapper.warning {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -8px -8px 0 0;
+}
+
+.closeButton:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.closeButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ================= CONTENT ================= */
+.content {
+    padding: 0 24px 24px 24px;
+}
+
+.title {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.3;
+}
+
+.message {
+    margin-bottom: 20px;
+}
+
+.message p {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.itemInfo {
+    margin-top: 8px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #374151;
+}
+
+/* ================= DETAILS ================= */
+.details {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.detailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detailRow:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.detailLabel {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.detailValue {
+    font-size: 14px;
+    color: #0f172a;
+    font-weight: 500;
+    text-align: right;
+}
+
+/* ================= WARNING ================= */
+.warning {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.warningIcon {
+    color: #d97706;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.warningText {
+    flex: 1;
+}
+
+.warningText strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 4px;
+}
+
+.warningText p {
+    margin: 0;
+    font-size: 13px;
+    color: #a16207;
+    line-height: 1.4;
+}
+
+/* ================= ACTIONS ================= */
+.actions {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px 24px 24px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.cancelButton,
+.confirmButton {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.cancelButton {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.cancelButton:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.confirmButton {
+    border: none;
+}
+
+.confirmButton.destructive {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.confirmButton.destructive:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+.confirmButton.primary {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.confirmButton.primary:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.cancelButton:disabled,
+.confirmButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ================= SPINNER ================= */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 640px) {
+    .overlay {
+        padding: 16px;
+    }
+    
+    .modal {
+        max-width: none;
+        border-radius: 12px;
+    }
+    
+    .header {
+        padding: 20px 20px 0 20px;
+    }
+    
+    .content {
+        padding: 0 20px 20px 20px;
+    }
+    
+    .actions {
+        padding: 16px 20px 20px 20px;
+        flex-direction: column;
+    }
+    
+    .cancelButton,
+    .confirmButton {
+        flex: none;
+    }
+    
+    .title {
+        font-size: 18px;
+    }
+    
+    .message p {
+        font-size: 15px;
+    }
+    
+    .iconWrapper {
+        width: 40px;
+        height: 40px;
+    }
+}

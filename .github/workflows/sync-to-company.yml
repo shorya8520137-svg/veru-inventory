@@ -1,0 +1,63 @@
+name: Sync to Company Repository
+
+on:
+  # Trigger on push to main branch
+  push:
+    branches: [ main ]
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      sync_message:
+        description: 'Custom sync message'
+        required: false
+        default: 'Sync from personal repository'
+
+jobs:
+  sync-to-company:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout source repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "CI/CD Sync Bot"
+        git config --global user.email "noreply@github.com"
+
+    - name: Add company repository as remote
+      run: |
+        git remote add company https://${{ secrets.COMPANY_TOKEN }}@github.com/shoryasingh-creator/hunyhunyinventory.git
+
+    - name: Fetch company repository
+      run: |
+        git fetch company
+
+    - name: Sync to company repository
+      run: |
+        # Create or switch to sync branch
+        git checkout -B sync-branch
+        
+        # Push to company repository main branch
+        git push company sync-branch:main --force-with-lease
+        
+        echo "✅ Successfully synced to company repository"
+
+    - name: Create sync summary
+      run: |
+        echo "## 🔄 Sync Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Source**: shorya8520137-svg/inventoryfullstack" >> $GITHUB_STEP_SUMMARY
+        echo "- **Destination**: shoryasingh-creator/hunyhunyinventory" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "## ❌ Sync Failed" >> $GITHUB_STEP_SUMMARY
+        echo "Please check the logs and verify your COMPANY_TOKEN secret." >> $GITHUB_STEP_SUMMARY

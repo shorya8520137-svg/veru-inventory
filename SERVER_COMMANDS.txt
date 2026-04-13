@@ -1,0 +1,111 @@
+═══════════════════════════════════════════════════════════════
+  CUSTOMER SUPPORT CHAT FIX - SERVER DEPLOYMENT COMMANDS
+═══════════════════════════════════════════════════════════════
+
+📋 STEP 1: PULL LATEST CODE
+────────────────────────────────────────────────────────────────
+cd /home/ubuntu/inventoryfullstack
+git pull origin stocksphere-phase-1-complete
+
+
+📋 STEP 2: RESTART BACKEND
+────────────────────────────────────────────────────────────────
+pm2 restart all
+pm2 logs --lines 50
+
+
+📋 STEP 3: REBUILD FRONTEND
+────────────────────────────────────────────────────────────────
+npm run build
+pm2 restart nextjs
+
+
+📋 STEP 4: VERIFY DEPLOYMENT
+────────────────────────────────────────────────────────────────
+pm2 status
+pm2 logs --lines 20
+
+
+═══════════════════════════════════════════════════════════════
+  TESTING COMMANDS (Run from local machine)
+═══════════════════════════════════════════════════════════════
+
+📋 TEST API
+────────────────────────────────────────────────────────────────
+node test-chat-messages.js
+
+
+📋 TEST IN BROWSER
+────────────────────────────────────────────────────────────────
+1. Customer Widget: https://13.229.107.233:8443/chat-widget.html
+2. Admin Dashboard: https://13.229.107.233:8443/customer-support
+
+
+═══════════════════════════════════════════════════════════════
+  DEBUGGING COMMANDS (If issues occur)
+═══════════════════════════════════════════════════════════════
+
+📋 CHECK SERVER LOGS
+────────────────────────────────────────────────────────────────
+pm2 logs --lines 100
+
+
+📋 CHECK DATABASE
+────────────────────────────────────────────────────────────────
+sudo mysql inventory_db
+
+-- Check recent conversations
+SELECT * FROM customer_support_conversations 
+ORDER BY created_at DESC LIMIT 5;
+
+-- Check messages for a conversation (replace CONV-XXXXX)
+SELECT * FROM customer_support_messages 
+WHERE conversation_id = 'CONV-XXXXX' 
+ORDER BY created_at ASC;
+
+
+📋 TEST API DIRECTLY
+────────────────────────────────────────────────────────────────
+# Create conversation
+curl -X POST https://13.229.107.233:8443/api/customer-support/conversations \
+  -H "Content-Type: application/json" \
+  -d '{"customer_name":"Test","customer_email":"test@example.com","subject":"Test","initial_message":"Hello"}' -k
+
+# Send admin message (replace CONV-XXXXX)
+curl -X POST https://13.229.107.233:8443/api/customer-support/conversations/CONV-XXXXX/messages \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Admin reply","sender_type":"support","sender_name":"Support Agent"}' -k
+
+# Get messages (replace CONV-XXXXX)
+curl https://13.229.107.233:8443/api/customer-support/conversations/CONV-XXXXX/messages -k
+
+
+═══════════════════════════════════════════════════════════════
+  WHAT WAS FIXED
+═══════════════════════════════════════════════════════════════
+
+✅ Removed JWT authentication from admin chat page
+✅ Made all message endpoints public (no auth required)
+✅ Added detailed console logging for debugging
+✅ Improved authentication bypass logic in server.js
+✅ Both customer widget and admin dashboard now use same public API
+
+RESULT: Admin replies now appear in customer chat widget!
+
+
+═══════════════════════════════════════════════════════════════
+  EXPECTED CONSOLE LOGS (Browser F12)
+═══════════════════════════════════════════════════════════════
+
+Admin Dashboard:
+  📤 Send message response: {success: true}
+  ✅ Message sent successfully
+  ✅ Fetched messages: X
+
+Customer Widget:
+  🔄 Fetching messages for: CONV-XXXXX
+  📨 Messages response: {success: true, data: {...}}
+  ✅ Received X messages
+
+
+═══════════════════════════════════════════════════════════════
