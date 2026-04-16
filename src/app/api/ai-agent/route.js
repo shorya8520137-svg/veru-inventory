@@ -21,6 +21,7 @@ export async function POST(req) {
           { label: 'English', value: 'en' },
           { label: 'हिंदी', value: 'hi' },
           { label: 'தமிழ்', value: 'ta' },
+          { label: 'తెలుగు', value: 'te' },
         ],
       },
     });
@@ -44,7 +45,7 @@ export async function POST(req) {
   try {
     const payload = {
       phase: 'final',
-      language,        // 'en' | 'hi' | 'ta'
+      language,        // 'en' | 'hi' | 'ta' | 'te'
       message,
       conversationHistory: conversationHistory || [],
     };
@@ -101,6 +102,7 @@ function fallbackFinal(language, message) {
   const responses = {
     hi: `नमस्ते! आपका संदेश मिल गया: "${message}"। हमारी टीम जल्द ही आपसे संपर्क करेगी।`,
     ta: `வணக்கம்! உங்கள் செய்தி பெறப்பட்டது: "${message}"। எங்கள் குழு விரைவில் தொடர்பு கொள்ளும்.`,
+    te: `నమస్కారం! మీ సందేశం అందింది: "${message}"। మా బృందం త్వరలో మీతో సంప్రదిస్తుంది.`,
     en: `Hello! We received your message: "${message}". Our team will get back to you shortly.`,
   };
   const local = responses[language] || responses.en;
