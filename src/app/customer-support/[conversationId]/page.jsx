@@ -171,7 +171,8 @@ export default function ChatPage(){
 
   const handleLanguageSelect=async(lang)=>{
     setAiLanguage(lang);
-    setAiMessages(prev=>[...prev,{role:'user',content:`Selected: ${lang==='en'?'English':lang==='hi'?'हिंदी':'தமிழ்'}`}]);
+    setShowAIAgent(true); // auto-open AI panel when language selected from main chat
+    setAiMessages(prev=>[...prev,{role:'user',content:`Selected: ${lang==='en'?'English':lang==='hi'?'हिंदी':lang==='ta'?'தமிழ்':'తెలుగు'}`}]);
     setAiPhase('language_selected');
     // Phase 2: show invoking
     const invoking=await callAIAgent('language_selected',lang,'');
@@ -333,6 +334,14 @@ export default function ChatPage(){
                           <div style={{position:'absolute',right:-14,top:12,width:28,height:28,borderRadius:'50%',background:'#EFF6FF',border:'1px solid #DBEAFE',display:'flex',alignItems:'center',justifyContent:'center'}}>
                             <svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#2563EB' strokeWidth='2'><circle cx='12' cy='12' r='10'/><path d='M12 8v4l3 3'/></svg>
                           </div>
+                        </div>
+                        {/* Language buttons after every bot message */}
+                        <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
+                          {[{label:'🇬🇧 English',value:'en'},{label:'🇮🇳 हिंदी',value:'hi'},{label:'🇮🇳 தமிழ்',value:'ta'},{label:'🇮🇳 తెలుగు',value:'te'}].map(lang=>(
+                            <button key={lang.value} onClick={()=>handleLanguageSelect(lang.value)} style={{padding:'8px 16px',borderRadius:20,border:`1.5px solid ${aiLanguage===lang.value?'#22C55E':'#7C3AED'}`,background:aiLanguage===lang.value?'#22C55E':'#fff',color:aiLanguage===lang.value?'#fff':'#7C3AED',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all 0.15s'}}>
+                              {lang.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     ):isSupport?(
