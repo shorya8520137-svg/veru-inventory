@@ -6,39 +6,56 @@
 const db = require('../db/connection');
 const http = require('http');
 
-const TRANSLATE_WEBHOOK = 'http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030';
+const TRANSLATE_WEBHOOK_HOST = '13.215.172.213';
+const TRANSLATE_WEBHOOK_PATH = '/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030';
+const TRANSLATE_WEBHOOK = `http://${TRANSLATE_WEBHOOK_HOST}:5678${TRANSLATE_WEBHOOK_PATH}`;
 
 /**
- * Translate text via n8n translate webhook (GET request)
+ * Call translate webhook using Node.js http module (no fetch dependency)
  */
-async function translateText(text, language) {
-    if (!language || language === 'en') return text;
-    try {
-        const url = `${TRANSLATE_WEBHOOK}?message=${encodeURIComponent(text)}&language=${language}`;
-        const res = await fetch(url);
-        const raw = await res.text();
-        if (!raw || raw.trim() === '' || raw.trim() === '""') return text;
-        try {
-            const json = JSON.parse(raw);
-            return json.reply_local || json.translated || json.output || json.message || text;
-        } catch { return raw || text; }
-    } catch (e) {
-        console.error('Translation error:', e.message);
-        return text;
-    }
+function callTranslateWebhook(message, language) {
+    return new Promise((resolve) => {
+        const query = `?message=${encodeURIComponent(message)}&language=${encodeURIComponent(language || 'en')}`;
+        const options = {
+            hostname: TRANSLATE_WEBHOOK_HOST,
+            port: 5678,
+            path: TRANSLATE_WEBHOOK_PATH + query,
+            method: 'GET',
+            timeout: 8000,
+        };
+        const req = http.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    if (!data || data.trim() === '' || data.trim() === '""') return resolve(null);
+                    const json = JSON.parse(data);
+                    resolve(json);
+                } catch { resolve(null); }
+            });
+        });
+        req.on('error', (e) => { console.error('Translate webhook http error:', e.message); resolve(null); });
+        req.on('timeout', () => { req.destroy(); resolve(null); });
+        req.end();
+    });
 }
 
 /**
- * Detect language from message via n8n translate webhook
+ * Translate text via n8n translate webhook
+ */
+async function translateText(text, language) {
+    if (!language || language === 'en') return text;
+    const result = await callTranslateWebhook(text, language);
+    if (!result) return text;
+    return result.reply_local || result.translated || result.output || result.message || text;
+}
+
+/**
+ * Detect language from message
  */
 async function detectLanguage(message) {
-    try {
-        const url = `${TRANSLATE_WEBHOOK}?message=${encodeURIComponent(message)}&detect=true`;
-        const res = await fetch(url);
-        const raw = await res.text();
-        const json = JSON.parse(raw);
-        return json.detected_language || json.language || 'en';
-    } catch { return 'en'; }
+    const result = await callTranslateWebhook(message, null);
+    return result?.detected_language || result?.language || 'en';
 }
 
 /**
@@ -159,11 +176,8 @@ class CustomerSupportController {
             let translatedBotResponse = null;
             let englishBotResponse = null;
             try {
-                const translateUrl = `http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030?message=${encodeURIComponent(initial_message)}&language=${detectedLang}`;
-                const tRes = await fetch(translateUrl);
-                const tText = await tRes.text();
-                if (tText && tText.trim() !== '' && tText.trim() !== '""') {
-                    const tJson = JSON.parse(tText);
+                const tJson = await callTranslateWebhook(initial_message, detectedLang);
+                if (tJson) {
                     translatedBotResponse = tJson.reply_local || tJson.output || null;
                     englishBotResponse = tJson.reply_en || null;
                 }
@@ -277,14 +291,10 @@ class CustomerSupportController {
                 // Step 2: Send message to translate webhook → get reply_local + reply_en
                 let translatedReply = null;
                 try {
-                    const translateUrl = `http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030?message=${encodeURIComponent(message)}&language=${convLang}`;
-                    const tRes = await fetch(translateUrl);
-                    const tText = await tRes.text();
-                    if (tText && tText.trim() !== '' && tText.trim() !== '""') {
-                        const tJson = JSON.parse(tText);
-                        // Store BOTH local and english in chat
+                    const tJson = await callTranslateWebhook(message, convLang);
+                    if (tJson) {
                         translatedReply = tJson.reply_local || tJson.output || null;
-                        const englishReply = tJson.reply_en || tJson.reply_local || null;
+                        const englishReply = tJson.reply_en || null;
                         
                         if (translatedReply) {
                             // Post translated (local language) response
