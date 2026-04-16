@@ -4,6 +4,42 @@
  */
 
 const db = require('../db/connection');
+const http = require('http');
+
+const TRANSLATE_WEBHOOK = 'http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030';
+
+/**
+ * Translate text via n8n translate webhook (GET request)
+ */
+async function translateText(text, language) {
+    if (!language || language === 'en') return text;
+    try {
+        const url = `${TRANSLATE_WEBHOOK}?message=${encodeURIComponent(text)}&language=${language}`;
+        const res = await fetch(url);
+        const raw = await res.text();
+        if (!raw || raw.trim() === '' || raw.trim() === '""') return text;
+        try {
+            const json = JSON.parse(raw);
+            return json.reply_local || json.translated || json.output || json.message || text;
+        } catch { return raw || text; }
+    } catch (e) {
+        console.error('Translation error:', e.message);
+        return text;
+    }
+}
+
+/**
+ * Detect language from message via n8n translate webhook
+ */
+async function detectLanguage(message) {
+    try {
+        const url = `${TRANSLATE_WEBHOOK}?message=${encodeURIComponent(message)}&detect=true`;
+        const res = await fetch(url);
+        const raw = await res.text();
+        const json = JSON.parse(raw);
+        return json.detected_language || json.language || 'en';
+    } catch { return 'en'; }
+}
 
 /**
  * Get bot response based on message content
@@ -115,7 +151,15 @@ class CustomerSupportController {
             // Get bot response
             const botResponse = await getBotResponse(initial_message);
             
-            if (botResponse) {
+            // Detect language and translate bot response
+            const detectedLang = await detectLanguage(initial_message);
+            const translatedBotResponse = await translateText(botResponse, detectedLang);
+            
+            // Store detected language in conversation
+            db.query('UPDATE customer_support_conversations SET preferred_language = ? WHERE conversation_id = ?', 
+                [detectedLang, conversation_id], () => {});
+            
+            if (translatedBotResponse) {
                 const botMessageQuery = `
                     INSERT INTO customer_support_messages 
                     (conversation_id, sender_type, sender_name, message)
@@ -123,7 +167,7 @@ class CustomerSupportController {
                 `;
                 
                 await new Promise((resolve, reject) => {
-                    db.query(botMessageQuery, [conversation_id, botResponse], (err, result) => {
+                    db.query(botMessageQuery, [conversation_id, translatedBotResponse], (err, result) => {
                         if (err) reject(err);
                         else resolve(result);
                     });
@@ -135,7 +179,8 @@ class CustomerSupportController {
                 message: 'Conversation created successfully',
                 data: {
                     conversation_id,
-                    bot_response: botResponse
+                    bot_response: translatedBotResponse,
+                    detected_language: detectedLang
                 }
             });
 
@@ -213,17 +258,25 @@ class CustomerSupportController {
                 botResponse = await getBotResponse(message);
                 
                 if (botResponse) {
+                    // Get conversation's preferred language and translate
+                    const convLang = await new Promise(resolve => {
+                        db.query('SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?', 
+                            [conversation_id], (err, rows) => resolve(rows?.[0]?.preferred_language || 'en'));
+                    });
+                    const translatedBot = await translateText(botResponse, convLang);
+                    
                     await new Promise((resolve, reject) => {
                         db.query(insertQuery, [
                             conversation_id,
                             'bot',
                             'Support Bot',
-                            botResponse
+                            translatedBot
                         ], (err, result) => {
                             if (err) reject(err);
                             else resolve(result);
                         });
                     });
+                    botResponse = translatedBot;
                 }
             }
 
