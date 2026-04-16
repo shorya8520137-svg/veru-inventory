@@ -79,6 +79,7 @@ export default function ChatPage(){
   const [slaSeconds,setSlaSeconds]=useState(0);       // countdown seconds
   const [showDisposition,setShowDisposition]=useState(false);
   const [showAIAgent,setShowAIAgent]=useState(false);
+  const [aiMode,setAiMode]=useState(false);           // AI takeover mode
   const [aiPhase,setAiPhase]=useState('init');
   const [aiLanguage,setAiLanguage]=useState('');
   const [aiMessages,setAiMessages]=useState([]);
@@ -147,15 +148,23 @@ export default function ChatPage(){
   const handleMarkResolved=()=>setShowDisposition(true);
 
   // ── AI Agent ──
-  const callAIAgent=async(phase,language,userMsg)=>{
+  const callAIAgent=async(phase,language,userMsg,isAiMode=false)=>{
     setAiLoading(true);
     try{
       const res=await fetch('/api/ai-agent',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phase,language,message:userMsg,conversationHistory:aiMessages.map(m=>({role:m.role,content:m.content}))})
+        body:JSON.stringify({
+          phase,
+          language:language||null,
+          message:userMsg,
+          conversationHistory:aiMessages.map(m=>({role:m.role,content:m.content||m.data?.reply_local||''})),
+          aiMode:isAiMode,
+        })
       });
       const data=await res.json();
+      // if language was detected, update state
+      if(data.data?.detected_language&&!aiLanguage) setAiLanguage(data.data.detected_language);
       return data.data;
     }catch(e){console.error(e);return null;}
     finally{setAiLoading(false);}
@@ -181,10 +190,9 @@ export default function ChatPage(){
       // After 2s auto-trigger final greeting
       setTimeout(async()=>{
         setAiPhase('ready');
-        const greeting=await callAIAgent('final',lang,'Hello, I need help');
+        const greeting=await callAIAgent('final',lang,'Hello, I need help',aiMode);
         if(greeting){
           setAiMessages(prev=>[...prev,{role:'assistant',type:'final_response',data:greeting}]);
-          // Post greeting into main chat too
           if(greeting.reply_local) await postToMainChat(greeting.reply_local);
         }
       },2000);
@@ -196,10 +204,11 @@ export default function ChatPage(){
     const msg=aiInput.trim();
     setAiInput('');
     setAiMessages(prev=>[...prev,{role:'user',content:msg}]);
-    const resp=await callAIAgent('final',aiLanguage,msg);
+    // use translate phase if no language set, else final
+    const phase=aiLanguage?'final':'translate';
+    const resp=await callAIAgent(phase,aiLanguage||null,msg,aiMode);
     if(resp){
       setAiMessages(prev=>[...prev,{role:'assistant',type:resp.type||'final_response',data:resp}]);
-      // Also post AI reply into main chat so customer sees it
       if(resp.type==='final_response'&&resp.reply_local){
         await postToMainChat(resp.reply_local);
       }
@@ -219,6 +228,35 @@ export default function ChatPage(){
   };
 
   useEffect(()=>{aiEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMessages]);
+
+  // ── Shared message pipeline ──
+  const handleIncomingMessage=async(msg)=>{
+    await fetchMessages(); // save already done by backend, just refresh
+    if(aiMode){
+      // send customer message to AI agent
+      const resp=await callAIAgent('final',aiLanguage,msg,true);
+      if(resp&&resp.type==='final_response'){
+        setAiMessages(prev=>[...prev,{role:'assistant',type:'final_response',data:resp}]);
+        if(resp.reply_local) await postToMainChat(resp.reply_local);
+      }
+    }
+  };
+
+  // ── Transfer to AI ──
+  const transferToAI=async()=>{
+    setAiMode(true);
+    setShowAIAgent(true);
+    // send last 5 messages as context
+    const history=messages.slice(-5).map(m=>({role:m.sender_type==='customer'?'user':'assistant',content:m.message}));
+    const lastCustomerMsg=messages.filter(m=>m.sender_type==='customer').slice(-1)[0]?.message||'Hello';
+    const resp=await callAIAgent('final',aiLanguage||'en',lastCustomerMsg,true);
+    if(resp&&resp.type==='final_response'){
+      setAiMessages(prev=>[...prev,{role:'assistant',type:'final_response',data:resp}]);
+      if(resp.reply_local) await postToMainChat(resp.reply_local);
+    }
+  };
+
+  const disableAI=()=>{setAiMode(false);};
 
   const handleDispositionSubmit=async(form)=>{
     try{
@@ -300,6 +338,11 @@ export default function ChatPage(){
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
             <button style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'#2563EB',cursor:'pointer',padding:'7px 10px',borderRadius:8,whiteSpace:'nowrap'}}>Assign to Me</button>
+            {aiMode?(
+              <button onClick={disableAI} style={{background:'#22C55E',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>✓ AI Active</button>
+            ):(
+              <button onClick={transferToAI} style={{background:'linear-gradient(135deg,#7C3AED,#6D28D9)',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap',boxShadow:'0 4px 12px rgba(109,40,217,0.3)'}}>⚡ Transfer to AI</button>
+            )}
             <button onClick={()=>setShowDisposition(true)} style={{background:'#EF4444',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>End Chat</button>
             <button onClick={handleMarkResolved} style={{background:'#1E3A5F',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>Mark Resolved</button>
           </div>
@@ -475,7 +518,7 @@ export default function ChatPage(){
               </div>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>AI Support Agent</div>
-                <div style={{fontSize:11,color:'rgba(255,255,255,0.7)'}}>Responses auto-post to main chat</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,0.7)'}}>{aiMode?'🟢 AI Takeover Active — auto-posting to chat':'Responses auto-post to main chat'}</div>
               </div>
             </div>
             <button onClick={()=>setShowAIAgent(false)} style={{background:'rgba(255,255,255,0.15)',border:'none',borderRadius:8,width:28,height:28,cursor:'pointer',color:'#fff',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
