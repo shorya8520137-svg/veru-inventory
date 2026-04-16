@@ -148,40 +148,53 @@ class CustomerSupportController {
                 });
             });
 
-            // Get bot response
-            const botResponse = await getBotResponse(initial_message);
-            
             // Detect language and translate bot response
             const detectedLang = await detectLanguage(initial_message);
-            const translatedBotResponse = await translateText(botResponse, detectedLang);
             
-            // Store detected language in conversation
+            // Store detected language
             db.query('UPDATE customer_support_conversations SET preferred_language = ? WHERE conversation_id = ?', 
                 [detectedLang, conversation_id], () => {});
-            
+
+            // Call translate webhook for initial response
+            let translatedBotResponse = null;
+            let englishBotResponse = null;
+            try {
+                const translateUrl = `http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030?message=${encodeURIComponent(initial_message)}&language=${detectedLang}`;
+                const tRes = await fetch(translateUrl);
+                const tText = await tRes.text();
+                if (tText && tText.trim() !== '' && tText.trim() !== '""') {
+                    const tJson = JSON.parse(tText);
+                    translatedBotResponse = tJson.reply_local || tJson.output || null;
+                    englishBotResponse = tJson.reply_en || null;
+                }
+            } catch(e) { console.error('Translate webhook error on create:', e.message); }
+
+            // Fallback to keyword bot
+            if (!translatedBotResponse) {
+                const botResponse = await getBotResponse(initial_message);
+                translatedBotResponse = await translateText(botResponse, detectedLang);
+            }
+
             if (translatedBotResponse) {
-                const botMessageQuery = `
-                    INSERT INTO customer_support_messages 
-                    (conversation_id, sender_type, sender_name, message)
-                    VALUES (?, 'bot', 'Support Bot', ?)
-                `;
-                
+                const botMessageQuery = `INSERT INTO customer_support_messages (conversation_id, sender_type, sender_name, message) VALUES (?, 'bot', 'Support Bot', ?)`;
                 await new Promise((resolve, reject) => {
                     db.query(botMessageQuery, [conversation_id, translatedBotResponse], (err, result) => {
-                        if (err) reject(err);
-                        else resolve(result);
+                        if (err) reject(err); else resolve(result);
                     });
                 });
+                if (englishBotResponse && englishBotResponse !== translatedBotResponse) {
+                    await new Promise((resolve, reject) => {
+                        db.query(botMessageQuery.replace('Support Bot', 'Support Bot (EN)'), 
+                            [conversation_id, `[EN] ${englishBotResponse}`], 
+                            (err, result) => { if (err) reject(err); else resolve(result); });
+                    });
+                }
             }
 
             res.status(201).json({
                 success: true,
                 message: 'Conversation created successfully',
-                data: {
-                    conversation_id,
-                    bot_response: translatedBotResponse,
-                    detected_language: detectedLang
-                }
+                data: { conversation_id, bot_response: translatedBotResponse, detected_language: detectedLang }
             });
 
         } catch (error) {
@@ -255,28 +268,55 @@ class CustomerSupportController {
             // Get bot response if customer message
             let botResponse = null;
             if (sender_type === 'customer' || !sender_type) {
-                botResponse = await getBotResponse(message);
-                
-                if (botResponse) {
-                    // Get conversation's preferred language and translate
-                    const convLang = await new Promise(resolve => {
-                        db.query('SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?', 
-                            [conversation_id], (err, rows) => resolve(rows?.[0]?.preferred_language || 'en'));
-                    });
-                    const translatedBot = await translateText(botResponse, convLang);
-                    
-                    await new Promise((resolve, reject) => {
-                        db.query(insertQuery, [
-                            conversation_id,
-                            'bot',
-                            'Support Bot',
-                            translatedBot
-                        ], (err, result) => {
-                            if (err) reject(err);
-                            else resolve(result);
+                // Step 1: Call translate webhook to get response in customer's language
+                const convLang = await new Promise(resolve => {
+                    db.query('SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?', 
+                        [conversation_id], (err, rows) => resolve(rows?.[0]?.preferred_language || 'en'));
+                });
+
+                // Step 2: Send message to translate webhook → get reply_local + reply_en
+                let translatedReply = null;
+                try {
+                    const translateUrl = `http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030?message=${encodeURIComponent(message)}&language=${convLang}`;
+                    const tRes = await fetch(translateUrl);
+                    const tText = await tRes.text();
+                    if (tText && tText.trim() !== '' && tText.trim() !== '""') {
+                        const tJson = JSON.parse(tText);
+                        // Store BOTH local and english in chat
+                        translatedReply = tJson.reply_local || tJson.output || null;
+                        const englishReply = tJson.reply_en || tJson.reply_local || null;
+                        
+                        if (translatedReply) {
+                            // Post translated (local language) response
+                            await new Promise((resolve, reject) => {
+                                db.query(insertQuery, [conversation_id, 'bot', 'Support Bot', translatedReply], 
+                                    (err, result) => { if (err) reject(err); else resolve(result); });
+                            });
+                            botResponse = translatedReply;
+                        }
+                        if (englishReply && englishReply !== translatedReply) {
+                            // Also post English version for admin reference
+                            await new Promise((resolve, reject) => {
+                                db.query(insertQuery, [conversation_id, 'bot', 'Support Bot (EN)', `[EN] ${englishReply}`],
+                                    (err, result) => { if (err) reject(err); else resolve(result); });
+                            });
+                        }
+                    }
+                } catch(translateErr) {
+                    console.error('Translate webhook error:', translateErr.message);
+                }
+
+                // Fallback to keyword bot if translate webhook failed
+                if (!translatedReply) {
+                    botResponse = await getBotResponse(message);
+                    const translated = await translateText(botResponse, convLang);
+                    if (translated) {
+                        await new Promise((resolve, reject) => {
+                            db.query(insertQuery, [conversation_id, 'bot', 'Support Bot', translated],
+                                (err, result) => { if (err) reject(err); else resolve(result); });
                         });
-                    });
-                    botResponse = translatedBot;
+                        botResponse = translated;
+                    }
                 }
             }
 
