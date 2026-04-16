@@ -267,6 +267,20 @@ export default function ChatPage(){
 
   useEffect(()=>{aiEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMessages]);
 
+  // ── Transfer to AI ──
+  const transferToAI=async()=>{
+    setAiMode(true);
+    setShowAIAgent(true);
+    const lastCustomerMsg=messages.filter(m=>m.sender_type==='customer').slice(-1)[0]?.message||'Hello';
+    const resp=await callAIAgent('final',aiLanguage||'en',lastCustomerMsg,true);
+    if(resp&&resp.type==='final_response'){
+      setAiMessages(prev=>[...prev,{role:'assistant',type:'final_response',data:resp}]);
+      if(resp.reply_local) await postToMainChat(resp.reply_local);
+    }
+  };
+
+  const disableAI=()=>setAiMode(false);
+
   // ── Translate & send to main chat ──
   const translateAndSend=async(text)=>{
     if(!aiLanguage||aiLanguage==='en'){
