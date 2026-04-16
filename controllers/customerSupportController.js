@@ -260,12 +260,27 @@ class CustomerSupportController {
                 VALUES (?, ?, ?, ?)
             `;
 
+            // Get conversation's preferred language
+            const convLang = await new Promise(resolve => {
+                db.query('SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?', 
+                    [conversation_id], (err, rows) => resolve(rows?.[0]?.preferred_language || 'en'));
+            });
+
+            // If SUPPORT/AGENT message → translate to customer's language before storing
+            let messageToStore = message;
+            if ((sender_type === 'support' || sender_type === 'bot') && convLang && convLang !== 'en') {
+                const tJson = await callTranslateWebhook(message, convLang);
+                if (tJson && (tJson.reply_local || tJson.output)) {
+                    messageToStore = tJson.reply_local || tJson.output || message;
+                }
+            }
+
             await new Promise((resolve, reject) => {
                 db.query(insertQuery, [
                     conversation_id,
                     sender_type || 'customer',
                     sender_name || 'Customer',
-                    message
+                    messageToStore
                 ], (err, result) => {
                     if (err) reject(err);
                     else resolve(result);
@@ -283,10 +298,7 @@ class CustomerSupportController {
             let botResponse = null;
             if (sender_type === 'customer' || !sender_type) {
                 // Step 1: Call translate webhook to get response in customer's language
-                const convLang = await new Promise(resolve => {
-                    db.query('SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?', 
-                        [conversation_id], (err, rows) => resolve(rows?.[0]?.preferred_language || 'en'));
-                });
+                // convLang already fetched above
 
                 // Step 2: Send message to translate webhook → get reply_local + reply_en
                 let translatedReply = null;
