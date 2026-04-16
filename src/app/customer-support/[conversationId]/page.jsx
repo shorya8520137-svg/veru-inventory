@@ -140,18 +140,24 @@ export default function ChatPage(){
   const sendMessage=async()=>{
     if(!newMessage.trim()||sending)return;
     setSending(true);
+    const msgToSend=newMessage;
+    setNewMessage('');
     try{
-      const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:newMessage,sender_type:'support',sender_name:'Support Agent'})
-      });
-      const data=await res.json();
-      if(data.success){
-        setNewMessage('');
-        lastSupportReplyRef.current=new Date(); // reset SLA timer
-        setSlaAlert(false);
-        setSlaSeconds(0);
-        await fetchMessages();
+      if(aiLanguage&&aiLanguage!=='en'){
+        // translate agent's message to selected language before sending
+        await translateAndSend(msgToSend);
+      } else {
+        // send directly
+        const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({message:msgToSend,sender_type:'support',sender_name:'Support Agent'})
+        });
+        const data=await res.json();
+        if(data.success){
+          lastSupportReplyRef.current=new Date();
+          setSlaAlert(false);setSlaSeconds(0);
+          await fetchMessages();
+        }
       }
     }catch(e){console.error(e);}
     finally{setSending(false);}
@@ -248,43 +254,42 @@ export default function ChatPage(){
     try{
       const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:`🤖 ${text}`,sender_type:'support',sender_name:'AI Agent'})
+        body:JSON.stringify({message:text,sender_type:'support',sender_name:'AI Agent'})
       });
       const data=await res.json();
-      if(data.success)await fetchMessages();
+      if(data.success){
+        lastSupportReplyRef.current=new Date();
+        setSlaAlert(false);setSlaSeconds(0);
+        await fetchMessages();
+      }
     }catch(e){console.error(e);}
   };
 
   useEffect(()=>{aiEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMessages]);
 
-  // ── Shared message pipeline ──
-  const handleIncomingMessage=async(msg)=>{
-    await fetchMessages(); // save already done by backend, just refresh
-    if(aiMode){
-      // send customer message to AI agent
-      const resp=await callAIAgent('final',aiLanguage,msg,true);
-      if(resp&&resp.type==='final_response'){
-        setAiMessages(prev=>[...prev,{role:'assistant',type:'final_response',data:resp}]);
-        if(resp.reply_local) await postToMainChat(resp.reply_local);
-      }
+  // ── Translate & send to main chat ──
+  const translateAndSend=async(text)=>{
+    if(!aiLanguage||aiLanguage==='en'){
+      // no translation needed
+      await postToMainChat(text);
+      return;
+    }
+    try{
+      // Translate webhook uses GET with query params
+      const url=`http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030?message=${encodeURIComponent(text)}&language=${aiLanguage}`;
+      const res=await fetch(url,{method:'GET'});
+      const raw=await res.text();
+      let translated=text;
+      try{
+        const json=JSON.parse(raw);
+        translated=json.reply_local||json.translated||json.output||json.message||text;
+      }catch{translated=raw||text;}
+      await postToMainChat(translated);
+    }catch(e){
+      console.error('Translate error:',e);
+      await postToMainChat(text); // fallback: send original
     }
   };
-
-  // ── Transfer to AI ──
-  const transferToAI=async()=>{
-    setAiMode(true);
-    setShowAIAgent(true);
-    // send last 5 messages as context
-    const history=messages.slice(-5).map(m=>({role:m.sender_type==='customer'?'user':'assistant',content:m.message}));
-    const lastCustomerMsg=messages.filter(m=>m.sender_type==='customer').slice(-1)[0]?.message||'Hello';
-    const resp=await callAIAgent('final',aiLanguage||'en',lastCustomerMsg,true);
-    if(resp&&resp.type==='final_response'){
-      setAiMessages(prev=>[...prev,{role:'assistant',type:'final_response',data:resp}]);
-      if(resp.reply_local) await postToMainChat(resp.reply_local);
-    }
-  };
-
-  const disableAI=()=>{setAiMode(false);};
 
   const handleDispositionSubmit=async(form)=>{
     try{
