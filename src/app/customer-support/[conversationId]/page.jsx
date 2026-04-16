@@ -100,6 +100,21 @@ export default function ChatPage(){
       if(data.success){
         const msgs=data.data.messages||[];
         setMessages(msgs);
+        // Sync main chat messages into AI panel for context
+        if(showAIAgent){
+          const mainChatInAI=msgs.map(m=>({
+            role:m.sender_type==='customer'?'user':'assistant',
+            content:m.message,
+            type:'main_chat',
+            sender:m.sender_name,
+            time:m.created_at
+          }));
+          // merge with existing AI messages, avoid duplicates
+          setAiMessages(prev=>{
+            const aiOnly=prev.filter(m=>m.type!=='main_chat');
+            return [...mainChatInAI,...aiOnly];
+          });
+        }
         // Find last support reply time
         const lastSupport=msgs.filter(m=>m.sender_type==='support').slice(-1)[0];
         lastSupportReplyRef.current=lastSupport?new Date(lastSupport.created_at):null;
@@ -172,9 +187,22 @@ export default function ChatPage(){
 
   const openAIAgent=async()=>{
     setShowAIAgent(true);
-    if(aiMessages.length===0){
+    // sync main chat messages into AI panel immediately
+    const mainChatMsgs=messages.map(m=>({
+      role:m.sender_type==='customer'?'user':'assistant',
+      content:m.message,
+      type:'main_chat',
+      sender:m.sender_name,
+      time:m.created_at
+    }));
+    if(aiMessages.filter(m=>m.type!=='main_chat').length===0){
+      // first open — show main chat + language selection
       const resp=await callAIAgent('init','','');
-      if(resp)setAiMessages([{role:'assistant',type:resp.type,data:resp}]);
+      const aiOnly=resp?[{role:'assistant',type:resp.type,data:resp}]:[];
+      setAiMessages([...mainChatMsgs,...aiOnly]);
+    } else {
+      // already has AI messages — just refresh main chat portion
+      setAiMessages(prev=>[...mainChatMsgs,...prev.filter(m=>m.type!=='main_chat')]);
     }
   };
 
@@ -527,6 +555,25 @@ export default function ChatPage(){
           {/* Messages */}
           <div className='custom-scrollbar' style={{flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12}}>
             {aiMessages.map((msg,i)=>{
+
+              /* ── main chat message mirrored in AI panel ── */
+              if(msg.type==='main_chat'){
+                const isCustomer=msg.role==='user';
+                return(
+                  <div key={i} style={{display:'flex',gap:8,alignItems:'flex-start',opacity:0.85}}>
+                    <div style={{width:22,height:22,borderRadius:'50%',background:isCustomer?'#3B82F6':'#6B7280',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#fff',flexShrink:0}}>
+                      {(msg.sender||'?')[0].toUpperCase()}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:10,color:'#9CA3AF',marginBottom:2}}>{msg.sender} • {msg.time?new Date(msg.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):''}</div>
+                      <div style={{background:isCustomer?'#F3F4F6':'#EFF6FF',borderRadius:10,padding:'8px 12px',fontSize:12,color:'#374151',lineHeight:1.5,border:`1px solid ${isCustomer?'#E5E7EB':'#DBEAFE'}`}}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               if(msg.role==='user'){
                 return(
                   <div key={i} style={{display:'flex',justifyContent:'flex-end'}}>
