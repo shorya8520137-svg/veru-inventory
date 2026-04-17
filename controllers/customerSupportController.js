@@ -11,17 +11,25 @@ const TRANSLATE_WEBHOOK_PATH = '/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030';
 const TRANSLATE_WEBHOOK = `http://${TRANSLATE_WEBHOOK_HOST}:5678${TRANSLATE_WEBHOOK_PATH}`;
 
 /**
- * Call translate webhook using Node.js http module (no fetch dependency)
+ * Call translate webhook — POST with JSON body
  */
 function callTranslateWebhook(message, language) {
     return new Promise((resolve) => {
-        const query = `?message=${encodeURIComponent(message)}&language=${encodeURIComponent(language || 'en')}`;
+        const body = JSON.stringify({
+            message: message,
+            language: language || 'en',
+            source: 'customer'
+        });
         const options = {
             hostname: TRANSLATE_WEBHOOK_HOST,
             port: 5678,
-            path: TRANSLATE_WEBHOOK_PATH + query,
-            method: 'GET',
+            path: TRANSLATE_WEBHOOK_PATH,
+            method: 'POST',
             timeout: 8000,
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(body)
+            }
         };
         const req = http.request(options, (res) => {
             let data = '';
@@ -34,8 +42,9 @@ function callTranslateWebhook(message, language) {
                 } catch { resolve(null); }
             });
         });
-        req.on('error', (e) => { console.error('Translate webhook http error:', e.message); resolve(null); });
+        req.on('error', (e) => { console.error('Translate webhook error:', e.message); resolve(null); });
         req.on('timeout', () => { req.destroy(); resolve(null); });
+        req.write(body);
         req.end();
     });
 }
