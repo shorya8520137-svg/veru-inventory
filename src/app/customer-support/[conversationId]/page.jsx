@@ -75,6 +75,8 @@ export default function ChatPage(){
   const [newMessage,setNewMessage]=useState('');
   const [loading,setLoading]=useState(true);
   const [sending,setSending]=useState(false);
+  const [translating,setTranslating]=useState(false);
+  const [convLanguage,setConvLanguage]=useState('en'); // preferred_language from DB
   const [slaAlert,setSlaAlert]=useState(false);       // red alert after 1 min no reply
   const [slaSeconds,setSlaSeconds]=useState(0);       // countdown seconds
   const [showDisposition,setShowDisposition]=useState(false);
@@ -100,6 +102,8 @@ export default function ChatPage(){
       if(data.success){
         const msgs=data.data.messages||[];
         setMessages(msgs);
+        // Update convLanguage from conversation data if available
+        if(data.data.preferred_language) setConvLanguage(data.data.preferred_language);
         // Sync main chat messages into AI panel for context
         if(showAIAgent){
           const mainChatInAI=msgs.map(m=>({
@@ -143,23 +147,24 @@ export default function ChatPage(){
     const msgToSend=newMessage;
     setNewMessage('');
     try{
-      if(aiLanguage&&aiLanguage!=='en'){
-        // translate agent's message to selected language before sending
-        await translateAndSend(msgToSend);
-      } else {
-        // send directly
-        const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({message:msgToSend,sender_type:'support',sender_name:'Support Agent'})
-        });
-        const data=await res.json();
-        if(data.success){
-          lastSupportReplyRef.current=new Date();
-          setSlaAlert(false);setSlaSeconds(0);
-          await fetchMessages();
-        }
+      // Always send with language — backend handles translation
+      const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          message:msgToSend,
+          sender_type:'support',
+          sender_name:'Support Agent',
+          language:convLanguage||aiLanguage||'en'  // always include language
+        })
+      });
+      const data=await res.json();
+      if(data.success){
+        lastSupportReplyRef.current=new Date();
+        setSlaAlert(false);setSlaSeconds(0);
+        await fetchMessages();
       }
-    }catch(e){console.error(e);}
+    }catch(e){console.error('sendMessage error:',e);}
     finally{setSending(false);}
   };
 
@@ -281,28 +286,28 @@ export default function ChatPage(){
 
   const disableAI=()=>setAiMode(false);
 
-  // ── Translate & send to main chat ──
+  // ── Translate & send to main chat (POST JSON, handle plain text response) ──
   const translateAndSend=async(text)=>{
-    if(!aiLanguage||aiLanguage==='en'){
-      // no translation needed
+    const lang=convLanguage||aiLanguage||'en';
+    if(!lang||lang==='en'){
       await postToMainChat(text);
       return;
     }
+    setTranslating(true);
     try{
-      // Translate webhook uses GET with query params
-      const url=`http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030?message=${encodeURIComponent(text)}&language=${aiLanguage}`;
-      const res=await fetch(url,{method:'GET'});
+      const res=await fetch('http://13.215.172.213:5678/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({type:'message',message:text,language:lang,source:'admin'})
+      });
+      // n8n returns PLAIN TEXT — do NOT JSON.parse
       const raw=await res.text();
-      let translated=text;
-      try{
-        const json=JSON.parse(raw);
-        translated=json.reply_local||json.translated||json.output||json.message||text;
-      }catch{translated=raw||text;}
+      const translated=(typeof raw==='string'&&raw.trim()&&raw.trim()!=='""')?raw.trim():text;
       await postToMainChat(translated);
     }catch(e){
-      console.error('Translate error:',e);
+      console.error('Translation error:',e);
       await postToMainChat(text); // fallback: send original
-    }
+    }finally{setTranslating(false);}
   };
 
   const handleDispositionSubmit=async(form)=>{
@@ -419,7 +424,8 @@ export default function ChatPage(){
                         </div>
                         <div style={{position:'relative',maxWidth:'72%'}}>
                           <div style={{background:'#fff',border:'1px solid #E5E7EB',borderRadius:16,padding:'14px 18px',boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
-                            <p style={{fontSize:13,color:'#374151',lineHeight:1.6,margin:0}}>{msg.message}</p>
+                            {/* Unicode-safe rendering — supports Tamil, Telugu, Hindi */}
+                            <p style={{fontSize:13,color:'#374151',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message}</p>
                           </div>
                           <div style={{position:'absolute',right:-14,top:12,width:28,height:28,borderRadius:'50%',background:'#EFF6FF',border:'1px solid #DBEAFE',display:'flex',alignItems:'center',justifyContent:'center'}}>
                             <svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#2563EB' strokeWidth='2'><circle cx='12' cy='12' r='10'/><path d='M12 8v4l3 3'/></svg>
@@ -441,10 +447,19 @@ export default function ChatPage(){
                           <span style={{fontSize:11,color:'#9CA3AF'}}>{formatTime(msg.created_at)}</span>
                         </div>
                         <div style={{maxWidth:'72%',background:'linear-gradient(135deg,#2563EB,#1D4ED8)',borderRadius:16,padding:'14px 18px',boxShadow:'0 4px 12px rgba(37,99,235,0.25)'}}>
-                          <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0}}>{msg.message}</p>
+                          <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message}</p>
                         </div>
                       </div>
                     ):(
+                      /* Customer message — check for [EN] reference messages */
+                      msg.message?.startsWith('[EN]')?(
+                        /* [EN] admin-reference message — show subtle in admin panel */
+                        <div style={{display:'flex',justifyContent:'flex-end',marginBottom:4}}>
+                          <span style={{fontSize:11,color:'#9CA3AF',background:'#F9FAFB',border:'1px solid #F1F5F9',borderRadius:8,padding:'3px 10px',fontStyle:'italic'}}>
+                            {msg.message}
+                          </span>
+                        </div>
+                      ):(
                       <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
                         <Avatar name={msg.sender_name||customerName} size={36}/>
                         <div style={{flex:1}}>
@@ -453,10 +468,11 @@ export default function ChatPage(){
                             <span style={{fontSize:11,color:'#9CA3AF'}}>{formatTime(msg.created_at)}</span>
                           </div>
                           <div style={{maxWidth:'72%',background:'#F3F4F6',borderRadius:16,padding:'14px 18px'}}>
-                            <p style={{fontSize:13,color:'#111827',lineHeight:1.6,margin:0}}>{msg.message}</p>
+                            <p style={{fontSize:13,color:'#111827',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message}</p>
                           </div>
                         </div>
                       </div>
+                      )
                     )}
                   </div>
                 );
@@ -488,14 +504,15 @@ export default function ChatPage(){
 
         {/* Input */}
         <div style={{padding:'10px 20px 16px',background:'#fff',flexShrink:0}}>
+          {translating&&<div style={{fontSize:11,color:'#7C3AED',marginBottom:6,display:'flex',alignItems:'center',gap:6}}><span style={{width:8,height:8,borderRadius:'50%',background:'#7C3AED',display:'inline-block',animation:'pulse 1s infinite'}}/>Translating...</div>}
           <div style={{display:'flex',alignItems:'flex-end',gap:12,background:slaAlert?'#FFF5F5':'#F9FAFB',borderRadius:14,border:`1.5px solid ${slaAlert?'#FCA5A5':'#E5E7EB'}`,padding:'12px 16px',transition:'all 0.3s'}}>
-            <textarea value={newMessage} onChange={e=>setNewMessage(e.target.value)} onKeyDown={handleKey} placeholder={slaAlert?"⚠ Customer waiting — type your response now...":"Type your response or use '/' for macros..."} rows={2} disabled={sending} style={{flex:1,background:'none',border:'none',outline:'none',resize:'none',fontSize:13,color:'#374151',fontFamily:'Inter,sans-serif',lineHeight:1.6}}/>
+            <textarea value={newMessage} onChange={e=>setNewMessage(e.target.value)} onKeyDown={handleKey} placeholder={slaAlert?"⚠ Customer waiting — type your response now...":"Type your response or use '/' for macros..."} rows={2} disabled={sending||translating} style={{flex:1,background:'none',border:'none',outline:'none',resize:'none',fontSize:13,color:'#374151',fontFamily:'system-ui,-apple-system,sans-serif',lineHeight:1.6}}/>
             <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
               <button style={{background:'none',border:'none',cursor:'pointer',color:'#9CA3AF',padding:4,display:'flex',alignItems:'center'}}>
                 <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'><path d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/></svg>
               </button>
-              <button onClick={sendMessage} disabled={!newMessage.trim()||sending} style={{background:slaAlert?'#DC2626':'#1E3A5F',color:'#fff',border:'none',borderRadius:10,padding:'9px 20px',fontSize:13,fontWeight:600,cursor:!newMessage.trim()||sending?'not-allowed':'pointer',opacity:!newMessage.trim()||sending?0.5:1,whiteSpace:'nowrap',transition:'background 0.3s'}}>
-                {sending?'Sending...':'Send Response'}
+              <button onClick={sendMessage} disabled={!newMessage.trim()||sending||translating} style={{background:slaAlert?'#DC2626':'#1E3A5F',color:'#fff',border:'none',borderRadius:10,padding:'9px 20px',fontSize:13,fontWeight:600,cursor:!newMessage.trim()||sending||translating?'not-allowed':'pointer',opacity:!newMessage.trim()||sending||translating?0.5:1,whiteSpace:'nowrap',transition:'background 0.3s'}}>
+                {translating?'Translating...':sending?'Sending...':'Send Response'}
               </button>
             </div>
           </div>

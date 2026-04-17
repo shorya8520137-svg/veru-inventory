@@ -275,7 +275,22 @@ class CustomerSupportController {
                     (err, results) => { if (err) reject(err); else resolve(results); }
                 );
             });
-            res.json({ success: true, data: { conversation_id, messages } });
+            // Also fetch preferred_language so frontend can use it
+            const conv = await new Promise((resolve, reject) => {
+                db.query(
+                    'SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?',
+                    [conversation_id],
+                    (err, rows) => { if (err) reject(err); else resolve(rows?.[0] || {}); }
+                );
+            });
+            res.json({
+                success: true,
+                data: {
+                    conversation_id,
+                    preferred_language: conv.preferred_language || 'en',
+                    messages
+                }
+            });
         } catch (error) {
             console.error('Get messages error:', error);
             res.status(500).json({ success: false, message: 'Failed to get messages', error: error.message });
