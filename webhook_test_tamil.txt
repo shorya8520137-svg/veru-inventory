@@ -1,0 +1,1 @@
+﻿{"reply_local":"வணக்கம் (Hello in Tamil)","reply_en":"Hello"}
