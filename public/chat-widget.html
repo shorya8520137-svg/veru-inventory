@@ -487,6 +487,7 @@
         let conversationId = null;
         let customerName = '';
         let customerEmail = '';
+        let selectedLanguage = localStorage.getItem('chat_language') || '';
         let isOpen = false;
         let pollInterval = null;
 
@@ -561,6 +562,11 @@
                     chatMessages.classList.add('active');
                     chatInput.classList.add('active');
 
+                    // Show language selector if not already selected
+                    if (!selectedLanguage) {
+                        showLanguageSelector();
+                    }
+
                     // Load messages
                     await fetchMessages();
                     startPolling();
@@ -593,32 +599,26 @@
             messageInput.disabled = true;
 
             try {
-                console.log('📤 Sending message:', message);
                 const response = await fetch(`${API_BASE}/customer-support/conversations/${conversationId}/messages`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: message,
                         sender_type: 'customer',
-                        sender_name: customerName
+                        sender_name: customerName,
+                        language: selectedLanguage || 'en'
                     })
                 });
 
                 const data = await response.json();
-                console.log('📨 Send response:', data);
-
                 if (data.success) {
                     messageInput.value = '';
-                    console.log('✅ Message sent successfully');
                     await fetchMessages();
                 } else {
-                    console.error('❌ Failed to send message:', data);
                     alert('Failed to send message. Please try again.');
                 }
             } catch (error) {
-                console.error('❌ Error sending message:', error);
+                console.error('Error sending message:', error);
                 alert('Failed to send message. Please try again.');
             } finally {
                 sendButton.disabled = false;
@@ -627,7 +627,7 @@
             }
         }
 
-        // Fetch messages
+        // Format time
         async function fetchMessages() {
             if (!conversationId) return;
 
@@ -649,39 +649,68 @@
             }
         }
 
-        // Display messages - filter out [EN] admin-only messages
+        // Show language selector bar
+        function showLanguageSelector() {
+            const existing = document.getElementById('lang-selector');
+            if (existing) return;
+            const bar = document.createElement('div');
+            bar.id = 'lang-selector';
+            bar.style.cssText = 'padding:10px 12px;background:#f8f0ff;border-bottom:1px solid #e9d5ff;display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
+            bar.innerHTML = `
+                <span style="font-size:12px;color:#6b7280;font-weight:600;">Select language:</span>
+                <button onclick="selectLanguage('en','English')" style="padding:5px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:#fff;color:#7c3aed;font-size:12px;font-weight:600;cursor:pointer;">🇬🇧 English</button>
+                <button onclick="selectLanguage('hi','Hindi')" style="padding:5px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:#fff;color:#7c3aed;font-size:12px;font-weight:600;cursor:pointer;">🇮🇳 हिंदी</button>
+                <button onclick="selectLanguage('ta','Tamil')" style="padding:5px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:#fff;color:#7c3aed;font-size:12px;font-weight:600;cursor:pointer;">🇮🇳 தமிழ்</button>
+                <button onclick="selectLanguage('te','Telugu')" style="padding:5px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:#fff;color:#7c3aed;font-size:12px;font-weight:600;cursor:pointer;">🇮🇳 తెలుగు</button>
+            `;
+            chatMessages.parentNode.insertBefore(bar, chatMessages);
+        }
+
+        // Override selectLanguage to also hide selector
+        const _origSelectLanguage = selectLanguage;
+        async function selectLanguage(langCode, langName) {
+            selectedLanguage = langCode;
+            localStorage.setItem('chat_language', langCode);
+            const bar = document.getElementById('lang-selector');
+            if (bar) {
+                bar.innerHTML = `<span style="font-size:12px;color:#7c3aed;font-weight:600;">✓ Language: ${langName}</span>`;
+                setTimeout(() => bar.remove(), 2000);
+            }
+            if (!conversationId) return;
+            try {
+                await fetch(`${API_BASE}/customer-support/conversations/${conversationId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: langCode, sender_type: 'language_select', sender_name: customerName, language: langCode })
+                });
+                await fetchMessages();
+            } catch (error) { console.error('Error setting language:', error); }
+        }
+
+        // Display messages — filter [EN] admin-only messages
         function displayMessages(messages) {
             chatMessages.innerHTML = '';
-
             messages.forEach(msg => {
-                // Skip [EN] messages - these are for admin reference only
+                // Skip [EN] messages and Support Bot (EN) — admin reference only
                 if (msg.message && msg.message.startsWith('[EN]')) return;
-                // Skip Support Bot (EN) messages
                 if (msg.sender_name === 'Support Bot (EN)') return;
 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${msg.sender_type}`;
-
                 const senderDiv = document.createElement('div');
                 senderDiv.className = 'message-sender';
                 senderDiv.textContent = msg.sender_name;
-
                 const bubbleDiv = document.createElement('div');
                 bubbleDiv.className = 'message-bubble';
                 bubbleDiv.textContent = msg.message;
-
                 const timeDiv = document.createElement('div');
                 timeDiv.className = 'message-time';
                 timeDiv.textContent = formatTime(msg.created_at);
-
                 messageDiv.appendChild(senderDiv);
                 messageDiv.appendChild(bubbleDiv);
                 messageDiv.appendChild(timeDiv);
-
                 chatMessages.appendChild(messageDiv);
             });
-
-            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
