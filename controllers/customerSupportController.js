@@ -34,10 +34,16 @@ function callWebhook(payload) {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
+                const text = data.trim();
+                if (!text || text === '' || text === '""') return resolve(null);
+                // Try JSON first, fall back to plain text
                 try {
-                    if (!data || data.trim() === '' || data.trim() === '""') return resolve(null);
-                    resolve(JSON.parse(data));
-                } catch { resolve(null); }
+                    const json = JSON.parse(text);
+                    resolve(json);
+                } catch {
+                    // n8n returns plain text e.g. "வணக்கம்"
+                    resolve({ reply_local: text, reply_en: text });
+                }
             });
         });
         req.on('error', (e) => { console.error('[Webhook Error]', e.message); resolve(null); });
