@@ -51,11 +51,15 @@ async function translateText(text, language) {
 }
 
 /**
- * Detect language from message
+ * Map language name to code
  */
-async function detectLanguage(message) {
-    const result = await callTranslateWebhook(message, null);
-    return result?.detected_language || result?.language || 'en';
+function getLanguageCode(message) {
+    const msg = (message || '').toLowerCase().trim();
+    if (msg === 'tamil' || msg === 'தமிழ்') return 'ta';
+    if (msg === 'hindi' || msg === 'हिंदी' || msg === 'हिन्दी') return 'hi';
+    if (msg === 'telugu' || msg === 'తెలుగు') return 'te';
+    if (msg === 'english') return 'en';
+    return null; // not a language selection
 }
 
 /**
@@ -165,8 +169,13 @@ class CustomerSupportController {
                 });
             });
 
-            // Detect language and translate bot response
-            const detectedLang = await detectLanguage(initial_message);
+            // Detect language — check if message IS a language name first
+            let detectedLang = getLanguageCode(initial_message);
+            if (!detectedLang) {
+                // Not a language name — detect via webhook
+                const tDetect = await callTranslateWebhook(initial_message, null);
+                detectedLang = tDetect?.detected_language || tDetect?.language || 'en';
+            }
             
             // Store detected language
             db.query('UPDATE customer_support_conversations SET preferred_language = ? WHERE conversation_id = ?', 
@@ -260,8 +269,19 @@ class CustomerSupportController {
                 VALUES (?, ?, ?, ?)
             `;
 
+            // If customer sends a language name, update preferred_language
+            let forcedLang = null;
+            if (sender_type === 'customer' || !sender_type) {
+                const langCode = getLanguageCode(message);
+                if (langCode) {
+                    forcedLang = langCode;
+                    db.query('UPDATE customer_support_conversations SET preferred_language = ? WHERE conversation_id = ?',
+                        [langCode, conversation_id], () => {});
+                }
+            }
+
             // Get conversation's preferred language
-            const convLang = await new Promise(resolve => {
+            const convLang = forcedLang || await new Promise(resolve => {
                 db.query('SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?', 
                     [conversation_id], (err, rows) => resolve(rows?.[0]?.preferred_language || 'en'));
             });

@@ -649,11 +649,16 @@
             }
         }
 
-        // Display messages
+        // Display messages - filter out [EN] admin-only messages
         function displayMessages(messages) {
             chatMessages.innerHTML = '';
 
             messages.forEach(msg => {
+                // Skip [EN] messages - these are for admin reference only
+                if (msg.message && msg.message.startsWith('[EN]')) return;
+                // Skip Support Bot (EN) messages
+                if (msg.sender_name === 'Support Bot (EN)') return;
+
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${msg.sender_type}`;
 
