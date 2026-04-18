@@ -24,7 +24,7 @@ function callWebhook(payload) {
             port: WEBHOOK_PORT,
             path: WEBHOOK_PATH,
             method: 'POST',          // ALWAYS POST — never GET
-            timeout: 10000,
+            timeout: 30000,
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(body, 'utf8'),
@@ -60,7 +60,7 @@ function callWebhook(payload) {
             resolve(null);
         });
         req.on('timeout', () => {
-            console.error('[n8n Webhook] ✗ Timeout after 10s');
+            console.error('[n8n Webhook] ✗ Timeout after 30s');
             req.destroy();
             resolve(null);
         });
@@ -283,7 +283,7 @@ class CustomerSupportController {
                 console.log(`[n8n] ← Admin response:`, result);
 
                 // 2. Determine final values
-                // n8n returns "original" as placeholder when no translation — use actual message
+                // n8n Code_Admin_Format sets reply_en="original" as placeholder — ignore it, use reply_local
                 const replyLocal = result?.reply_local;
                 const translated = (replyLocal && replyLocal !== 'original') ? replyLocal : message;  // local language for customer
                 console.log(`[DB] Storing → original="${message}" translated="${translated}"`);
