@@ -678,22 +678,32 @@
             }
             if (!conversationId) return;
             try {
+                // Send language_select — backend stores language, does NOT create a chat message
                 await fetch(`${API_BASE}/customer-support/conversations/${conversationId}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: langCode, sender_type: 'language_select', sender_name: customerName, language: langCode })
+                    body: JSON.stringify({
+                        message: langCode,
+                        sender_type: 'language_select',
+                        sender_name: customerName,
+                        language: langCode
+                    })
                 });
-                await fetchMessages();
+                // Do NOT call fetchMessages here — no new message was stored
+                // Just update local state silently
             } catch (error) { console.error('Error setting language:', error); }
         }
 
-        // Display messages — filter [EN] admin-only messages
+        // Display messages — filter [EN] admin-only messages and language codes
         function displayMessages(messages) {
             chatMessages.innerHTML = '';
+            const langCodes = ['en','hi','ta','te'];
             messages.forEach(msg => {
-                // Skip [EN] messages and Support Bot (EN) — admin reference only
+                // Skip [EN] messages — admin reference only
                 if (msg.message && msg.message.startsWith('[EN]')) return;
                 if (msg.sender_name === 'Support Bot (EN)') return;
+                // Skip bare language code messages (e.g. "ta", "hi", "en", "te")
+                if (langCodes.includes(msg.message?.toLowerCase()?.trim())) return;
 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${msg.sender_type}`;
