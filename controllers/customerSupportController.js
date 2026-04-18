@@ -185,8 +185,6 @@ class CustomerSupportController {
     /**
      * Send a message in a conversation
      * POST /api/customer-support/conversations/:conversation_id/messages
-     *
-     * Special case: sender_type = "language_select" → store language, no chat message
      */
     async sendMessage(req, res) {
         try {
@@ -200,95 +198,80 @@ class CustomerSupportController {
             // Check conversation exists
             const exists = await new Promise((resolve, reject) => {
                 db.query('SELECT id FROM customer_support_conversations WHERE conversation_id = ?',
-                    [conversation_id], (err, results) => { if (err) reject(err); else resolve(results.length > 0); });
+                    [conversation_id],
+                    (err, results) => err ? reject(err) : resolve(results.length > 0));
             });
-            if (!exists) return res.status(404).json({ success: false, message: 'Conversation not found' });
+            if (!exists) {
+                return res.status(404).json({ success: false, message: 'Conversation not found' });
+            }
 
-            // ── LANGUAGE SELECTION ──
-            // When customer selects language (e.g. "Tamil"), store it — do NOT create a chat message
+            // ── LANGUAGE SELECT (NO MESSAGE SAVE) ──
             if (sender_type === 'language_select') {
                 const langCode = language || message.toLowerCase().trim();
                 await setConvLang(conversation_id, langCode);
                 return res.json({ success: true, message: 'Language preference saved', data: { language: langCode } });
             }
 
-            // ── Get stored language for this conversation ──
+            // Get conversation language
             const convLang = await getConvLang(conversation_id);
 
             // Update timestamp
             db.query('UPDATE customer_support_conversations SET updated_at = NOW() WHERE conversation_id = ?', [conversation_id], () => {});
 
-            // ── CUSTOMER MESSAGE ──
-            if (sender_type === 'customer' || !sender_type) {
-                console.log(`[n8n] Customer msg → lang=${convLang} msg="${message}"`);
+            console.log(`\n====== NEW MESSAGE ======`);
+            console.log(`Sender: ${sender_type}`);
+            console.log(`Lang: ${convLang}`);
+            console.log(`Msg: ${message}`);
 
-                // 1. Call n8n FIRST — translate customer message to English for admin
-                //    Do NOT store original message yet — wait for translation
-                const customerResult = await callWebhook({
+            // ─────────────────────────────
+            // 🧠 CUSTOMER MESSAGE FLOW
+            // ─────────────────────────────
+            if (sender_type === 'customer' || !sender_type) {
+                // 1. Translate → ENGLISH (for admin)
+                const result = await callWebhook({
                     type: 'message',
                     message: message,
                     language: convLang || 'en',
                     source: 'customer'
                 });
-                console.log(`[n8n] Customer translate response:`, customerResult);
+                console.log(`[n8n] Customer Translation:`, result);
 
-                // 2. Store customer message in their original language (what they typed)
-                await insertMessage(conversation_id, 'customer', sender_name || 'Customer', message);
+                // 2. Final message to store (ENGLISH)
+                const finalMessage = result?.reply_en || message;
 
-                // 3. Store English translation for admin reference (only if different from original)
-                const enVersion = customerResult?.reply_en;
-                if (enVersion && enVersion !== message) {
-                    await insertMessage(conversation_id, 'bot', 'Support Bot (EN)', `[EN] ${enVersion}`);
-                }
+                // 3. SAVE ONLY AFTER TRANSLATION
+                await insertMessage(conversation_id, 'customer', sender_name || 'Customer', finalMessage);
 
-                // 4. Get bot reply in English
-                const botEn = await getBotResponse(message);
-                console.log(`[n8n] Bot reply (EN): "${botEn}" → translating to lang=${convLang}`);
-
-                // 5. Translate bot reply to customer's language via n8n
-                const botResult = await callWebhook({
-                    type: 'message',
-                    message: botEn,
-                    language: convLang || 'en',
-                    source: 'admin'
-                });
-                console.log(`[n8n] Bot translate response:`, botResult);
-
-                // 6. Store ONLY translated bot response — never store English if lang is set
-                const botFinal = (convLang && convLang !== 'en')
-                    ? (botResult?.reply_local || botEn)
-                    : botEn;
-                await insertMessage(conversation_id, 'bot', 'Support Bot', botFinal);
-
-                return res.json({ success: true, message: 'Message sent successfully' });
+                return res.json({ success: true, message: finalMessage });
             }
 
-            // ── SUPPORT / ADMIN MESSAGE ──
+            // ─────────────────────────────
+            // 🧠 ADMIN / SUPPORT MESSAGE FLOW
+            // ─────────────────────────────
             if (sender_type === 'support' || sender_type === 'admin') {
-                console.log(`[n8n] Admin msg → lang=${convLang} msg="${message}"`);
-
-                // 1. Call n8n FIRST — translate admin message to customer's language
-                //    Do NOT store until translation is complete
-                const adminResult = await callWebhook({
+                // 1. Translate → LOCAL LANGUAGE
+                const result = await callWebhook({
                     type: 'message',
                     message: message,
                     language: convLang || 'en',
                     source: 'admin'
                 });
-                console.log(`[n8n] Admin translate response:`, adminResult);
+                console.log(`[n8n] Admin Translation:`, result);
 
-                // 2. Store translated message — never store English if customer's lang is set
-                const localMsg = (convLang && convLang !== 'en')
-                    ? (adminResult?.reply_local || message)
-                    : message;
-                await insertMessage(conversation_id, 'support', sender_name || 'Support Agent', localMsg);
+                // 2. Final message to store (LOCAL)
+                const finalMessage = result?.reply_local || message;
 
-                return res.json({ success: true, message: 'Message sent successfully' });
+                // 3. SAVE ONLY AFTER TRANSLATION
+                await insertMessage(conversation_id, 'support', sender_name || 'Support Agent', finalMessage);
+
+                return res.json({ success: true, message: finalMessage });
             }
 
-            // ── OTHER (bot direct insert) ──
-            await insertMessage(conversation_id, sender_type, sender_name||'Bot', message);
-            return res.json({ success:true, message:'Message sent successfully' });
+            // ─────────────────────────────
+            // FALLBACK (RARE CASE)
+            // ─────────────────────────────
+            await insertMessage(conversation_id, sender_type || 'bot', sender_name || 'System', message);
+            return res.json({ success: true, message });
 
         } catch (error) {
             console.error('Send message error:', error);
