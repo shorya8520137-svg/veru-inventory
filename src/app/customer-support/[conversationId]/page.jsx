@@ -76,7 +76,8 @@ export default function ChatPage(){
   const [loading,setLoading]=useState(true);
   const [sending,setSending]=useState(false);
   const [translating,setTranslating]=useState(false);
-  const [convLanguage,setConvLanguage]=useState('en'); // preferred_language from DB
+  const [convLanguage,setConvLanguage]=useState('en');
+  const [webhookStatus,setWebhookStatus]=useState(null); // preferred_language from DB
   const [slaAlert,setSlaAlert]=useState(false);       // red alert after 1 min no reply
   const [slaSeconds,setSlaSeconds]=useState(0);       // countdown seconds
   const [showDisposition,setShowDisposition]=useState(false);
@@ -147,7 +148,10 @@ export default function ChatPage(){
     const msgToSend=newMessage;
     setNewMessage('');
     try{
-      // Send to backend — backend handles n8n translation, no frontend translation
+      console.log('%c[WEBHOOK] 🚀 Sending message to backend...', 'color:#7C3AED;font-weight:bold;font-size:13px');
+      console.log('%c[WEBHOOK] Payload:', 'color:#6B7280', { message:msgToSend, sender_type:'support', language:convLanguage||aiLanguage||'en' });
+      setWebhookStatus('firing');
+
       const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -159,13 +163,25 @@ export default function ChatPage(){
         })
       });
       const data=await res.json();
+
       if(data.success){
+        console.log('%c[WEBHOOK] ✅ n8n triggered successfully!', 'color:#22C55E;font-weight:bold;font-size:13px');
+        console.log('%c[WEBHOOK] Response:', 'color:#6B7280', data);
+        setWebhookStatus('ok');
+        setTimeout(()=>setWebhookStatus(null),3000);
         lastSupportReplyRef.current=new Date();
         setSlaAlert(false);setSlaSeconds(0);
-        // Only fetch messages AFTER backend confirms success (no optimistic update)
         await fetchMessages();
+      } else {
+        console.log('%c[WEBHOOK] ❌ Backend error', 'color:#EF4444;font-weight:bold', data);
+        setWebhookStatus('error');
+        setTimeout(()=>setWebhookStatus(null),3000);
       }
-    }catch(e){console.error('sendMessage error:',e);}
+    }catch(e){
+      console.log('%c[WEBHOOK] ❌ Network error', 'color:#EF4444;font-weight:bold', e.message);
+      setWebhookStatus('error');
+      setTimeout(()=>setWebhookStatus(null),3000);
+    }
     finally{setSending(false);}
   };
 
@@ -220,7 +236,8 @@ export default function ChatPage(){
 
   const handleLanguageSelect=async(lang)=>{
     setAiLanguage(lang);
-    setShowAIAgent(true); // auto-open AI panel when language selected from main chat
+    setShowAIAgent(true);
+    console.log(`%c[WEBHOOK] 🌐 Language selected: ${lang}`, 'color:#2563EB;font-weight:bold;font-size:13px');
     setAiMessages(prev=>[...prev,{role:'user',content:`Selected: ${lang==='en'?'English':lang==='hi'?'हिंदी':lang==='ta'?'தமிழ்':'తెలుగు'}`}]);
     setAiPhase('language_selected');
     // Phase 2: show invoking
@@ -388,6 +405,10 @@ export default function ChatPage(){
             <span style={{fontSize:13,fontWeight:600,color:slaAlert?'#DC2626':'#111827',whiteSpace:'nowrap'}}>
               {slaAlert?'⚠ Response Overdue':'Active Conversation'}
             </span>
+            {/* Webhook status indicator */}
+            {webhookStatus==='firing'&&<span style={{fontSize:11,fontWeight:600,color:'#7C3AED',background:'#F5F3FF',padding:'2px 8px',borderRadius:20,marginLeft:8,animation:'pulse 1s infinite'}}>⚡ n8n firing...</span>}
+            {webhookStatus==='ok'&&<span style={{fontSize:11,fontWeight:600,color:'#16A34A',background:'#F0FDF4',padding:'2px 8px',borderRadius:20,marginLeft:8}}>✅ n8n OK</span>}
+            {webhookStatus==='error'&&<span style={{fontSize:11,fontWeight:600,color:'#DC2626',background:'#FEF2F2',padding:'2px 8px',borderRadius:20,marginLeft:8}}>❌ n8n Error</span>}
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
             <button style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'#2563EB',cursor:'pointer',padding:'7px 10px',borderRadius:8,whiteSpace:'nowrap'}}>Assign to Me</button>
