@@ -147,7 +147,7 @@ export default function ChatPage(){
     const msgToSend=newMessage;
     setNewMessage('');
     try{
-      // Always send with language — backend handles translation
+      // Send to backend — backend handles n8n translation, no frontend translation
       const res=await fetch(`${API_BASE}/api/customer-support/conversations/${conversationId}/messages`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -155,13 +155,14 @@ export default function ChatPage(){
           message:msgToSend,
           sender_type:'support',
           sender_name:'Support Agent',
-          language:convLanguage||aiLanguage||'en'  // always include language
+          language:convLanguage||aiLanguage||'en'
         })
       });
       const data=await res.json();
       if(data.success){
         lastSupportReplyRef.current=new Date();
         setSlaAlert(false);setSlaSeconds(0);
+        // Only fetch messages AFTER backend confirms success (no optimistic update)
         await fetchMessages();
       }
     }catch(e){console.error('sendMessage error:',e);}
