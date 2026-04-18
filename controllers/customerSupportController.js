@@ -343,7 +343,7 @@ class CustomerSupportController {
             const { conversation_id } = req.params;
             const messages = await new Promise((resolve, reject) => {
                 db.query(
-                    'SELECT id, sender_type, sender_name, message, is_read, created_at FROM customer_support_messages WHERE conversation_id = ? ORDER BY created_at ASC',
+                    'SELECT id, sender_type, sender_name, message, message_original, message_translated, is_read, created_at FROM customer_support_messages WHERE conversation_id = ? ORDER BY created_at ASC',
                     [conversation_id],
                     (err, results) => { if (err) reject(err); else resolve(results); }
                 );
