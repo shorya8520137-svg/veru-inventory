@@ -218,11 +218,29 @@ class CustomerSupportController {
             if (sender_type === 'language_select') {
                 const langCode = language || message.toLowerCase().trim();
                 await setConvLang(conversation_id, langCode);
+                console.log(`[Lang] ✅ language_select: set preferred_language="${langCode}"`);
                 return res.json({ success: true, message: 'Language preference saved', data: { language: langCode } });
             }
 
-            // Get conversation language
+            // ── AUTO-DETECT: if message IS a language name/code, set it and stop ──
+            const LANG_MAP = {
+                'tamil':'ta', 'தமிழ்':'ta', 'ta':'ta',
+                'hindi':'hi', 'हिंदी':'hi', 'hi':'hi',
+                'telugu':'te', 'తెలుగు':'te', 'te':'te',
+                'english':'en', 'en':'en'
+            };
+            const msgKey = message.trim().toLowerCase();
+            const msgKeyOrig = message.trim();
+            if (LANG_MAP[msgKey] || LANG_MAP[msgKeyOrig]) {
+                const langCode = LANG_MAP[msgKey] || LANG_MAP[msgKeyOrig];
+                await setConvLang(conversation_id, langCode);
+                console.log(`[Lang] ✅ Auto-detected language="${langCode}" from message="${message}" — NOT storing as chat`);
+                return res.json({ success: true, message: 'Language preference saved', data: { language: langCode } });
+            }
+
+            // Get conversation language — AFTER language detection
             const convLang = await getConvLang(conversation_id);
+            console.log(`[Lang] convLang="${convLang}" for ${conversation_id}`);
 
             // Update timestamp
             db.query('UPDATE customer_support_conversations SET updated_at = NOW() WHERE conversation_id = ?', [conversation_id], () => {});
