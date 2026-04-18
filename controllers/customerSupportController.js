@@ -247,7 +247,9 @@ class CustomerSupportController {
                 console.log(`[n8n] ← Customer response:`, result);
 
                 // 2. Determine final values
-                const translated = result?.reply_en || message;  // English for admin
+                // n8n returns "original" as placeholder when no translation — use actual message
+                const replyEn = result?.reply_en;
+                const translated = (replyEn && replyEn !== 'original') ? replyEn : message;  // English for admin
                 console.log(`[DB] Storing → original="${message}" translated="${translated}"`);
 
                 // 3. ONE insert — translate first, then save
@@ -281,7 +283,9 @@ class CustomerSupportController {
                 console.log(`[n8n] ← Admin response:`, result);
 
                 // 2. Determine final values
-                const translated = result?.reply_local || message;  // local language for customer
+                // n8n returns "original" as placeholder when no translation — use actual message
+                const replyLocal = result?.reply_local;
+                const translated = (replyLocal && replyLocal !== 'original') ? replyLocal : message;  // local language for customer
                 console.log(`[DB] Storing → original="${message}" translated="${translated}"`);
 
                 // 3. ONE insert — translate first, then save
