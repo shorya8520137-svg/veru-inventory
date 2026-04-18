@@ -76,7 +76,10 @@ function getConvLang(conversation_id) {
         db.query(
             'SELECT preferred_language FROM customer_support_conversations WHERE conversation_id = ?',
             [conversation_id],
-            (err, rows) => resolve(rows?.[0]?.preferred_language || 'en')
+            (err, rows) => {
+                if (err) { console.error('[getConvLang] Column may not exist:', err.message); return resolve('en'); }
+                resolve(rows?.[0]?.preferred_language || 'en');
+            }
         );
     });
 }
@@ -87,7 +90,7 @@ function setConvLang(conversation_id, language) {
         db.query(
             'UPDATE customer_support_conversations SET preferred_language = ? WHERE conversation_id = ?',
             [language, conversation_id],
-            () => resolve()
+            (err) => { if (err) console.error('[setConvLang] Column may not exist:', err.message); resolve(); }
         );
     });
 }
@@ -328,8 +331,8 @@ class CustomerSupportController {
 
             const query = `
                 SELECT c.id, c.conversation_id, c.customer_name, c.customer_email, c.customer_phone,
-                    c.subject, c.status, c.priority, c.preferred_language, c.inquiry_type,
-                    c.description, c.created_at, c.updated_at,
+                    c.subject, c.status, c.priority, c.preferred_language,
+                    c.created_at, c.updated_at,
                     (SELECT COUNT(*) FROM customer_support_messages WHERE conversation_id = c.conversation_id) as message_count,
                     (SELECT message FROM customer_support_messages WHERE conversation_id = c.conversation_id ORDER BY created_at DESC LIMIT 1) as last_message
                 FROM customer_support_conversations c
