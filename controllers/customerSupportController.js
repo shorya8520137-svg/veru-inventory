@@ -15,7 +15,7 @@ const WEBHOOK_HOST = '13.215.172.213';
 const WEBHOOK_PORT = 5678;
 const WEBHOOK_PATH = '/webhook/6ba285e1-413c-4c00-9a93-d653daaa1030';
 
-/* ── POST JSON to n8n webhook ── */
+/* ── POST JSON to n8n webhook — production-ready with logging ── */
 function callWebhook(payload) {
     return new Promise((resolve) => {
         const body = JSON.stringify(payload);
@@ -23,17 +23,25 @@ function callWebhook(payload) {
             hostname: WEBHOOK_HOST,
             port: WEBHOOK_PORT,
             path: WEBHOOK_PATH,
-            method: 'POST',
-            timeout: 8000,
+            method: 'POST',          // ALWAYS POST — never GET
+            timeout: 10000,
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(body)
+                'Content-Length': Buffer.byteLength(body, 'utf8'),
+                'Accept': 'application/json, text/plain, */*'
             }
         };
+
+        // Debug log — confirm method and payload
+        console.log(`[n8n Webhook] → POST http://${WEBHOOK_HOST}:${WEBHOOK_PORT}${WEBHOOK_PATH}`);
+        console.log(`[n8n Webhook] → Payload: ${body}`);
+
         const req = http.request(options, (res) => {
             let data = '';
+            res.setEncoding('utf8');
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
+                console.log(`[n8n Webhook] ← Status: ${res.statusCode} | Response: ${data.substring(0, 200)}`);
                 const text = data.trim();
                 if (!text || text === '' || text === '""') return resolve(null);
                 // Try JSON first, fall back to plain text
@@ -46,9 +54,18 @@ function callWebhook(payload) {
                 }
             });
         });
-        req.on('error', (e) => { console.error('[Webhook Error]', e.message); resolve(null); });
-        req.on('timeout', () => { req.destroy(); resolve(null); });
-        req.write(body);
+
+        req.on('error', (e) => {
+            console.error(`[n8n Webhook] ✗ Error: ${e.message}`);
+            resolve(null);
+        });
+        req.on('timeout', () => {
+            console.error('[n8n Webhook] ✗ Timeout after 10s');
+            req.destroy();
+            resolve(null);
+        });
+
+        req.write(body, 'utf8');
         req.end();
     });
 }
