@@ -252,38 +252,11 @@ class CustomerSupportController {
 
             // ─────────────────────────────
             // 🧠 CUSTOMER MESSAGE FLOW
-            // ─────────────────────────────
+            // ── CUSTOMER MESSAGE: Store as-is, NO translation ──
             if (sender_type === 'customer' || !sender_type) {
-                // 1. Call n8n FIRST — translate local → English
-                console.log(`[n8n] → Payload:`, { type:'message', message, language:convLang||'en', source:'customer' });
-                const result = await callWebhook({
-                    type: 'message',
-                    message: message,
-                    language: convLang || 'en',
-                    source: 'customer'
-                });
-                console.log(`[n8n] ← Customer response:`, result);
-
-                // 2. Determine final values
-                // n8n returns "original" as placeholder when no translation — use actual message
-                const replyEn = result?.reply_en;
-                const translated = (replyEn && replyEn !== 'original') ? replyEn : message;  // English for admin
-                console.log(`[DB] Storing → original="${message}" translated="${translated}"`);
-
-                // 3. ONE insert — translate first, then save
-                await insertMessage(
-                    conversation_id,
-                    'customer',
-                    sender_name || 'Customer',
-                    translated,       // message (display) = English
-                    message,          // message_original = local language input
-                    translated        // message_translated = English
-                );
-
-                return res.json({
-                    success: true,
-                    data: { original: message, translated }
-                });
+                console.log(`[DB] customer storing original (no translation): "${message}"`);
+                await insertMessage(conversation_id, 'customer', sender_name||'Customer', message, message, message);
+                return res.json({ success:true, data:{ original:message, translated:message } });
             }
 
             // ─────────────────────────────
