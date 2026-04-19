@@ -468,10 +468,17 @@ export default function ChatPage(){
                           <span style={{fontSize:12,color:'#6B7280',fontWeight:500}}>{msg.sender_name||'Support Agent'}</span>
                           <span style={{fontSize:11,color:'#9CA3AF'}}>{formatTime(msg.created_at)}</span>
                         </div>
-                        {/* Admin sees their original English message */}
+                        {/* Original English — what admin typed */}
                         <div style={{maxWidth:'72%',background:'linear-gradient(135deg,#2563EB,#1D4ED8)',borderRadius:16,padding:'14px 18px',boxShadow:'0 4px 12px rgba(37,99,235,0.25)'}}>
-                          <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message_original||msg.message}</p>
+                          <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif'}}>{msg.message_original||msg.message}</p>
                         </div>
+                        {/* Translated — what customer received */}
+                        {msg.message && msg.message_original && msg.message !== msg.message_original && (
+                          <div style={{maxWidth:'72%',background:'#EFF6FF',borderRadius:10,padding:'8px 14px',border:'1px solid #BFDBFE'}}>
+                            <div style={{fontSize:10,fontWeight:700,color:'#93C5FD',letterSpacing:'0.06em',marginBottom:3}}>SENT TO CUSTOMER</div>
+                            <p style={{fontSize:12,color:'#1E40AF',lineHeight:1.5,margin:0,fontFamily:'system-ui,-apple-system,sans-serif'}}>{msg.message}</p>
+                          </div>
+                        )}
                       </div>
                     ):(
                       /* Customer message — check for [EN] reference messages */
