@@ -591,10 +591,12 @@
             }
         });
 
+        let isSending = false; // guard against double-send
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message || !conversationId) return;
+            if (!message || !conversationId || isSending) return;
 
+            isSending = true;
             sendButton.disabled = true;
             messageInput.disabled = true;
 
@@ -621,6 +623,7 @@
                 console.error('Error sending message:', error);
                 alert('Failed to send message. Please try again.');
             } finally {
+                isSending = false;
                 sendButton.disabled = false;
                 messageInput.disabled = false;
                 messageInput.focus();

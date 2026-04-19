@@ -256,6 +256,22 @@ class CustomerSupportController {
             // Store English (translated) as main message for admin panel
             // Store original Tamil as message_original for chat widget
             if (sender_type === 'customer' || !sender_type) {
+                // ── IDEMPOTENCY: block duplicate within 10 seconds ──
+                const recentDup = await new Promise(resolve => {
+                    db.query(
+                        `SELECT id FROM customer_support_messages
+                         WHERE conversation_id = ? AND sender_type = 'customer'
+                           AND message_original = ? AND created_at >= NOW() - INTERVAL 10 SECOND
+                         LIMIT 1`,
+                        [conversation_id, message],
+                        (err, rows) => resolve(rows?.[0] || null)
+                    );
+                });
+                if (recentDup) {
+                    console.log(`[Dedup] ⚠ Duplicate customer message blocked (id=${recentDup.id})`);
+                    return res.json({ success:true, data:{ original:message, translated:message, deduplicated:true } });
+                }
+
                 console.log(`[n8n] → CUSTOMER: lang=${convLang} msg="${message}"`);
                 const result = await callWebhook({ type:'message', message, language:convLang||'en', source:'customer' });
                 console.log(`[n8n] ← CUSTOMER:`, result);
