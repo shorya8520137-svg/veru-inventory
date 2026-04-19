@@ -468,17 +468,10 @@ export default function ChatPage(){
                           <span style={{fontSize:12,color:'#6B7280',fontWeight:500}}>{msg.sender_name||'Support Agent'}</span>
                           <span style={{fontSize:11,color:'#9CA3AF'}}>{formatTime(msg.created_at)}</span>
                         </div>
-                        {/* Show translated message (what customer sees) */}
+                        {/* Admin sees their original English message */}
                         <div style={{maxWidth:'72%',background:'linear-gradient(135deg,#2563EB,#1D4ED8)',borderRadius:16,padding:'14px 18px',boxShadow:'0 4px 12px rgba(37,99,235,0.25)'}}>
-                          <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message}</p>
+                          <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message_original||msg.message}</p>
                         </div>
-                        {/* Show original English below if different from translated */}
-                        {msg.message_original && msg.message_original !== msg.message && (
-                          <div style={{maxWidth:'72%',background:'#F1F5F9',borderRadius:10,padding:'6px 12px',border:'1px dashed #CBD5E1'}}>
-                            <span style={{fontSize:10,color:'#94A3B8',fontWeight:600,letterSpacing:'0.05em'}}>ORIGINAL: </span>
-                            <span style={{fontSize:11,color:'#64748B',fontStyle:'italic'}}>{msg.message_original}</span>
-                          </div>
-                        )}
                       </div>
                     ):(
                       /* Customer message — check for [EN] reference messages */
