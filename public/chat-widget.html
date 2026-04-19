@@ -643,7 +643,9 @@
 
                 if (data.success) {
                     console.log('✅ Received', data.data.messages.length, 'messages');
-                    displayMessages(data.data.messages);
+                    // Pass preferred_language so widget knows which language to show
+                    const lang = data.data.preferred_language || selectedLanguage || 'en';
+                    displayMessages(data.data.messages, lang);
                 } else {
                     console.error('❌ Failed to fetch messages:', data);
                 }
