@@ -700,14 +700,39 @@
         // Display messages — filter [EN] admin-only messages and language codes
         function displayMessages(messages) {
             chatMessages.innerHTML = '';
-            const langCodes = ['en','hi','ta','te'];
+            const langNames = ['en','hi','ta','te','tamil','hindi','telugu','english'];
+
+            // Deduplicate: for customer messages, group by conversation+sender+original content
+            // keep only the one with message_original (local lang) if duplicate exists
+            const seen = new Set();
+
             messages.forEach(msg => {
                 // Skip [EN] messages — admin reference only
                 if (msg.message && msg.message.startsWith('[EN]')) return;
                 if (msg.sender_name === 'Support Bot (EN)') return;
-                // Skip bare language code messages AND language name messages
-                const langNames = ['en','hi','ta','te','tamil','hindi','telugu','english'];
+
+                // Skip language_select type rows (old bug — stored before fix)
+                if (msg.sender_type === 'language_select') return;
+
+                // Skip bare language code/name messages (e.g. "Tamil", "ta", "Hindi")
                 if (langNames.includes(msg.message?.toLowerCase()?.trim())) return;
+                if (langNames.includes(msg.message_original?.toLowerCase()?.trim())) return;
+                // For customer messages: display text = message_original (their language)
+                // fallback to message if message_original is empty
+                let displayText;
+                if (msg.sender_type === 'customer') {
+                    displayText = (msg.message_original && msg.message_original.trim())
+                        ? msg.message_original
+                        : msg.message;
+                } else {
+                    // support/bot: show message (already translated to customer's language)
+                    displayText = msg.message;
+                }
+
+                // Deduplicate by sender_type + displayText — skip if already shown
+                const dedupKey = `${msg.sender_type}::${displayText?.trim()}`;
+                if (seen.has(dedupKey)) return;
+                seen.add(dedupKey);
 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${msg.sender_type}`;
@@ -716,13 +741,7 @@
                 senderDiv.textContent = msg.sender_name;
                 const bubbleDiv = document.createElement('div');
                 bubbleDiv.className = 'message-bubble';
-                // For customer messages: show original (local language), not translated English
-                // For support/bot messages: show translated (local language) which is what's in message field
-                if (msg.sender_type === 'customer' && msg.message_original) {
-                    bubbleDiv.textContent = msg.message_original;
-                } else {
-                    bubbleDiv.textContent = msg.message;
-                }
+                bubbleDiv.textContent = displayText;
                 const timeDiv = document.createElement('div');
                 timeDiv.className = 'message-time';
                 timeDiv.textContent = formatTime(msg.created_at);

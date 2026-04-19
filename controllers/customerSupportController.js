@@ -256,12 +256,12 @@ class CustomerSupportController {
             // Store English (translated) as main message for admin panel
             // Store original Tamil as message_original for chat widget
             if (sender_type === 'customer' || !sender_type) {
-                // ── IDEMPOTENCY: block duplicate within 10 seconds ──
+                // ── IDEMPOTENCY: block duplicate within 30 seconds ──
                 const recentDup = await new Promise(resolve => {
                     db.query(
                         `SELECT id FROM customer_support_messages
                          WHERE conversation_id = ? AND sender_type = 'customer'
-                           AND message_original = ? AND created_at >= NOW() - INTERVAL 10 SECOND
+                           AND message_original = ? AND created_at >= NOW() - INTERVAL 30 SECOND
                          LIMIT 1`,
                         [conversation_id, message],
                         (err, rows) => resolve(rows?.[0] || null)
