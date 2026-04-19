@@ -724,16 +724,11 @@
                     const main = msg.message?.trim();
 
                     if (orig && orig !== main) {
-                        // Has real translation — show original (local language)
-                        displayText = orig;
-                    } else if (isNonEnglish && orig === main) {
-                        // message_original == message means no translation happened
-                        // If this looks like English and we expect non-English, skip it
-                        // (it's the "translated for admin" row that slipped through)
-                        const looksEnglish = /^[a-zA-Z0-9\s.,!?'"()-]+$/.test(main);
-                        if (looksEnglish) return; // skip English-only row for non-English customer
+                        // Has real translation — ALWAYS show original (local language)
+                        // Never show the English translation to customer
                         displayText = orig;
                     } else {
+                        // No translation — show as-is
                         displayText = orig || main;
                     }
                 } else {
