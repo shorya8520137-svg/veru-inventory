@@ -252,11 +252,19 @@ class CustomerSupportController {
 
             // ─────────────────────────────
             // 🧠 CUSTOMER MESSAGE FLOW
-            // ── CUSTOMER MESSAGE: Store as-is, NO translation ──
+            // ── CUSTOMER MESSAGE ──
+            // Store English (translated) as main message for admin panel
+            // Store original Tamil as message_original for chat widget
             if (sender_type === 'customer' || !sender_type) {
-                console.log(`[DB] customer storing original (no translation): "${message}"`);
-                await insertMessage(conversation_id, 'customer', sender_name||'Customer', message, message, message);
-                return res.json({ success:true, data:{ original:message, translated:message } });
+                console.log(`[n8n] → CUSTOMER: lang=${convLang} msg="${message}"`);
+                const result = await callWebhook({ type:'message', message, language:convLang||'en', source:'customer' });
+                console.log(`[n8n] ← CUSTOMER:`, result);
+                const replyEn = result?.reply_en;
+                const englishForAdmin = (replyEn && replyEn !== 'original') ? replyEn : message;
+                console.log(`[DB] customer: original="${message}" english="${englishForAdmin}"`);
+                // message = English (admin sees this), message_original = Tamil (widget shows this)
+                await insertMessage(conversation_id, 'customer', sender_name||'Customer', englishForAdmin, message, englishForAdmin);
+                return res.json({ success:true, data:{ original:message, translated:englishForAdmin } });
             }
 
             // ─────────────────────────────
