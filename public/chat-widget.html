@@ -712,7 +712,13 @@
                 senderDiv.textContent = msg.sender_name;
                 const bubbleDiv = document.createElement('div');
                 bubbleDiv.className = 'message-bubble';
-                bubbleDiv.textContent = msg.message;
+                // For customer messages: show original (local language), not translated English
+                // For support/bot messages: show translated (local language) which is what's in message field
+                if (msg.sender_type === 'customer' && msg.message_original) {
+                    bubbleDiv.textContent = msg.message_original;
+                } else {
+                    bubbleDiv.textContent = msg.message;
+                }
                 const timeDiv = document.createElement('div');
                 timeDiv.className = 'message-time';
                 timeDiv.textContent = formatTime(msg.created_at);
