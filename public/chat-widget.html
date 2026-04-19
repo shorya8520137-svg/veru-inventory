@@ -702,8 +702,9 @@
                 // Skip [EN] messages — admin reference only
                 if (msg.message && msg.message.startsWith('[EN]')) return;
                 if (msg.sender_name === 'Support Bot (EN)') return;
-                // Skip bare language code messages (e.g. "ta", "hi", "en", "te")
-                if (langCodes.includes(msg.message?.toLowerCase()?.trim())) return;
+                // Skip bare language code messages AND language name messages
+                const langNames = ['en','hi','ta','te','tamil','hindi','telugu','english'];
+                if (langNames.includes(msg.message?.toLowerCase()?.trim())) return;
 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${msg.sender_type}`;
