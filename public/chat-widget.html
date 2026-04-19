@@ -698,12 +698,10 @@
         }
 
         // Display messages — filter [EN] admin-only messages and language codes
-        function displayMessages(messages) {
+        function displayMessages(messages, convLang) {
             chatMessages.innerHTML = '';
             const langNames = ['en','hi','ta','te','tamil','hindi','telugu','english'];
-
-            // Deduplicate: for customer messages, group by conversation+sender+original content
-            // keep only the one with message_original (local lang) if duplicate exists
+            const isNonEnglish = convLang && convLang !== 'en';
             const seen = new Set();
 
             messages.forEach(msg => {
@@ -711,25 +709,36 @@
                 if (msg.message && msg.message.startsWith('[EN]')) return;
                 if (msg.sender_name === 'Support Bot (EN)') return;
 
-                // Skip language_select type rows (old bug — stored before fix)
+                // Skip language_select type rows (old bug)
                 if (msg.sender_type === 'language_select') return;
 
-                // Skip bare language code/name messages (e.g. "Tamil", "ta", "Hindi")
+                // Skip bare language code/name messages (e.g. "Tamil", "ta")
                 if (langNames.includes(msg.message?.toLowerCase()?.trim())) return;
                 if (langNames.includes(msg.message_original?.toLowerCase()?.trim())) return;
-                // For customer messages: display text = message_original (their language)
-                // fallback to message if message_original is empty
+
                 let displayText;
                 if (msg.sender_type === 'customer') {
-                    displayText = (msg.message_original && msg.message_original.trim())
-                        ? msg.message_original
-                        : msg.message;
+                    const orig = msg.message_original?.trim();
+                    const main = msg.message?.trim();
+
+                    if (orig && orig !== main) {
+                        // Has real translation — show original (local language)
+                        displayText = orig;
+                    } else if (isNonEnglish && orig === main) {
+                        // message_original == message means no translation happened
+                        // If this looks like English and we expect non-English, skip it
+                        // (it's the "translated for admin" row that slipped through)
+                        const looksEnglish = /^[a-zA-Z0-9\s.,!?'"()-]+$/.test(main);
+                        if (looksEnglish) return; // skip English-only row for non-English customer
+                        displayText = orig;
+                    } else {
+                        displayText = orig || main;
+                    }
                 } else {
-                    // support/bot: show message (already translated to customer's language)
                     displayText = msg.message;
                 }
 
-                // Deduplicate by sender_type + displayText — skip if already shown
+                // Deduplicate by sender_type + displayText
                 const dedupKey = `${msg.sender_type}::${displayText?.trim()}`;
                 if (seen.has(dedupKey)) return;
                 seen.add(dedupKey);
