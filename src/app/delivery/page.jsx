@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import DeliveryCharts from './DeliveryCharts';
+import ShipmentTable from './ShipmentTable';
+import ShipmentStats from './ShipmentStats';
 
 const TrackingMap = dynamic(() => import('./TrackingMap'), { ssr: false });
 
@@ -59,24 +61,6 @@ export default function DeliveryPage() {
   return (
     <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '16px' }}>
 
-      {/* CTA */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-        <button style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          background: 'linear-gradient(135deg, #1E3A5F, #2563EB)',
-          color: '#fff', border: 'none', borderRadius: 14,
-          padding: '12px 24px', fontSize: 14, fontWeight: 700,
-          cursor: 'pointer', boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
-          transition: 'transform 0.2s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Create Shipment
-        </button>
-      </div>
-
       {/* KPI CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
         {KPI_CARDS.map((card, i) => (
@@ -100,10 +84,10 @@ export default function DeliveryPage() {
       </div>
 
       {/* MAIN GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 12, alignItems: 'stretch' }}>
 
         {/* MAP */}
-        <div style={{ borderRadius: 18, overflow: 'hidden', height: 480, position: 'relative' }}>
+        <div style={{ borderRadius: 18, overflow: 'hidden', minHeight: 380, position: 'relative' }}>
           {/* Live badge */}
           <div style={{
             position: 'absolute', top: 16, left: 16, zIndex: 1000,
@@ -166,6 +150,12 @@ export default function DeliveryPage() {
 
       {/* 3D CHARTS */}
       <DeliveryCharts />
+
+      {/* SHIPMENT TABLE */}
+      <ShipmentTable />
+
+      {/* SHIPMENT STATS */}
+      <ShipmentStats />
     </div>
   );
 }

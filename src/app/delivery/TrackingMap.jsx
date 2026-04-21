@@ -92,7 +92,7 @@ export default function TrackingMap({ awb, setAwb, journey }) {
           }}
         />
       </div>
-      <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 18 }} />
+      <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: 380, borderRadius: 18 }} />
     </div>
   );
 }
