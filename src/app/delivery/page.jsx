@@ -169,16 +169,10 @@ export default function DeliveryPage() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '28px 32px' }}>
+    <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '28px 32px' }}>
 
-      {/* HEADER */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.5px', margin: 0 }}>
-            Fleet Intelligence Console
-          </h1>
-          <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>Real-time optimization & logistics oversight</p>
-        </div>
+      {/* CREATE SHIPMENT BUTTON — top right only */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 28 }}>
         <button style={{
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'linear-gradient(135deg, #1E3A5F, #2563EB)',
@@ -194,8 +188,6 @@ export default function DeliveryPage() {
           Create Shipment
         </button>
       </div>
-
-      {/* KPI CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
         {KPI_CARDS.map((card, i) => (
           <div key={i} style={{
