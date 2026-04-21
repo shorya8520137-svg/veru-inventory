@@ -87,7 +87,7 @@ function DonutChart3D({ data }) {
 
 export default function DeliveryCharts() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginTop: 20 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 12 }}>
       {CHARTS.map((chart, i) => (
         <div key={i} style={{
           background: '#fff', borderRadius: 20, padding: '20px 24px 24px',

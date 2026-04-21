@@ -57,10 +57,10 @@ export default function DeliveryPage() {
   const [awb, setAwb] = useState('');
 
   return (
-    <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '28px 32px' }}>
+    <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '16px' }}>
 
       {/* CTA */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
         <button style={{
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'linear-gradient(135deg, #1E3A5F, #2563EB)',
@@ -78,7 +78,7 @@ export default function DeliveryPage() {
       </div>
 
       {/* KPI CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
         {KPI_CARDS.map((card, i) => (
           <div key={i} style={{
             background: '#fff', borderRadius: 20, padding: '20px 22px',
@@ -100,7 +100,7 @@ export default function DeliveryPage() {
       </div>
 
       {/* MAIN GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 12 }}>
 
         {/* MAP */}
         <div style={{ borderRadius: 18, overflow: 'hidden', height: 480, position: 'relative' }}>
