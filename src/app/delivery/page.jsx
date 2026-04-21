@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import DeliveryCharts from './DeliveryCharts';
 
 const TrackingMap = dynamic(() => import('./TrackingMap'), { ssr: false });
 
@@ -102,20 +103,18 @@ export default function DeliveryPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
 
         {/* MAP */}
-        <div style={{ background: '#fff', borderRadius: 24, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #F1F5F9' }}>
-          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', height: 480 }}>
-            {/* Live badge */}
-            <div style={{
-              position: 'absolute', top: 16, left: 16, zIndex: 1000,
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'rgba(10,22,40,0.85)', backdropFilter: 'blur(8px)',
-              borderRadius: 20, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.15)',
-            }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Live Network: Active Hubs</span>
-            </div>
-            <TrackingMap awb={awb} setAwb={setAwb} journey={DEMO_JOURNEY} />
+        <div style={{ borderRadius: 18, overflow: 'hidden', height: 480, position: 'relative' }}>
+          {/* Live badge */}
+          <div style={{
+            position: 'absolute', top: 16, left: 16, zIndex: 1000,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'rgba(10,22,40,0.85)', backdropFilter: 'blur(8px)',
+            borderRadius: 20, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.15)',
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Live Network: Active Hubs</span>
           </div>
+          <TrackingMap awb={awb} setAwb={setAwb} journey={DEMO_JOURNEY} />
         </div>
 
         {/* AI INSIGHTS */}
@@ -164,6 +163,9 @@ export default function DeliveryPage() {
           </div>
         </div>
       </div>
+
+      {/* 3D CHARTS */}
+      <DeliveryCharts />
     </div>
   );
 }
