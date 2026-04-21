@@ -375,6 +375,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </SidebarMenuItem>
                     )}
 
+                    {/* DELIVERY */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/delivery" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/delivery"), collapsed }))}
+                                >
+                                    <Truck size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Delivery</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
                     {/* INVENTORY GPT */}
                     {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
                         <SidebarMenuItem>
