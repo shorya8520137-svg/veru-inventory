@@ -174,6 +174,28 @@ export default function OrdersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* PAGINATION */}
+        {!loading && orders.length > ITEMS_PER_PAGE && (
+          <div style={{ padding: '10px 20px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: '#64748B' }}>
+              {(page-1)*ITEMS_PER_PAGE+1}–{Math.min(page*ITEMS_PER_PAGE, orders.length)} of {orders.length}
+            </span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
+                style={{ width:28,height:28,borderRadius:6,border:'1.5px solid #E5E7EB',background:'#fff',cursor:page===1?'not-allowed':'pointer',color:page===1?'#CBD5E1':'#374151',fontSize:13 }}>‹</button>
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i+1).map(p => (
+                <button key={p} onClick={() => setPage(p)} style={{
+                  width:28,height:28,borderRadius:6,fontSize:12,fontWeight:600,cursor:'pointer',
+                  background:page===p?'#1E3A5F':'#fff', color:page===p?'#fff':'#374151',
+                  border:page===p?'none':'1.5px solid #E5E7EB',
+                }}>{p}</button>
+              ))}
+              <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
+                style={{ width:28,height:28,borderRadius:6,border:'1.5px solid #E5E7EB',background:'#fff',cursor:page===totalPages?'not-allowed':'pointer',color:page===totalPages?'#CBD5E1':'#374151',fontSize:13 }}>›</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
