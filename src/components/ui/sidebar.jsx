@@ -384,10 +384,40 @@ const InventoryMenu = ({ onOpenOperation }) => {
                             >
                                 <Link 
                                     href="/delivery" 
-                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/delivery"), collapsed }))}
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/delivery") && !pathname.startsWith("/delivery/order"), collapsed }))}
                                 >
                                     <Truck size={collapsed ? 16 : 16} />
                                     {!collapsed && <span>Delivery</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* ORDER (sub-tab under delivery) */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div whileHover={{ scale: 1.02, x: 2 }} whileTap={{ scale: 0.98 }}>
+                                <Link href="/delivery/order"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/delivery/order"), collapsed }))}
+                                    style={{ paddingLeft: collapsed ? undefined : 28 }}
+                                >
+                                    <Package size={collapsed ? 16 : 14} />
+                                    {!collapsed && <span style={{ fontSize: 13 }}>Create Order</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* ORDERS TABLE */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div whileHover={{ scale: 1.02, x: 2 }} whileTap={{ scale: 0.98 }}>
+                                <Link href="/delivery/orders"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/delivery/orders"), collapsed }))}
+                                    style={{ paddingLeft: collapsed ? undefined : 28 }}
+                                >
+                                    <Activity size={collapsed ? 16 : 14} />
+                                    {!collapsed && <span style={{ fontSize: 13 }}>Orders</span>}
                                 </Link>
                             </motion.div>
                         </SidebarMenuItem>

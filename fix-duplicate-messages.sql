@@ -42,3 +42,7 @@ WHERE sender_type = 'language_select';
 SELECT ROW_COUNT() AS language_select_rows_deleted;
 
 SELECT '=== DONE ===' AS info;
+
+
+
+ "SELECT id, LEFT(message,40) msg, LEFT(message_original,40) orig FROM customer_support_messages WHERE conversation_id='CONV-1776620313348-jj41ejju1' AND sender_type='customer';"
