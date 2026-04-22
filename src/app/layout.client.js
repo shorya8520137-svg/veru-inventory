@@ -100,7 +100,7 @@ export default function ClientLayout({ children }) {
                     {/* MAIN CONTENT */}
                     <main className="flex-1 min-w-0 overflow-hidden relative bg-gradient-to-br from-slate-50/50 to-white">
                         <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-hide">
-                            <div className="min-h-full p-0">
+                            <div className="p-0">
                                 {children}
                             </div>
                         </div>
