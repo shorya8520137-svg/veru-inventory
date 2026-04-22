@@ -7,8 +7,7 @@ import { getMockInventoryResponse } from "../../utils/mockInventoryData";
 import ProductTracker from "./ProductTracker";
 import { usePermissions, PERMISSIONS } from '@/contexts/PermissionsContext';
 
-const PAGE_SIZE = 50; // Items to show per page in UI
-const API_LIMIT = 10000; // Fetch all data from API at once
+const PAGE_SIZE = 50;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 const WAREHOUSES = [
@@ -74,182 +73,70 @@ export default function InventorySheet() {
     const loadInventory = async () => {
         setLoading(true);
         try {
+            // ── Server-side pagination — fetch only current page ──
             const params = new URLSearchParams({
-                limit: API_LIMIT.toString(), // Fetch ALL data at once
+                page: page.toString(),
+                limit: PAGE_SIZE.toString(),
             });
 
-            // Add warehouse filter - if selectedWarehouses is empty, show ALL warehouses
-            if (selectedWarehouses.length > 0) {
-                // For single warehouse selection, use 'warehouse' parameter
-                if (selectedWarehouses.length === 1) {
-                    params.append('warehouse', selectedWarehouses[0]);
-                } else {
-                    // For multiple warehouses, try 'warehouses' parameter
-                    params.append('warehouses', selectedWarehouses.join(','));
-                }
-            }
-            // Add search filter - combine chips and current input
-            const allSearchTerms = [...searchChips];
-            if (searchQuery.trim()) {
-                allSearchTerms.push(searchQuery.trim());
-            }
-            if (allSearchTerms.length > 0) {
-                params.append('search', allSearchTerms.join(' '));
-            }
-            if (stockFilter !== 'all') {
-                params.append('stockFilter', stockFilter);
-            }
-            if (sortBy !== 'product_name') {
-                params.append('sortBy', sortBy);
-            }
-            if (sortOrder !== 'asc') {
-                params.append('sortOrder', sortOrder);
-            }
-            // Only add date filters if they are actually set
-            if (dateFrom && dateFrom.trim()) {
-                params.append('dateFrom', dateFrom);
-            }
-            if (dateTo && dateTo.trim()) {
-                params.append('dateTo', dateTo);
-            }
+            if (selectedWarehouses.length === 1) params.append('warehouse', selectedWarehouses[0]);
+            else if (selectedWarehouses.length > 1) params.append('warehouses', selectedWarehouses.join(','));
 
-            console.log('≡ƒöù API URL:', `${API_BASE}/api/inventory?${params}`);
-            console.log('≡ƒÅó Selected warehouses for API:', selectedWarehouses);
+            const allSearchTerms = [...searchChips];
+            if (searchQuery.trim()) allSearchTerms.push(searchQuery.trim());
+            if (allSearchTerms.length > 0) params.append('search', allSearchTerms.join(' '));
+            if (stockFilter !== 'all') params.append('stockFilter', stockFilter);
+            if (sortBy !== 'product_name') params.append('sortBy', sortBy);
+            if (sortOrder !== 'asc') params.append('sortOrder', sortOrder);
+            if (dateFrom && dateFrom.trim()) params.append('dateFrom', dateFrom);
+            if (dateTo && dateTo.trim()) params.append('dateTo', dateTo);
+
+            console.log('🔗 API URL:', `${API_BASE}/api/inventory?${params}`);
 
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE}/api/inventory?${params}`, {
-                method: 'GET',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
-            console.log('≡ƒôè Raw API Response:', data);
-            
-            // Parse response
+
             let inventoryItems = [];
+            let totalCount = 0;
+
             if (data.success && data.data) {
                 inventoryItems = Array.isArray(data.data) ? data.data : data.data.items || data.data.inventory || [];
+                totalCount = data.total || data.pagination?.total || inventoryItems.length;
             } else if (Array.isArray(data)) {
                 inventoryItems = data;
-            } else if (data.inventory) {
-                inventoryItems = data.inventory;
-            } else if (data.items) {
-                inventoryItems = data.items;
+                totalCount = data.length;
             }
 
-            console.log('≡ƒôè Total items from API:', inventoryItems.length);
-            console.log('≡ƒÅó Selected warehouses:', selectedWarehouses.length === 0 ? 'ALL' : selectedWarehouses.join(', '));
-            
-            // Debug: Check what warehouses are actually in the response
-            if (inventoryItems.length > 0) {
-                const warehousesInResponse = [...new Set(inventoryItems.map(item => 
-                    item.warehouse || item.warehouse_name || item.Warehouse_name || 'Unknown'
-                ))];
-                console.log('≡ƒÅó Warehouses found in API response:', warehousesInResponse);
-                console.log('≡ƒÅó Expected warehouses:', selectedWarehouses.length === 0 ? 'ALL' : selectedWarehouses);
-                
-                // Check if filtering worked
-                if (selectedWarehouses.length > 0) {
-                    const unexpectedWarehouses = warehousesInResponse.filter(wh => 
-                        !selectedWarehouses.includes(wh) && wh !== 'Unknown'
-                    );
-                    if (unexpectedWarehouses.length > 0) {
-                        console.error('Γ¥î WAREHOUSE FILTERING FAILED!');
-                        console.error('Γ¥î Unexpected warehouses in response:', unexpectedWarehouses);
-                        console.error('Γ¥î This indicates the API is not filtering properly');
-                    } else {
-                        console.log('Γ£à Warehouse filtering working correctly');
-                    }
-                }
-            }
+            setItems(inventoryItems);
+            setAllItems(inventoryItems); // keep for stats
+            setTotalPages(Math.ceil(totalCount / PAGE_SIZE) || 1);
 
-            // Store ALL items for frontend pagination
-            setAllItems(inventoryItems);
-            
-            // Apply frontend filtering as backup if API filtering failed
-            let filteredItems = inventoryItems;
-            if (selectedWarehouses.length > 0) {
-                filteredItems = inventoryItems.filter(item => {
-                    const itemWarehouse = item.warehouse || item.warehouse_name || item.Warehouse_name;
-                    return selectedWarehouses.includes(itemWarehouse);
-                });
-                
-                if (filteredItems.length !== inventoryItems.length) {
-                    console.log('≡ƒöº Applied frontend warehouse filtering');
-                    console.log('≡ƒöº Before filtering:', inventoryItems.length, 'items');
-                    console.log('≡ƒöº After filtering:', filteredItems.length, 'items');
-                    setAllItems(filteredItems);
-                }
-            }
-            
-            // Calculate pages
-            const totalPagesCalc = Math.ceil(filteredItems.length / PAGE_SIZE) || 1;
-            setTotalPages(totalPagesCalc);
-            
-            // Show first page
-            setItems(filteredItems.slice(0, PAGE_SIZE));
-            setPage(1);
-
-            // Calculate stats
             setStats({
-                totalProducts: filteredItems.length,
-                totalStock: filteredItems.reduce((sum, item) => sum + (parseInt(item.stock || item.quantity || 0)), 0),
-                lowStockItems: filteredItems.filter(item => {
-                    const stock = parseInt(item.stock || item.quantity || 0);
-                    return stock > 0 && stock <= 10;
-                }).length,
-                outOfStockItems: filteredItems.filter(item => {
-                    const stock = parseInt(item.stock || item.quantity || 0);
-                    return stock === 0;
-                }).length
+                totalProducts: totalCount,
+                totalStock: inventoryItems.reduce((s, i) => s + parseInt(i.stock || i.quantity || 0), 0),
+                lowStockItems: inventoryItems.filter(i => { const s = parseInt(i.stock||0); return s>0&&s<=10; }).length,
+                outOfStockItems: inventoryItems.filter(i => parseInt(i.stock||0) === 0).length,
             });
 
-            console.log('Γ£à Frontend pagination ready:', { totalItems: inventoryItems.length, totalPages: totalPagesCalc, pageSize: PAGE_SIZE });
-
         } catch (error) {
-            console.error('Γ¥î Error loading inventory:', error);
-            setAllItems([]);
-            setItems([]);
-            setTotalPages(1);
-            setStats({ totalProducts: 0, totalStock: 0, lowStockItems: 0, outOfStockItems: 0 });
+            console.error('❌ Error loading inventory:', error);
+            setItems([]); setAllItems([]); setTotalPages(1);
+            setStats({ totalProducts:0, totalStock:0, lowStockItems:0, outOfStockItems:0 });
         } finally {
             setLoading(false);
         }
     };
-    
-    // Γ£à Handle page change - slice data from allItems
-    useEffect(() => {
-        if (allItems.length > 0) {
-            const startIndex = (page - 1) * PAGE_SIZE;
-            const endIndex = startIndex + PAGE_SIZE;
-            setItems(allItems.slice(startIndex, endIndex));
-            console.log(`≡ƒôä Page ${page}: showing items ${startIndex + 1} to ${Math.min(endIndex, allItems.length)} of ${allItems.length}`);
-        }
-    }, [page, allItems]);
+    useEffect(() => { loadInventory(); }, [selectedWarehouses, stockFilter, sortBy, sortOrder, dateFrom, dateTo, useMockData, page]);
 
     useEffect(() => {
-        // Load data when filters change (NOT when page changes - that's handled separately)
-        console.log('≡ƒöä Filters changed, reloading data...');
-        loadInventory();
-    }, [selectedWarehouses, stockFilter, sortBy, sortOrder, dateFrom, dateTo, useMockData]);
-
-    // Separate effect for search with debounce
-    useEffect(() => {
-        const delayedSearch = setTimeout(() => {
-            if (searchQuery !== undefined) {
-                console.log('≡ƒöì Search query changed, reloading...', searchQuery);
-                loadInventory();
-            }
-        }, 300);
-
-        return () => clearTimeout(delayedSearch);
+        const t = setTimeout(() => { loadInventory(); }, 300);
+        return () => clearTimeout(t);
     }, [searchQuery]);
 
     /* ================= SEARCH WITH BACKEND SUGGESTIONS ================= */
