@@ -691,10 +691,10 @@ export default function InventorySheet() {
     };
 
     return (
-        <div style={{ display:'flex', flexDirection:'column', height:'100%', fontFamily:'Inter,sans-serif', background:'#F8FAFC' }}>
+        <div style={{ display:'flex', flexDirection:'column', height:'100%', fontFamily:'Inter,sans-serif', background:'#F8FAFC', padding:'0 20px 16px', boxSizing:'border-box' }}>
             {/* ── KPI CARDS — fixed at top ── */}
-            <div style={{ flexShrink:0, padding:'16px 20px 0' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
+            <div style={{ flexShrink:0, padding:'12px 20px 0' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:10 }}>
                 {[
                     { label:'TOTAL PRODUCTS', value: stats.totalProducts.toLocaleString(), sub:'Active SKUs', color:'#6366F1', icon:'📦' },
                     { label:'TOTAL STOCK', value: stats.totalStock.toLocaleString(), sub:'Units across warehouses', color:'#10B981', icon:'📊' },
@@ -713,7 +713,7 @@ export default function InventorySheet() {
             </div>
 
             {/* ── FILTER + SEARCH BAR ── */}
-            <div style={{ background:'#fff', borderRadius:14, padding:'12px 16px', margin:'12px 20px 0', boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <div style={{ background:'#fff', borderRadius:14, padding:'10px 14px', margin:'10px 0 0', boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                 {/* Search */}
                 <div style={{ position:'relative', flex:1, minWidth:200 }}>
                     <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#94A3B8' }} />
@@ -801,7 +801,7 @@ export default function InventorySheet() {
             </div>{/* end fixed top section */}
 
             {/* ── ACTIVE STOCK REGISTRY TABLE — flex-1, only this scrolls ── */}
-            <div style={{ flex:1, display:'flex', flexDirection:'column', background:'#fff', borderRadius:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', overflow:'hidden', margin:'12px 20px 16px' }}>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', background:'#fff', borderRadius:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', overflow:'hidden', margin:'10px 0 0', minHeight:0 }}>
                 <div style={{ padding:'12px 18px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                     <span style={{ fontSize:13, fontWeight:700, color:'#0F172A' }}>Active Stock Registry</span>
                     <span style={{ fontSize:11, color:'#94A3B8' }}>Showing {items.length} of {allItems.length} entries</span>
