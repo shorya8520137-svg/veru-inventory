@@ -165,22 +165,6 @@ export default function ReviewsPage() {
   return (
     <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '20px 24px' }}>
 
-      {/* HEADER */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:800, color:'#0F172A', margin:0 }}>Review Management</h1>
-          <p style={{ fontSize:13, color:'#64748B', margin:'4px 0 0' }}>Curate, analyze, and respond to platform-wide feedback with AI assistance.</p>
-        </div>
-        <div style={{ display:'flex', gap:10 }}>
-          <button style={{ padding:'9px 18px', borderRadius:10, border:'1.5px solid #E5E7EB', background:'#fff', fontSize:13, fontWeight:600, color:'#374151', cursor:'pointer' }}>
-            Review Queue {stats.pending > 0 && `(${stats.pending})`}
-          </button>
-          <button style={{ padding:'9px 18px', borderRadius:10, border:'none', background:'#1E3A5F', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            Campaign Settings
-          </button>
-        </div>
-      </div>
-
       {/* STATS */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:20 }}>
         <div style={{ background:'#fff', borderRadius:16, padding:'20px 24px', boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9' }}>

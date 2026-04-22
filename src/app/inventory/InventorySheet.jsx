@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Search, Filter, Download, Package, MapPin, BarChart3, Eye, RefreshCw, Calendar, TrendingUp, X, ChevronDown } from "lucide-react";
@@ -113,8 +113,8 @@ export default function InventorySheet() {
                 params.append('dateTo', dateTo);
             }
 
-            console.log('🔗 API URL:', `${API_BASE}/api/inventory?${params}`);
-            console.log('🏢 Selected warehouses for API:', selectedWarehouses);
+            console.log('≡ƒöù API URL:', `${API_BASE}/api/inventory?${params}`);
+            console.log('≡ƒÅó Selected warehouses for API:', selectedWarehouses);
 
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE}/api/inventory?${params}`, {
@@ -130,7 +130,7 @@ export default function InventorySheet() {
             }
 
             const data = await response.json();
-            console.log('📊 Raw API Response:', data);
+            console.log('≡ƒôè Raw API Response:', data);
             
             // Parse response
             let inventoryItems = [];
@@ -144,16 +144,16 @@ export default function InventorySheet() {
                 inventoryItems = data.items;
             }
 
-            console.log('📊 Total items from API:', inventoryItems.length);
-            console.log('🏢 Selected warehouses:', selectedWarehouses.length === 0 ? 'ALL' : selectedWarehouses.join(', '));
+            console.log('≡ƒôè Total items from API:', inventoryItems.length);
+            console.log('≡ƒÅó Selected warehouses:', selectedWarehouses.length === 0 ? 'ALL' : selectedWarehouses.join(', '));
             
             // Debug: Check what warehouses are actually in the response
             if (inventoryItems.length > 0) {
                 const warehousesInResponse = [...new Set(inventoryItems.map(item => 
                     item.warehouse || item.warehouse_name || item.Warehouse_name || 'Unknown'
                 ))];
-                console.log('🏢 Warehouses found in API response:', warehousesInResponse);
-                console.log('🏢 Expected warehouses:', selectedWarehouses.length === 0 ? 'ALL' : selectedWarehouses);
+                console.log('≡ƒÅó Warehouses found in API response:', warehousesInResponse);
+                console.log('≡ƒÅó Expected warehouses:', selectedWarehouses.length === 0 ? 'ALL' : selectedWarehouses);
                 
                 // Check if filtering worked
                 if (selectedWarehouses.length > 0) {
@@ -161,11 +161,11 @@ export default function InventorySheet() {
                         !selectedWarehouses.includes(wh) && wh !== 'Unknown'
                     );
                     if (unexpectedWarehouses.length > 0) {
-                        console.error('❌ WAREHOUSE FILTERING FAILED!');
-                        console.error('❌ Unexpected warehouses in response:', unexpectedWarehouses);
-                        console.error('❌ This indicates the API is not filtering properly');
+                        console.error('Γ¥î WAREHOUSE FILTERING FAILED!');
+                        console.error('Γ¥î Unexpected warehouses in response:', unexpectedWarehouses);
+                        console.error('Γ¥î This indicates the API is not filtering properly');
                     } else {
-                        console.log('✅ Warehouse filtering working correctly');
+                        console.log('Γ£à Warehouse filtering working correctly');
                     }
                 }
             }
@@ -182,9 +182,9 @@ export default function InventorySheet() {
                 });
                 
                 if (filteredItems.length !== inventoryItems.length) {
-                    console.log('🔧 Applied frontend warehouse filtering');
-                    console.log('🔧 Before filtering:', inventoryItems.length, 'items');
-                    console.log('🔧 After filtering:', filteredItems.length, 'items');
+                    console.log('≡ƒöº Applied frontend warehouse filtering');
+                    console.log('≡ƒöº Before filtering:', inventoryItems.length, 'items');
+                    console.log('≡ƒöº After filtering:', filteredItems.length, 'items');
                     setAllItems(filteredItems);
                 }
             }
@@ -211,10 +211,10 @@ export default function InventorySheet() {
                 }).length
             });
 
-            console.log('✅ Frontend pagination ready:', { totalItems: inventoryItems.length, totalPages: totalPagesCalc, pageSize: PAGE_SIZE });
+            console.log('Γ£à Frontend pagination ready:', { totalItems: inventoryItems.length, totalPages: totalPagesCalc, pageSize: PAGE_SIZE });
 
         } catch (error) {
-            console.error('❌ Error loading inventory:', error);
+            console.error('Γ¥î Error loading inventory:', error);
             setAllItems([]);
             setItems([]);
             setTotalPages(1);
@@ -224,19 +224,19 @@ export default function InventorySheet() {
         }
     };
     
-    // ✅ Handle page change - slice data from allItems
+    // Γ£à Handle page change - slice data from allItems
     useEffect(() => {
         if (allItems.length > 0) {
             const startIndex = (page - 1) * PAGE_SIZE;
             const endIndex = startIndex + PAGE_SIZE;
             setItems(allItems.slice(startIndex, endIndex));
-            console.log(`📄 Page ${page}: showing items ${startIndex + 1} to ${Math.min(endIndex, allItems.length)} of ${allItems.length}`);
+            console.log(`≡ƒôä Page ${page}: showing items ${startIndex + 1} to ${Math.min(endIndex, allItems.length)} of ${allItems.length}`);
         }
     }, [page, allItems]);
 
     useEffect(() => {
         // Load data when filters change (NOT when page changes - that's handled separately)
-        console.log('🔄 Filters changed, reloading data...');
+        console.log('≡ƒöä Filters changed, reloading data...');
         loadInventory();
     }, [selectedWarehouses, stockFilter, sortBy, sortOrder, dateFrom, dateTo, useMockData]);
 
@@ -244,7 +244,7 @@ export default function InventorySheet() {
     useEffect(() => {
         const delayedSearch = setTimeout(() => {
             if (searchQuery !== undefined) {
-                console.log('🔍 Search query changed, reloading...', searchQuery);
+                console.log('≡ƒöì Search query changed, reloading...', searchQuery);
                 loadInventory();
             }
         }, 300);
@@ -361,15 +361,15 @@ export default function InventorySheet() {
 
     /* ================= WAREHOUSE FILTER ================= */
     const handleWarehouseToggle = (warehouseCode) => {
-        console.log('🏢 Warehouse toggled:', warehouseCode);
-        console.log('🏢 Current selection:', selectedWarehouses);
+        console.log('≡ƒÅó Warehouse toggled:', warehouseCode);
+        console.log('≡ƒÅó Current selection:', selectedWarehouses);
 
         setSelectedWarehouses(prev => {
             const newSelection = prev.includes(warehouseCode)
                 ? prev.filter(code => code !== warehouseCode) // Remove if already selected
                 : [...prev, warehouseCode]; // Add if not selected
             
-            console.log('🏢 New selection:', newSelection);
+            console.log('≡ƒÅó New selection:', newSelection);
             return newSelection;
         });
         
@@ -377,14 +377,14 @@ export default function InventorySheet() {
     };
 
     const selectAllWarehouses = () => {
-        console.log('🏢 Selecting all accessible warehouses');
+        console.log('≡ƒÅó Selecting all accessible warehouses');
         setSelectedWarehouses(availableWarehouses.map(w => w.code));
         setShowWarehouseDropdown(false);
         setPage(1);
     };
 
     const clearAllWarehouses = () => {
-        console.log('🏢 Clearing all warehouses (showing ALL)');
+        console.log('≡ƒÅó Clearing all warehouses (showing ALL)');
         setSelectedWarehouses([]);
         setShowWarehouseDropdown(false);
         setPage(1);
@@ -403,12 +403,12 @@ export default function InventorySheet() {
     }, [showWarehouseDropdown]);
 
     /* ================= LOAD INVENTORY WITH SPECIFIC WAREHOUSE (UNUSED - KEPT FOR REFERENCE) ================= */
-    // ✅ NOTE: This function is no longer used. All loading goes through loadInventory() now.
+    // Γ£à NOTE: This function is no longer used. All loading goes through loadInventory() now.
     const loadInventoryWithWarehouse = async (warehouseCode) => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
-                page: page.toString(),  // ✅ FIXED: Use current page, not hardcoded '1'
+                page: page.toString(),  // Γ£à FIXED: Use current page, not hardcoded '1'
                 limit: PAGE_SIZE.toString(),
             });
 
@@ -437,7 +437,7 @@ export default function InventorySheet() {
                 params.append('dateTo', dateTo);
             }
 
-            console.log('🔍 Loading inventory for warehouse:', warehouseCode);
+            console.log('≡ƒöì Loading inventory for warehouse:', warehouseCode);
             console.log('API URL:', `${API_BASE}/api/inventory?${params}`);
 
             const token = localStorage.getItem('token');
@@ -495,12 +495,12 @@ export default function InventorySheet() {
 
             // Verify warehouse filtering worked correctly
             const actualWarehouses = [...new Set(inventoryItems.map(item => item.warehouse || item.warehouse_name || item.Warehouse_name))];
-            console.log('🏢 Expected warehouse:', warehouseCode);
-            console.log('🏢 Actual warehouses in response:', actualWarehouses);
+            console.log('≡ƒÅó Expected warehouse:', warehouseCode);
+            console.log('≡ƒÅó Actual warehouses in response:', actualWarehouses);
 
             if (warehouseCode && actualWarehouses.length > 0 && !actualWarehouses.includes(warehouseCode)) {
-                console.error('❌ WAREHOUSE FILTER FAILED! Expected:', warehouseCode, 'Got:', actualWarehouses);
-                console.error('❌ This indicates a backend filtering bug or data corruption');
+                console.error('Γ¥î WAREHOUSE FILTER FAILED! Expected:', warehouseCode, 'Got:', actualWarehouses);
+                console.error('Γ¥î This indicates a backend filtering bug or data corruption');
                 // Clear data if wrong warehouse data is returned
                 inventoryItems = [];
                 totalCount = 0;
@@ -511,9 +511,9 @@ export default function InventorySheet() {
                     outOfStockItems: 0
                 };
             } else if (warehouseCode && actualWarehouses.length === 0) {
-                console.log('✅ Warehouse filter working correctly - no data for', warehouseCode);
+                console.log('Γ£à Warehouse filter working correctly - no data for', warehouseCode);
             } else if (warehouseCode && actualWarehouses.includes(warehouseCode)) {
-                console.log('✅ Warehouse filter working correctly - data matches', warehouseCode);
+                console.log('Γ£à Warehouse filter working correctly - data matches', warehouseCode);
             }
 
             // Calculate stats if not provided by API
@@ -532,7 +532,7 @@ export default function InventorySheet() {
                 };
             }
 
-            console.log('✅ Final processed data for', warehouseCode, ':', {
+            console.log('Γ£à Final processed data for', warehouseCode, ':', {
                 itemsCount: inventoryItems.length,
                 totalCount,
                 stats: statsData,
@@ -548,7 +548,7 @@ export default function InventorySheet() {
                 outOfStockItems: statsData.outOfStockItems || 0
             });
         } catch (error) {
-            console.error('❌ Error loading inventory for', warehouseCode, ':', error);
+            console.error('Γ¥î Error loading inventory for', warehouseCode, ':', error);
 
             // Don't fall back to mock data for warehouse-specific requests
             // Just show empty state
@@ -611,8 +611,8 @@ export default function InventorySheet() {
                 params.append('dateTo', dateTo);
             }
 
-            console.log('🔽 Exporting with params:', params.toString());
-            console.log('🏢 Export warehouses:', exportWarehouses.length === 0 ? 'All Warehouses' : exportWarehouses.join(', '));
+            console.log('≡ƒö╜ Exporting with params:', params.toString());
+            console.log('≡ƒÅó Export warehouses:', exportWarehouses.length === 0 ? 'All Warehouses' : exportWarehouses.join(', '));
 
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE}/api/inventory/export?${params}`, {
@@ -637,12 +637,12 @@ export default function InventorySheet() {
                 a.click();
                 URL.revokeObjectURL(url);
 
-                console.log('✅ Export completed for:', warehouseName);
+                console.log('Γ£à Export completed for:', warehouseName);
             } else {
-                console.error('❌ Export failed:', response.status);
+                console.error('Γ¥î Export failed:', response.status);
             }
         } catch (error) {
-            console.error('❌ Export error:', error);
+            console.error('Γ¥î Export error:', error);
         }
     };
 
@@ -693,7 +693,7 @@ export default function InventorySheet() {
                 current_stock: selectedItemForUpdate.stock || selectedItemForUpdate.quantity || 0
             };
 
-            console.log('📦 Updating stock:', updateData);
+            console.log('≡ƒôª Updating stock:', updateData);
 
             const response = await fetch(`${API_BASE}/api/inventory/update-stock`, {
                 method: 'POST',
@@ -707,7 +707,7 @@ export default function InventorySheet() {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                console.log('✅ Stock updated successfully:', result);
+                console.log('Γ£à Stock updated successfully:', result);
                 
                 // Update the local state to reflect the change
                 const updatedItems = items.map(item => {
@@ -759,16 +759,16 @@ export default function InventorySheet() {
                     outOfStockItems: newOutOfStockItems
                 }));
                 
-                alert(`✅ Stock updated successfully!\nNew stock level: ${result.new_stock || result.data?.new_stock || 'Updated'}`);
+                alert(`Γ£à Stock updated successfully!\nNew stock level: ${result.new_stock || result.data?.new_stock || 'Updated'}`);
                 closeStockUpdateModal();
                 
             } else {
-                console.error('❌ Stock update failed:', result);
-                alert(`❌ Failed to update stock: ${result.message || 'Unknown error'}`);
+                console.error('Γ¥î Stock update failed:', result);
+                alert(`Γ¥î Failed to update stock: ${result.message || 'Unknown error'}`);
             }
         } catch (error) {
-            console.error('❌ Stock update error:', error);
-            alert(`❌ Error updating stock: ${error.message}`);
+            console.error('Γ¥î Stock update error:', error);
+            alert(`Γ¥î Error updating stock: ${error.message}`);
         } finally {
             setUpdatingStock(false);
         }
@@ -785,594 +785,266 @@ export default function InventorySheet() {
         setSelectedItem(null);
     };
 
+    // ── Status badge helper ──
+    const getStatusBadge = (stock) => {
+        const s = parseInt(stock || 0);
+        if (s === 0) return { label: 'Critical', color: '#DC2626', bg: '#FEF2F2' };
+        if (s <= 10) return { label: 'Low Stock', color: '#D97706', bg: '#FEF3C7' };
+        return { label: 'Optimal', color: '#16A34A', bg: '#DCFCE7' };
+    };
+
+    const timeAgo = (ts) => {
+        if (!ts) return '—';
+        const diff = Date.now() - new Date(ts).getTime();
+        const m = Math.floor(diff / 60000);
+        if (m < 60) return `${m}m ago`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h}h ago`;
+        return `${Math.floor(h/24)}d ago`;
+    };
+
     return (
-        <div className={styles.container}>
-            {/* Top Bar */}
-            <div className={styles.topBar}>
-                <div className={styles.topLeft}>
-                    <h1 className={styles.title}>
-                        <Package size={20} />
-                        Inventory Management
-                        {useMockData && <span style={{fontSize: '12px', color: '#f59e0b', marginLeft: '8px'}}>(Mock Data)</span>}
-                    </h1>
-                    {selectedWarehouses.length > 0 && (
-                        <div style={{
-                            fontSize: '12px', 
-                            color: '#3b82f6', 
-                            marginLeft: '12px',
-                            padding: '4px 8px',
-                            background: '#dbeafe',
-                            borderRadius: '12px',
-                            fontWeight: '500'
-                        }}>
-                            {selectedWarehouses.length} warehouse{selectedWarehouses.length > 1 ? 's' : ''} selected
-                        </div>
-                    )}
-                    {selectedWarehouses.length === 0 && (
-                        <div style={{
-                            fontSize: '12px', 
-                            color: '#059669', 
-                            marginLeft: '12px',
-                            padding: '4px 8px',
-                            background: '#dcfce7',
-                            borderRadius: '12px',
-                            fontWeight: '500'
-                        }}>
-                            All warehouses
-                        </div>
-                    )}
-                </div>
-
-                <div className={styles.topActions}>
-                    <button
-                        className={styles.refreshBtn}
-                        onClick={() => {
-                            console.log('🔄 Manual refresh triggered');
-                            loadInventory();
-                        }}
-                        title="Refresh"
+        <div style={{ fontFamily: 'Inter, sans-serif', background: '#F8FAFC', padding: '16px 20px' }}>
+            {/* ── KPI CARDS ── */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
+                {[
+                    { label:'TOTAL PRODUCTS', value: stats.totalProducts.toLocaleString(), sub:'Active SKUs', color:'#6366F1', icon:'📦' },
+                    { label:'TOTAL STOCK', value: stats.totalStock.toLocaleString(), sub:'Units across warehouses', color:'#10B981', icon:'📊' },
+                    { label:'URGENT RESTOCK', value: stats.outOfStockItems, sub:'Out of stock SKUs', color:'#EF4444', icon:'⚠', alert: stats.outOfStockItems > 0 },
+                    { label:'LOW STOCK', value: stats.lowStockItems, sub:'Below 10 units', color:'#F59E0B', icon:'📉' },
+                ].map((kpi,i) => (
+                    <div key={i} style={{ background:'#fff', borderRadius:14, padding:'16px 18px', boxShadow:'0 1px 6px rgba(0,0,0,0.06)', border: kpi.alert ? '1.5px solid #FCA5A5' : '1px solid #F1F5F9', transition:'all 0.2s' }}
+                        onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
+                        onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
                     >
-                        <RefreshCw size={16} />
-                    </button>
-
-                    {/* Export Dropdown */}
-                    {hasPermission(PERMISSIONS.INVENTORY_EXPORT) && (
-                        <div className={styles.exportDropdown}>
-                            <select
-                                onChange={(e) => {
-                                    if (e.target.value) {
-                                        exportToCSV(e.target.value);
-                                        e.target.value = ''; // Reset selection
-                                    }
-                                }}
-                                className={styles.exportSelect}
-                                defaultValue=""
-                            >
-                                <option value="" disabled>📥 Export Data</option>
-                                <option value="current">
-                                    Current Selection ({selectedWarehouses.length === 0 ? 'All Warehouses' : `${selectedWarehouses.length} warehouses`})
-                                </option>
-                                <option value="GGM_WH">Gurgaon Warehouse</option>
-                                <option value="BLR_WH">Bangalore Warehouse</option>
-                                <option value="MUM_WH">Mumbai Warehouse</option>
-                                <option value="AMD_WH">Ahmedabad Warehouse</option>
-                                <option value="HYD_WH">Hyderabad Warehouse</option>
-                                <option value="all">All Warehouses</option>
-                            </select>
-                        </div>
-                    )}
-
-                    {/* Export Button with Download Icon */}
-                    <button
-                        onClick={() => exportToCSV('current')}
-                        className={styles.exportBtn}
-                        title="Export Current Data"
-                    >
-                        <Download size={16} />
-                        Export
-                    </button>
-                </div>
-            </div>
-
-            {/* Stats Bar */}
-            <div className={styles.statsBar}>
-                <div className={styles.statItem}>
-                    <span className={styles.statValue}>{stats.totalProducts}</span>
-                    <span className={styles.statLabel}>Products</span>
-                </div>
-                <div className={styles.statItem}>
-                    <span className={styles.statValue}>{stats.totalStock}</span>
-                    <span className={styles.statLabel}>Total Stock</span>
-                </div>
-                <div className={styles.statItem}>
-                    <span className={styles.statValue}>{stats.lowStockItems}</span>
-                    <span className={styles.statLabel}>Low Stock</span>
-                </div>
-                <div className={styles.statItem}>
-                    <span className={styles.statValue}>{stats.outOfStockItems}</span>
-                    <span className={styles.statLabel}>Out of Stock</span>
-                </div>
-            </div>
-
-            {/* Search & Filter Bar */}
-            <div className={styles.searchBar}>
-                <div className={styles.searchGroup}>
-                    <Search className={styles.searchIcon} size={16} />
-                    
-                    {/* Search Chips */}
-                    <div className={styles.searchChipsContainer}>
-                        {searchChips.map((chip, index) => (
-                            <div key={index} className={styles.searchChip}>
-                                <span>{chip}</span>
-                                <button 
-                                    onClick={() => removeSearchChip(index)}
-                                    className={styles.chipRemove}
-                                >
-                                    <X size={12} />
-                                </button>
-                            </div>
-                        ))}
-                        
-                        {searchChips.length > 1 && (
-                            <button
-                                onClick={() => {
-                                    setSearchChips([]);
-                                    setPage(1);
-                                }}
-                                className={styles.clearAllChips}
-                                title="Clear all search terms"
-                            >
-                                Clear All
-                            </button>
-                        )}
-                        
-                        <input
-                            type="text"
-                            placeholder={searchChips.length > 0 ? "Add more search terms..." : "Search products by name, barcode, or variant..."}
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            onKeyDown={handleSearchKeyDown}
-                            className={styles.searchInput}
-                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                        />
+                        <div style={{ fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.08em', marginBottom:8 }}>{kpi.label}</div>
+                        <div style={{ fontSize:26, fontWeight:900, color: kpi.alert ? '#DC2626' : '#0F172A', marginBottom:4 }}>{kpi.value}</div>
+                        <div style={{ fontSize:11, color:'#64748B' }}>{kpi.sub}</div>
                     </div>
+                ))}
+            </div>
 
-                    {/* Search Suggestions */}
+            {/* ── FILTER + SEARCH BAR ── */}
+            <div style={{ background:'#fff', borderRadius:14, padding:'12px 16px', marginBottom:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                {/* Search */}
+                <div style={{ position:'relative', flex:1, minWidth:200 }}>
+                    <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#94A3B8' }} />
+                    <input
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        onKeyDown={handleSearchKeyDown}
+                        placeholder="Search product, barcode..."
+                        style={{ paddingLeft:30, paddingRight:12, paddingTop:8, paddingBottom:8, borderRadius:10, border:'1.5px solid #E5E7EB', fontSize:12, outline:'none', background:'#F8FAFC', width:'100%', boxSizing:'border-box' }}
+                    />
                     {showSuggestions && suggestions.length > 0 && (
-                        <div className={styles.suggestions}>
-                            {suggestions.map((suggestion, index) => (
-                                <div
-                                    key={suggestion.p_id}
-                                    className={`${styles.suggestionItem} ${
-                                        index === selectedSuggestionIndex ? styles.suggestionItemActive : ''
-                                    }`}
-                                    onClick={() => selectSuggestion(suggestion)}
-                                    onMouseEnter={() => setSelectedSuggestionIndex(index)}
-                                >
-                                    <Package size={14} />
-                                    <div>
-                                        <div className={styles.suggestionName}>{suggestion.product_name}</div>
-                                        <div className={styles.suggestionBarcode}>{suggestion.barcode}</div>
-                                    </div>
+                        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:200, overflowY:'auto' }}>
+                            {suggestions.map((s,i) => (
+                                <div key={i} onClick={() => selectSuggestion(s)} style={{ padding:'8px 12px', cursor:'pointer', fontSize:12, borderBottom:'1px solid #F1F5F9', background: i===selectedSuggestionIndex?'#F8FAFC':'#fff' }}>
+                                    <div style={{ fontWeight:600 }}>{s.product_name}</div>
+                                    <div style={{ fontSize:10, color:'#94A3B8' }}>{s.barcode}</div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
 
-                {/* Inline Warehouse Filter */}
-                <div className={styles.inlineFilter}>
-                    <label className={styles.filterLabel}>Warehouses:</label>
-                    <div className={`${styles.warehouseDropdown} warehouseDropdown`}>
-                        <button 
-                            className={styles.warehouseToggle}
-                            onClick={() => setShowWarehouseDropdown(!showWarehouseDropdown)}
-                        >
-                            {selectedWarehouses.length === 0 ? 'All Warehouses' : 
-                             selectedWarehouses.length === 1 ? WAREHOUSES.find(w => w.code === selectedWarehouses[0])?.name :
-                             `${selectedWarehouses.length} Selected`}
-                            <ChevronDown size={14} />
-                        </button>
-                        {showWarehouseDropdown && (
-                            <div className={styles.warehouseDropdownMenu}>
-                                <div className={styles.warehouseActions}>
-                                    <button onClick={clearAllWarehouses} className={styles.warehouseAction}>
-                                        Show All
-                                    </button>
-                                    <button onClick={selectAllWarehouses} className={styles.warehouseAction}>
-                                        Select All
-                                    </button>
-                                </div>
-                                {availableWarehouses.map(warehouse => (
-                                    <label key={warehouse.code} className={styles.warehouseOption}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedWarehouses.includes(warehouse.code)}
-                                            onChange={() => handleWarehouseToggle(warehouse.code)}
-                                        />
-                                        <span>{warehouse.name}</span>
-                                    </label>
-                                ))}
+                {/* Warehouse filter */}
+                <div style={{ position:'relative' }} className="warehouseDropdown">
+                    <button onClick={() => setShowWarehouseDropdown(!showWarehouseDropdown)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:10, border:'1.5px solid #E5E7EB', background:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', color:'#374151' }}>
+                        <Filter size={12} />
+                        {selectedWarehouses.length === 0 ? 'All Warehouses' : `${selectedWarehouses.length} WH`}
+                        <ChevronDown size={12} />
+                    </button>
+                    {showWarehouseDropdown && (
+                        <div style={{ position:'absolute', top:'100%', left:0, background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, minWidth:200, padding:8 }}>
+                            <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+                                <button onClick={clearAllWarehouses} style={{ flex:1, padding:'5px', borderRadius:8, border:'1px solid #E5E7EB', background:'#fff', fontSize:11, cursor:'pointer' }}>All</button>
+                                <button onClick={selectAllWarehouses} style={{ flex:1, padding:'5px', borderRadius:8, border:'1px solid #E5E7EB', background:'#fff', fontSize:11, cursor:'pointer' }}>Select All</button>
                             </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Inline Date Filter */}
-                <div className={styles.inlineFilter}>
-                    <label className={styles.filterLabel}>From:</label>
-                    <input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => {
-                            setDateFrom(e.target.value);
-                            setPage(1);
-                        }}
-                        className={styles.inlineDateInput}
-                        placeholder="Start Date"
-                    />
-                </div>
-
-                <div className={styles.inlineFilter}>
-                    <label className={styles.filterLabel}>To:</label>
-                    <input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => {
-                            setDateTo(e.target.value);
-                            setPage(1);
-                        }}
-                        className={styles.inlineDateInput}
-                        placeholder="End Date"
-                    />
-                </div>
-
-                <button
-                    className={`${styles.filterBtn} ${showFilters ? styles.active : ''}`}
-                    onClick={() => setShowFilters(!showFilters)}
-                >
-                    <Filter size={16} />
-                    More
-                </button>
-            </div>
-
-            {/* Main Content */}
-            <div className={styles.mainContent}>
-                {/* Filter Sidebar */}
-                {showFilters && (
-                    <>
-                        <div className={styles.filterOverlay} onClick={() => setShowFilters(false)} />
-                        <div className={styles.filterSidebar}>
-                            <div className={styles.filterHeader}>
-                                <h3>Filters</h3>
-                                <button
-                                    className={styles.closeBtn}
-                                    onClick={() => setShowFilters(false)}
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            <div className={styles.filterContent}>
-                                {/* Quick Actions */}
-                                <div className={styles.filterSection}>
-                                    <h4>Quick Actions</h4>
-                                    <button
-                                        className={styles.filterAction}
-                                        onClick={() => {
-                                            setSelectedWarehouses([]);
-                                            setDateFrom("");
-                                            setDateTo("");
-                                            setStockFilter("all");
-                                            setSortBy("product_name");
-                                            setSortOrder("asc");
-                                            setSearchQuery("");
-                                            setSearchChips([]);
-                                            setPage(1);
-                                        }}
-                                    >
-                                        Reset Filters
-                                    </button>
-                                </div>
-
-                                {/* Date Range Filter - Moved to sidebar for advanced options */}
-                                <div className={styles.filterSection}>
-                                    <h4>Advanced Date Range</h4>
-                                    <div className={styles.dateInputs}>
-                                        <input
-                                            type="date"
-                                            value={dateFrom}
-                                            onChange={(e) => {
-                                                console.log('Date from changed to:', e.target.value);
-                                                setDateFrom(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            className={styles.dateInput}
-                                            placeholder="From"
-                                        />
-                                        <input
-                                            type="date"
-                                            value={dateTo}
-                                            onChange={(e) => {
-                                                console.log('Date to changed to:', e.target.value);
-                                                setDateTo(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            className={styles.dateInput}
-                                            placeholder="To"
-                                        />
+                            {availableWarehouses.map(wh => (
+                                <div key={wh.code} onClick={() => handleWarehouseToggle(wh.code)} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px', borderRadius:8, cursor:'pointer', background: selectedWarehouses.includes(wh.code)?'#EFF6FF':'transparent', fontSize:12 }}>
+                                    <div style={{ width:14, height:14, borderRadius:4, border:'1.5px solid', borderColor: selectedWarehouses.includes(wh.code)?'#2563EB':'#D1D5DB', background: selectedWarehouses.includes(wh.code)?'#2563EB':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                        {selectedWarehouses.includes(wh.code) && <span style={{ color:'#fff', fontSize:9 }}>✓</span>}
                                     </div>
+                                    <span style={{ fontWeight: selectedWarehouses.includes(wh.code)?600:400 }}>{wh.name}</span>
                                 </div>
-
-                                {/* Stock Status Filter */}
-                                <div className={styles.filterSection}>
-                                    <h4>Stock Status</h4>
-                                    <select
-                                        value={stockFilter}
-                                        onChange={(e) => {
-                                            console.log('Stock filter changed to:', e.target.value);
-                                            setStockFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className={styles.filterSelect}
-                                    >
-                                        <option value="all">All Items</option>
-                                        <option value="in-stock">In Stock</option>
-                                        <option value="low-stock">Low Stock</option>
-                                        <option value="out-of-stock">Out of Stock</option>
-                                    </select>
-                                </div>
-
-                                {/* Sort Options */}
-                                <div className={styles.filterSection}>
-                                    <h4>Sort By</h4>
-                                    <select
-                                        value={sortBy}
-                                        onChange={(e) => {
-                                            console.log('Sort by changed to:', e.target.value);
-                                            setSortBy(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className={styles.filterSelect}
-                                    >
-                                        <option value="product_name">Product Name</option>
-                                        <option value="stock">Stock Quantity</option>
-                                        <option value="warehouse">Warehouse</option>
-                                        <option value="updated_at">Last Updated</option>
-                                    </select>
-                                    <select
-                                        value={sortOrder}
-                                        onChange={(e) => {
-                                            console.log('Sort order changed to:', e.target.value);
-                                            setSortOrder(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className={styles.filterSelect}
-                                    >
-                                        <option value="asc">Ascending</option>
-                                        <option value="desc">Descending</option>
-                                    </select>
-                                </div>
-                            </div>
+                            ))}
                         </div>
-                    </>
+                    )}
+                </div>
+
+                {/* Stock filter */}
+                <select value={stockFilter} onChange={e=>{setStockFilter(e.target.value);setPage(1);}} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #E5E7EB', fontSize:12, background:'#fff', outline:'none', cursor:'pointer' }}>
+                    <option value="all">All Stock</option>
+                    <option value="in-stock">In Stock</option>
+                    <option value="low-stock">Low Stock</option>
+                    <option value="out-of-stock">Out of Stock</option>
+                </select>
+
+                {/* Sort */}
+                <select value={sortBy} onChange={e=>{setSortBy(e.target.value);setPage(1);}} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #E5E7EB', fontSize:12, background:'#fff', outline:'none', cursor:'pointer' }}>
+                    <option value="product_name">Sort: Name</option>
+                    <option value="stock">Sort: Stock</option>
+                    <option value="updated_at">Sort: Updated</option>
+                </select>
+                <select value={sortOrder} onChange={e=>{setSortOrder(e.target.value);setPage(1);}} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #E5E7EB', fontSize:12, background:'#fff', outline:'none', cursor:'pointer' }}>
+                    <option value="asc">↑ Asc</option>
+                    <option value="desc">↓ Desc</option>
+                </select>
+
+                {/* Date range */}
+                <input type="date" value={dateFrom} onChange={e=>{setDateFrom(e.target.value);setPage(1);}} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #E5E7EB', fontSize:12, outline:'none', background:'#F8FAFC' }}/>
+                <input type="date" value={dateTo} onChange={e=>{setDateTo(e.target.value);setPage(1);}} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #E5E7EB', fontSize:12, outline:'none', background:'#F8FAFC' }}/>
+
+                {/* Refresh + Export */}
+                <button onClick={loadInventory} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #E5E7EB', background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:4, fontSize:12 }}>
+                    <RefreshCw size={12} /> Refresh
+                </button>
+                {hasPermission(PERMISSIONS.INVENTORY_EXPORT) && (
+                    <button onClick={() => exportToCSV('current')} style={{ padding:'7px 12px', borderRadius:10, border:'none', background:'#1E3A5F', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
+                        <Download size={12} /> Export
+                    </button>
                 )}
 
-                {/* Inventory Table */}
-                <div className={styles.tableContainer} key={`inventory-${selectedWarehouses.join('-')}`}>
-                    {loading ? (
-                        <div className={styles.loading}>
-                            <div className={styles.spinner}></div>
-                            <p>Loading inventory...</p>
-                        </div>
-                    ) : items.length === 0 ? (
-                        <div className={styles.noData}>
-                            <Package size={48} />
-                            <h3>No inventory data found</h3>
-                            <p>Try adjusting your filters or check if inventory data exists in the database.</p>
-                            <button
-                                className={styles.refreshBtn}
-                                onClick={() => {
-                                    // ✅ FIXED: Use single loader
-                                    loadInventory();
-                                }}
-                            >
-                                <RefreshCw size={16} />
-                                Refresh Data
-                            </button>
-                        </div>
-                    ) : (
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Barcode</th>
-                                    <th>Stock</th>
-                                    <th>Damage</th>
-                                    <th>Location</th>
-                                    <th>Status</th>
-                                    <th>Updated</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {items.map((item, index) => (
-                                    <tr key={item.id || index}>
-                                        <td>
-                                            <div className={styles.productCell}>
-                                                <div className={styles.productName}>
-                                                    {item.product || item.product_name || item.name || 'N/A'}
-                                                </div>
-                                                {(item.variant || item.product_variant) && (
-                                                    <div className={styles.productVariant}>
-                                                        {item.variant || item.product_variant}
-                                                    </div>
-                                                )}
-                                            </div>
+                <span style={{ marginLeft:'auto', fontSize:11, color:'#94A3B8' }}>
+                    {allItems.length} items · Page {page}/{totalPages}
+                </span>
+            </div>
+
+            {/* ── ACTIVE STOCK REGISTRY TABLE ── */}
+            <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', overflow:'hidden' }}>
+                <div style={{ padding:'12px 18px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:'#0F172A' }}>Active Stock Registry</span>
+                    <span style={{ fontSize:11, color:'#94A3B8' }}>Showing {items.length} of {allItems.length} entries</span>
+                </div>
+
+                <div style={{ overflowX:'auto' }} className={styles.scrollbarHide || ''}>
+                {loading ? (
+                    <div style={{ padding:'48px', textAlign:'center', color:'#94A3B8' }}>
+                        <div style={{ width:32, height:32, border:'3px solid #E5E7EB', borderTopColor:'#6366F1', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 12px' }}/>
+                        Loading inventory...
+                    </div>
+                ) : items.length === 0 ? (
+                    <div style={{ padding:'64px', textAlign:'center', color:'#94A3B8' }}>
+                        <div style={{ fontSize:36, marginBottom:12 }}>📦</div>
+                        <div style={{ fontSize:15, fontWeight:700, color:'#374151', marginBottom:6 }}>No inventory data found</div>
+                        <button onClick={loadInventory} style={{ padding:'8px 18px', borderRadius:10, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>Refresh</button>
+                    </div>
+                ) : (
+                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                        <thead>
+                            <tr style={{ background:'#F8FAFC', borderBottom:'1px solid #F1F5F9' }}>
+                                <th style={{ padding:'10px 16px', textAlign:'left', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>PRODUCT INFO</th>
+                                <th style={{ padding:'10px 16px', textAlign:'left', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>SKU IDENTIFIER</th>
+                                <th style={{ padding:'10px 16px', textAlign:'center', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>CURRENT STOCK</th>
+                                <th style={{ padding:'10px 16px', textAlign:'center', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>DAMAGE</th>
+                                <th style={{ padding:'10px 16px', textAlign:'left', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>WAREHOUSE</th>
+                                <th style={{ padding:'10px 16px', textAlign:'center', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>STATUS</th>
+                                <th style={{ padding:'10px 16px', textAlign:'right', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>AUDIT</th>
+                                <th style={{ padding:'10px 16px', textAlign:'center', fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.07em', whiteSpace:'nowrap' }}>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items.map((item, idx) => {
+                                const stock = parseInt(item.stock || item.quantity || 0);
+                                const badge = getStatusBadge(stock);
+                                return (
+                                    <tr key={item.id || idx} style={{ borderBottom:'1px solid #F8FAFC', transition:'background 0.1s', cursor:'pointer' }}
+                                        onMouseEnter={e=>e.currentTarget.style.background='#F8FAFC'}
+                                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                                    >
+                                        {/* Product Info */}
+                                        <td style={{ padding:'12px 16px', maxWidth:180 }}>
+                                            <div style={{ fontWeight:700, color:'#0F172A', fontSize:13, lineHeight:1.3 }}>{item.product || item.product_name || 'N/A'}</div>
+                                            {(item.variant || item.product_variant) && (
+                                                <div style={{ fontSize:11, color:'#94A3B8', marginTop:2 }}>{item.variant || item.product_variant}</div>
+                                            )}
                                         </td>
-                                        <td>
-                                            <code className={styles.barcode}>
+                                        {/* SKU */}
+                                        <td style={{ padding:'12px 16px' }}>
+                                            <span style={{ fontFamily:'monospace', fontSize:11, background:'#EEF2FF', color:'#4F46E5', padding:'3px 8px', borderRadius:6, whiteSpace:'nowrap' }}>
                                                 {item.code || item.barcode || 'N/A'}
-                                            </code>
+                                            </span>
                                         </td>
-                                        <td>
-                                            <div
-                                                className={styles.stockCell}
+                                        {/* Stock */}
+                                        <td style={{ padding:'12px 16px', textAlign:'center' }}>
+                                            <span
+                                                style={{ fontSize:18, fontWeight:900, color: stock === 0 ? '#DC2626' : stock <= 10 ? '#D97706' : '#0F172A', cursor: hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? 'pointer' : 'default' }}
                                                 onClick={hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? () => openTimeline(item) : undefined}
-                                                title={hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? "Click to view stock timeline" : "Timeline access restricted"}
-                                                style={{ cursor: hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? 'pointer' : 'default' }}
+                                                title={hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? 'View timeline' : ''}
                                             >
-                                                <span className={styles.stockNumber}>
-                                                    {item.stock || item.quantity || 0}
-                                                </span>
+                                                {stock}
+                                            </span>
+                                            {hasPermission(PERMISSIONS.INVENTORY_EDIT) && (
+                                                <button onClick={e=>{e.stopPropagation();openStockUpdateModal(item);}} style={{ marginLeft:6, background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#94A3B8' }} title="Edit stock">✏️</button>
+                                            )}
+                                        </td>
+                                        {/* Damage */}
+                                        <td style={{ padding:'12px 16px', textAlign:'center', fontSize:13, color: (item.damage_count||0)>0?'#DC2626':'#94A3B8', fontWeight: (item.damage_count||0)>0?700:400 }}>
+                                            {item.damage_count || 0}
+                                        </td>
+                                        {/* Warehouse */}
+                                        <td style={{ padding:'12px 16px' }}>
+                                            <span style={{ fontSize:11, fontWeight:600, color:'#374151', background:'#F1F5F9', padding:'3px 8px', borderRadius:6 }}>
+                                                {item.warehouse || item.warehouse_name || item.Warehouse_name || '—'}
+                                            </span>
+                                        </td>
+                                        {/* Status */}
+                                        <td style={{ padding:'12px 16px', textAlign:'center' }}>
+                                            <span style={{ fontSize:10, fontWeight:700, color:badge.color, background:badge.bg, padding:'4px 10px', borderRadius:20 }}>{badge.label}</span>
+                                        </td>
+                                        {/* Audit */}
+                                        <td style={{ padding:'12px 16px', textAlign:'right', fontSize:11, color:'#94A3B8', whiteSpace:'nowrap' }}>
+                                            {timeAgo(item.updated_at || item.last_updated)}
+                                        </td>
+                                        {/* Actions */}
+                                        <td style={{ padding:'12px 16px', textAlign:'center' }}>
+                                            <div style={{ display:'flex', gap:4, justifyContent:'center' }}>
+                                                {hasPermission(PERMISSIONS.INVENTORY_TIMELINE) && (
+                                                    <button onClick={() => openTimeline(item)} style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid #E5E7EB', background:'#fff', cursor:'pointer', fontSize:10, fontWeight:600, color:'#6366F1' }} title="Timeline">
+                                                        <BarChart3 size={11} />
+                                                    </button>
+                                                )}
                                                 {hasPermission(PERMISSIONS.INVENTORY_EDIT) && (
-                                                    <button
-                                                        className={styles.editStockBtn}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openStockUpdateModal(item);
-                                                        }}
-                                                        title="Update Stock Manually"
-                                                    >
+                                                    <button onClick={() => openStockUpdateModal(item)} style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid #E5E7EB', background:'#fff', cursor:'pointer', fontSize:10, fontWeight:600, color:'#374151' }} title="Edit">
                                                         ✏️
                                                     </button>
                                                 )}
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className={styles.damageCell}>
-                                                <span className={styles.currentDamage}>
-                                                    {item.damage_count || 0}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className={styles.locationCell}>
-                                                <MapPin size={12} />
-                                                <span>
-                                                    {item.warehouse || item.warehouse_name || item.Warehouse_name || item.location || 'N/A'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={`${styles.statusBadge} ${
-                                                (item.stock || item.quantity || 0) === 0 ? styles.outOfStock :
-                                                (item.stock || item.quantity || 0) < 10 ? styles.lowStock :
-                                                styles.inStock
-                                            }`}>
-                                                {(item.stock || item.quantity || 0) === 0 ? 'Out of Stock' :
-                                                 (item.stock || item.quantity || 0) < 10 ? 'Low Stock' :
-                                                 'In Stock'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={styles.dateText}>
-                                                <Calendar size={12} />
-                                                {item.updated_at ? new Date(item.updated_at).toLocaleDateString() :
-                                                 item.last_updated ? new Date(item.last_updated).toLocaleDateString() :
-                                                 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button
-                                                className={styles.actionBtn}
-                                                title="View Details"
-                                                disabled
-                                                style={{ opacity: 0.3, cursor: 'not-allowed' }}
-                                            >
-                                                <Eye size={14} />
-                                            </button>
-                                        </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                )}
                 </div>
-            </div>
 
-            {/* Enhanced Pagination - ALWAYS SHOW */}
-            <div className={styles.pagination}>
-                {/* First Page Button */}
-                <button
-                    disabled={page === 1}
-                    onClick={() => setPage(1)}
-                    className={`${styles.paginationBtn} ${page === 1 ? styles.disabled : ''}`}
-                    title="First Page"
-                >
-                    ⟪
-                </button>
-                
-                {/* Previous Button */}
-                <button
-                    disabled={page === 1}
-                    onClick={() => setPage(page - 1)}
-                    className={`${styles.paginationBtn} ${page === 1 ? styles.disabled : ''}`}
-                    title="Previous Page"
-                >
-                    ⟨ Previous
-                </button>
-                
-                <div className={styles.paginationNumbers}>
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                            pageNum = i + 1;
-                        } else if (page <= 3) {
-                            pageNum = i + 1;
-                        } else if (page >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                        } else {
-                            pageNum = page - 2 + i;
-                        }
-                        
-                        return (
-                            <button
-                                key={pageNum}
-                                onClick={() => setPage(pageNum)}
-                                className={`${styles.paginationNumber} ${page === pageNum ? styles.active : ''}`}
-                            >
-                                {pageNum}
-                            </button>
-                        );
-                    })}
-                </div>
-                
-                {/* Next Button */}
-                <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage(page + 1)}
-                    className={`${styles.paginationBtn} ${page === totalPages ? styles.disabled : ''}`}
-                    title="Next Page"
-                >
-                    Next ⟩
-                </button>
-                
-                {/* Last Page Button */}
-                <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage(totalPages)}
-                    className={`${styles.paginationBtn} ${page === totalPages ? styles.disabled : ''}`}
-                    title="Last Page"
-                >
-                    ⟫
-                </button>
-                
-                {/* Page Info */}
-                <div className={styles.paginationControls}>
-                    <span className={styles.paginationInfo}>
-                        Page {page} of {totalPages} • Showing {items.length} of {allItems.length} items (50 per page)
-                    </span>
-                </div>
+                {/* Pagination */}
+                {!loading && allItems.length > 0 && (
+                    <div style={{ padding:'10px 18px', borderTop:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                        <span style={{ fontSize:11, color:'#64748B' }}>
+                            Showing {(page-1)*PAGE_SIZE+1}–{Math.min(page*PAGE_SIZE, allItems.length)} of {allItems.length}
+                        </span>
+                        <div style={{ display:'flex', gap:4 }}>
+                            <button onClick={()=>setPage(1)} disabled={page===1} style={{ width:28,height:28,borderRadius:6,border:'1.5px solid #E5E7EB',background:'#fff',cursor:page===1?'not-allowed':'pointer',fontSize:12,color:page===1?'#CBD5E1':'#374151' }}>⟪</button>
+                            <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} style={{ width:28,height:28,borderRadius:6,border:'1.5px solid #E5E7EB',background:'#fff',cursor:page===1?'not-allowed':'pointer',fontSize:12,color:page===1?'#CBD5E1':'#374151' }}>‹</button>
+                            {Array.from({length:Math.min(totalPages,5)},(_,i)=>{
+                                const p = totalPages<=5?i+1:page<=3?i+1:page>=totalPages-2?totalPages-4+i:page-2+i;
+                                return <button key={p} onClick={()=>setPage(p)} style={{ width:28,height:28,borderRadius:6,border:'none',fontSize:12,fontWeight:600,cursor:'pointer',background:page===p?'#6366F1':'#fff',color:page===p?'#fff':'#374151',border:page===p?'none':'1.5px solid #E5E7EB' }}>{p}</button>;
+                            })}
+                            <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages} style={{ width:28,height:28,borderRadius:6,border:'1.5px solid #E5E7EB',background:'#fff',cursor:page===totalPages?'not-allowed':'pointer',fontSize:12,color:page===totalPages?'#CBD5E1':'#374151' }}>›</button>
+                            <button onClick={()=>setPage(totalPages)} disabled={page===totalPages} style={{ width:28,height:28,borderRadius:6,border:'1.5px solid #E5E7EB',background:'#fff',cursor:page===totalPages?'not-allowed':'pointer',fontSize:12,color:page===totalPages?'#CBD5E1':'#374151' }}>⟫</button>
+                        </div>
+                    </div>
+                )}
             </div>
-
             {/* Manual Stock Update Modal */}
             {showStockUpdateModal && selectedItemForUpdate && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.stockUpdateModal}>
                         <div className={styles.modalHeader}>
-                            <h3>📦 Update Stock Manually</h3>
+                            <h3>≡ƒôª Update Stock Manually</h3>
                             <button
                                 className={styles.closeBtn}
                                 onClick={closeStockUpdateModal}
@@ -1478,7 +1150,7 @@ export default function InventorySheet() {
                             {/* Warning for stock out */}
                             {stockUpdateType === 'out' && parseInt(stockUpdateQuantity) > (selectedItemForUpdate.stock || 0) && (
                                 <div className={styles.warningMessage}>
-                                    ⚠️ Warning: This will result in negative stock. The system will set stock to 0.
+                                    ΓÜá∩╕Å Warning: This will result in negative stock. The system will set stock to 0.
                                 </div>
                             )}
                         </div>
@@ -1503,7 +1175,7 @@ export default function InventorySheet() {
                                     </>
                                 ) : (
                                     <>
-                                        📦 Update Stock
+                                        ≡ƒôª Update Stock
                                     </>
                                 )}
                             </button>
