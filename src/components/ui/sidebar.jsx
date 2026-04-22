@@ -504,61 +504,6 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </MenuItemWithSub>
                     )}
 
-                    {/* ORDERS */}
-                    {hasAnyOrderAccess() && (
-                        <MenuItemWithSub
-                            icon={Truck}
-                            label="Orders"
-                            isActive={isOrdersRoute}
-                            isOpen={ordersOpen}
-                            onToggle={() => setOrdersOpen(!ordersOpen)}
-                            basePath="/order"
-                        >
-                            <motion.div
-                                whileHover={{ x: 2 }}
-                                whileTap={{ scale: 0.98 }}
-                            >
-                                <Link 
-                                    href="/order/websiteorder"
-                                    className={cn(
-                                        "block rounded-md px-2.5 py-1.5 text-xs transition-all duration-200",
-                                        pathname === "/order/websiteorder" ? "text-slate-900 font-medium bg-slate-50" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    Website Orders
-                                </Link>
-                            </motion.div>
-                            <motion.div
-                                whileHover={{ x: 2 }}
-                                whileTap={{ scale: 0.98 }}
-                            >
-                                <Link 
-                                    href="/warehouse-order-activity"
-                                    className={cn(
-                                        "block rounded-md px-2.5 py-1.5 text-xs transition-all duration-200",
-                                        pathname === "/warehouse-order-activity" ? "text-slate-900 font-medium bg-slate-50" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    Warehouse Order Activity
-                                </Link>
-                            </motion.div>
-                             <motion.div
-                                whileHover={{ x: 2 }}
-                                whileTap={{ scale: 0.98 }}
-                            >
-                                <Link 
-                                    href="/order/store"
-                                    className={cn(
-                                        "block rounded-md px-2.5 py-1.5 text-xs transition-all duration-200",
-                                        pathname === "/order/store" ? "text-slate-900 font-medium bg-slate-50" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    Store
-                                </Link>
-                            </motion.div>
-                        </MenuItemWithSub>
-                    )}
-
                     {/* OPERATIONS */}
                     {(hasPermission(PERMISSIONS.OPERATIONS_DAMAGE) || 
                       hasPermission(PERMISSIONS.OPERATIONS_RETURN) || 
