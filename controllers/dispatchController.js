@@ -391,14 +391,25 @@ exports.createDispatch = async (req, res) => {
                 // Step 2: Create dispatch record
                 const dispatchSql = `
                     INSERT INTO warehouse_dispatch (
-                        tenant_id, warehouse, order_ref, customer, product_name, qty, variant,
+                        tenant_id, warehouse, order_ref, customer,
+                        customer_phone, customer_email, customer_address,
+                        customer_city, customer_state, customer_pincode,
+                        product_name, qty, variant,
                         barcode, awb, logistics, parcel_type, length, width, height,
-                        actual_weight, payment_mode, invoice_amount, processed_by, remarks
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        actual_weight, payment_mode, invoice_amount, processed_by, remarks,
+                        status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
                 `;
 
                 connection.query(dispatchSql, [
-                    tenantId, warehouse, order_ref, customer, product_name, quantity, variant,
+                    tenantId, warehouse, order_ref, customer,
+                    req.body.customer_phone || null,
+                    req.body.customer_email || null,
+                    req.body.customer_address || null,
+                    req.body.customer_city || null,
+                    req.body.customer_state || null,
+                    req.body.customer_pincode || null,
+                    product_name, quantity, variant,
                     barcode, awb, logistics, parcel_type, length, width, height,
                     actual_weight, payment_mode, invoice_amount, processed_by, remarks
                 ], (err, dispatchResult) => {
