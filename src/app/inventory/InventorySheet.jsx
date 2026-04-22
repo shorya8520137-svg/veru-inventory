@@ -7,7 +7,7 @@ import { getMockInventoryResponse } from "../../utils/mockInventoryData";
 import ProductTracker from "./ProductTracker";
 import { usePermissions, PERMISSIONS } from '@/contexts/PermissionsContext';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 const WAREHOUSES = [
@@ -691,8 +691,9 @@ export default function InventorySheet() {
     };
 
     return (
-        <div style={{ fontFamily: 'Inter, sans-serif', background: '#F8FAFC', padding: '16px 20px' }}>
-            {/* ── KPI CARDS ── */}
+        <div style={{ display:'flex', flexDirection:'column', height:'100%', fontFamily:'Inter,sans-serif', background:'#F8FAFC' }}>
+            {/* ── KPI CARDS — fixed at top ── */}
+            <div style={{ flexShrink:0, padding:'16px 20px 0' }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
                 {[
                     { label:'TOTAL PRODUCTS', value: stats.totalProducts.toLocaleString(), sub:'Active SKUs', color:'#6366F1', icon:'📦' },
@@ -712,7 +713,7 @@ export default function InventorySheet() {
             </div>
 
             {/* ── FILTER + SEARCH BAR ── */}
-            <div style={{ background:'#fff', borderRadius:14, padding:'12px 16px', marginBottom:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <div style={{ background:'#fff', borderRadius:14, padding:'12px 16px', margin:'12px 20px 0', boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                 {/* Search */}
                 <div style={{ position:'relative', flex:1, minWidth:200 }}>
                     <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#94A3B8' }} />
@@ -796,16 +797,17 @@ export default function InventorySheet() {
                 <span style={{ marginLeft:'auto', fontSize:11, color:'#94A3B8' }}>
                     {allItems.length} items · Page {page}/{totalPages}
                 </span>
-            </div>
+            </div>{/* end filter bar */}
+            </div>{/* end fixed top section */}
 
-            {/* ── ACTIVE STOCK REGISTRY TABLE ── */}
-            <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', overflow:'hidden' }}>
+            {/* ── ACTIVE STOCK REGISTRY TABLE — flex-1, only this scrolls ── */}
+            <div style={{ flex:1, display:'flex', flexDirection:'column', background:'#fff', borderRadius:14, boxShadow:'0 1px 6px rgba(0,0,0,0.05)', border:'1px solid #F1F5F9', overflow:'hidden', margin:'12px 20px 16px' }}>
                 <div style={{ padding:'12px 18px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                     <span style={{ fontSize:13, fontWeight:700, color:'#0F172A' }}>Active Stock Registry</span>
                     <span style={{ fontSize:11, color:'#94A3B8' }}>Showing {items.length} of {allItems.length} entries</span>
                 </div>
 
-                <div style={{ overflowX:'auto' }} className={styles.scrollbarHide || ''}>
+                <div style={{ flex:1, overflowX:'auto', overflowY:'auto' }} className="scrollbar-hide">
                 {loading ? (
                     <div style={{ padding:'48px', textAlign:'center', color:'#94A3B8' }}>
                         <div style={{ width:32, height:32, border:'3px solid #E5E7EB', borderTopColor:'#6366F1', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 12px' }}/>
