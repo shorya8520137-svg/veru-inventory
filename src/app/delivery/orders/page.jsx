@@ -37,11 +37,11 @@ export default function OrdersPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch(`${API_BASE}/api/orders?limit=100`, {
+    fetch(`${API_BASE}/api/dispatch?limit=100`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
-      .then(d => { if (d.success) setOrders(d.data?.orders || []); })
+      .then(d => { if (d.success || Array.isArray(d.data)) setOrders(d.data?.dispatches || d.data || []); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

@@ -1,9 +1,39 @@
-const db = require('../db/connection');
+const db      = require('../db/connection');
+const https   = require('https');
 const ProductionEventAuditLogger = require('../ProductionEventAuditLogger');
 const ExistingSchemaNotificationService = require('../services/ExistingSchemaNotificationService');
 
-// Initialize production event audit logger (fixes user_id and ip_address NULL issues + Cloudflare IP tracking)
 const eventAuditLogger = new ProductionEventAuditLogger();
+
+/* ── Shiprocket API call (secure — token from env, never exposed to client) ── */
+function callShiprocket(payload) {
+    return new Promise((resolve) => {
+        const token = process.env.shiprocket_api_token || process.env.DELIVERY_API_TOKEN || '';
+        if (!token) return resolve({ success: false, error: 'Shiprocket token not configured' });
+
+        const body = JSON.stringify(payload);
+        const req  = https.request({
+            hostname: 'apiv2.shiprocket.in',
+            path:     '/v1/external/orders/create/adhoc',
+            method:   'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${token}`,
+                'Content-Length': Buffer.byteLength(body),
+            },
+        }, (res) => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => {
+                try { resolve({ success: res.statusCode < 300, status: res.statusCode, body: JSON.parse(data) }); }
+                catch { resolve({ success: false, status: res.statusCode, body: data }); }
+            });
+        });
+        req.on('error', e => resolve({ success: false, error: e.message }));
+        req.setTimeout(30000, () => { req.destroy(); resolve({ success: false, error: 'timeout' }); });
+        req.write(body); req.end();
+    });
+}
 
 /**
  * =====================================================
@@ -440,6 +470,40 @@ exports.createDispatch = async (req, res) => {
                                     awb,
                                     quantity_dispatched: quantity,
                                     reference: `DISPATCH_${dispatchId}_${awb}`
+                                });
+
+                                // ── Fire Shiprocket async (non-blocking) ──
+                                const srPayload = {
+                                    order_id:    `DISP-${dispatchId}`,
+                                    order_date:  new Date().toISOString().split('T')[0],
+                                    pickup_location: warehouse,
+                                    billing_customer_name: customer || 'Customer',
+                                    billing_address: req.body.customer_address || 'N/A',
+                                    billing_city:    req.body.customer_city    || 'N/A',
+                                    billing_pincode: req.body.customer_pincode || '000000',
+                                    billing_state:   req.body.customer_state   || 'N/A',
+                                    billing_country: 'India',
+                                    billing_email:   req.body.customer_email   || '',
+                                    billing_phone:   req.body.customer_phone   || '0000000000',
+                                    shipping_is_billing: true,
+                                    order_items: [{
+                                        name: product_name, sku: barcode,
+                                        units: quantity, selling_price: invoice_amount || 0,
+                                    }],
+                                    payment_method: payment_mode === 'COD' ? 'COD' : 'Prepaid',
+                                    sub_total: invoice_amount || 0,
+                                    length: length || 10, breadth: width || 10,
+                                    height: height || 10, weight: actual_weight || 0.5,
+                                };
+                                callShiprocket(srPayload).then(sr => {
+                                    if (sr.success && sr.body?.order_id) {
+                                        db.query(
+                                            'UPDATE warehouse_dispatch SET shiprocket_order_id=?, shiprocket_shipment_id=?, awb_code=? WHERE id=?',
+                                            [sr.body.order_id, sr.body.shipment_id || null, sr.body.awb_code || null, dispatchId],
+                                            () => {}
+                                        );
+                                    }
+                                    console.log(`[Shiprocket] dispatch ${dispatchId}:`, sr.status || sr.error);
                                 });
                             });
                         });
