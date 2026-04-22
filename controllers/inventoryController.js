@@ -305,36 +305,45 @@ exports.getInventory = async (req, res) => {
     db.query(sql, values, (err, rows) => {
         if (err) {
             console.error('❌ Inventory query error:', err);
-            return res.status(500).json({
-                success: false,
-                error: err.sqlMessage
-            });
+            return res.status(500).json({ success: false, error: err.sqlMessage });
         }
 
-        console.log('✅ Query result:', rows.length, 'rows');
-        console.log('📊 Sample data:', rows[0] || 'No data');
+        // ── Get total count (without LIMIT) for pagination ──
+        const countSql = sql.replace(/SELECT.*?FROM/s, 'SELECT COUNT(*) as cnt FROM').replace(/ORDER BY.*$/s, '').replace(/LIMIT.*$/s, '');
+        const countValues = values.slice(0, -2); // remove limit + offset
 
-        // Calculate stats
-        const totalProducts = rows.length;
-        const totalStock = rows.reduce((sum, item) => sum + parseInt(item.stock || 0), 0);
-        const lowStockItems = rows.filter(item => parseInt(item.stock || 0) > 0 && parseInt(item.stock || 0) <= 10).length;
-        const outOfStockItems = rows.filter(item => parseInt(item.stock || 0) === 0).length;
+        // Build a clean count query
+        const baseCountSql = `
+            SELECT COUNT(*) as cnt
+            FROM (
+                SELECT sb.barcode
+                FROM stock_batches sb
+                WHERE ${filters.join(' AND ')}
+                GROUP BY sb.barcode, sb.product_name, sb.variant, sb.warehouse
+                ${stockFilter === 'in-stock' ? 'HAVING SUM(sb.qty_available) > 10' :
+                  stockFilter === 'low-stock' ? 'HAVING SUM(sb.qty_available) > 0 AND SUM(sb.qty_available) <= 10' :
+                  stockFilter === 'out-of-stock' ? 'HAVING SUM(sb.qty_available) = 0' : ''}
+            ) as counted
+        `;
 
-        res.json({
-            success: true,
-            data: rows,
-            total: totalProducts,
-            stats: {
-                totalProducts,
-                totalStock,
-                lowStockItems,
-                outOfStockItems
-            },
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                pages: Math.ceil(totalProducts / limit)
-            }
+        db.query(baseCountSql, countValues, (countErr, countRows) => {
+            const totalCount = countErr ? rows.length : (countRows[0]?.cnt || rows.length);
+
+            const totalStock = rows.reduce((sum, item) => sum + parseInt(item.stock || 0), 0);
+            const lowStockItems = rows.filter(item => parseInt(item.stock || 0) > 0 && parseInt(item.stock || 0) <= 10).length;
+            const outOfStockItems = rows.filter(item => parseInt(item.stock || 0) === 0).length;
+
+            res.json({
+                success: true,
+                data: rows,
+                total: totalCount,
+                stats: { totalProducts: totalCount, totalStock, lowStockItems, outOfStockItems },
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    pages: Math.ceil(totalCount / limit)
+                }
+            });
         });
     });
 };

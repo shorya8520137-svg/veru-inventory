@@ -107,15 +107,21 @@ export default function InventorySheet() {
 
             if (data.success && data.data) {
                 inventoryItems = Array.isArray(data.data) ? data.data : data.data.items || data.data.inventory || [];
-                totalCount = data.total || data.pagination?.total || inventoryItems.length;
+                totalCount = data.total || data.pagination?.total || data.pagination?.pages * PAGE_SIZE || inventoryItems.length;
+                // Use pages from pagination if available
+                const totalPages = data.pagination?.pages || Math.ceil(totalCount / PAGE_SIZE) || 1;
+                setTotalPages(totalPages);
             } else if (Array.isArray(data)) {
                 inventoryItems = data;
                 totalCount = data.length;
+                setTotalPages(Math.ceil(totalCount / PAGE_SIZE) || 1);
             }
 
             setItems(inventoryItems);
-            setAllItems(inventoryItems); // keep for stats
-            setTotalPages(Math.ceil(totalCount / PAGE_SIZE) || 1);
+            setAllItems(inventoryItems);
+            if (!data.pagination?.pages) {
+                setTotalPages(Math.ceil(totalCount / PAGE_SIZE) || 1);
+            }
 
             setStats({
                 totalProducts: totalCount,
