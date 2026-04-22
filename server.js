@@ -158,11 +158,19 @@ app.use('/api', (req, res, next) => {
     // Apply authentication to all other routes
     authenticateToken(req, res, next);
 });
+
+// ── TENANT MIDDLEWARE — inject tenant_id after auth ──
+const tenantMiddleware = require('./middleware/tenant');
+app.use('/api', tenantMiddleware);
+
 app.use("/api/dispatch", require("./routes/dispatchRoutes"));
 app.use("/api/dispatch-beta", require("./routes/dispatchRoutes")); // existing
 
 // 🔥 PRODUCT ROUTES (ADDED)
 app.use("/api/products", require("./routes/productRoutes"));
+
+// 🔥 ORDER ROUTES (Shiprocket integration)
+app.use("/api/orders", require("./routes/orderRoutes"));
 
 // 🔥 REVIEW ROUTES
 app.use("/api", require("./routes/reviewRoutes"));
@@ -264,6 +272,9 @@ app.use((err, req, res, next) => {
 // ===============================
 const PORT = process.env.PORT || 5000;
 const HOST = "0.0.0.0";
+
+// ── BACKGROUND JOBS ──
+require('./jobs/inventorySnapshotJob');
 
 app.listen(PORT, HOST, () => {
     console.log("======================================");

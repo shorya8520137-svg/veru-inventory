@@ -16,6 +16,9 @@ const eventAuditLogger = new ProductionEventAuditLogger();
  * CREATE NEW DISPATCH - Enhanced for frontend form
  */
 exports.createDispatch = async (req, res) => {
+    // ── Extract tenant_id from request (injected by tenant middleware) ──
+    const tenantId = req.tenantId || 1;
+
     // Handle both API formats (original and frontend form)
     const isFormData = req.body.selectedWarehouse !== undefined;
     
@@ -334,10 +337,10 @@ exports.createDispatch = async (req, res) => {
             const checkStockSql = `
                 SELECT SUM(qty_available) as available_stock 
                 FROM stock_batches 
-                WHERE barcode = ? AND warehouse = ? AND status = 'active'
+                WHERE barcode = ? AND warehouse = ? AND status = 'active' AND tenant_id = ?
             `;
 
-            connection.query(checkStockSql, [barcode, warehouse], (err, stockResult) => {
+            connection.query(checkStockSql, [barcode, warehouse, tenantId], (err, stockResult) => {
                 if (err) {
                     return connection.rollback(() => {
                         connection.release();
@@ -358,14 +361,14 @@ exports.createDispatch = async (req, res) => {
                 // Step 2: Create dispatch record
                 const dispatchSql = `
                     INSERT INTO warehouse_dispatch (
-                        warehouse, order_ref, customer, product_name, qty, variant,
+                        tenant_id, warehouse, order_ref, customer, product_name, qty, variant,
                         barcode, awb, logistics, parcel_type, length, width, height,
                         actual_weight, payment_mode, invoice_amount, processed_by, remarks
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `;
 
                 connection.query(dispatchSql, [
-                    warehouse, order_ref, customer, product_name, quantity, variant,
+                    tenantId, warehouse, order_ref, customer, product_name, quantity, variant,
                     barcode, awb, logistics, parcel_type, length, width, height,
                     actual_weight, payment_mode, invoice_amount, processed_by, remarks
                 ], (err, dispatchResult) => {
@@ -452,10 +455,11 @@ exports.createDispatch = async (req, res) => {
                 SELECT id, qty_available 
                 FROM stock_batches 
                 WHERE barcode = ? AND warehouse = ? AND status = 'active' AND qty_available > 0
+                  AND tenant_id = ?
                 ORDER BY created_at ASC
             `;
 
-            connection.query(updateStockSql, [barcode, warehouse], (err, batches) => {
+            connection.query(updateStockSql, [barcode, warehouse, tenantId], (err, batches) => {
                 if (err) {
                     return connection.rollback(() =>
                         res.status(500).json({ success: false, message: err.message })
@@ -532,7 +536,18 @@ exports.createDispatch = async (req, res) => {
                                     );
                                 }
 
-                                callback();
+                                // ── SYNC inventory.stock (live stock table) ──
+                                const syncInventorySql = `
+                                    UPDATE inventory
+                                    SET stock = GREATEST(0, stock - ?),
+                                        updated_at = NOW()
+                                    WHERE code = ? AND (warehouse = ? OR warehouse_code = ?)
+                                      AND tenant_id = ?
+                                `;
+                                connection.query(syncInventorySql, [qty, barcode, warehouse, warehouse, tenantId], () => {
+                                    // Non-fatal if inventory row doesn't exist yet
+                                    callback();
+                                });
                             });
                         }
                     });
@@ -565,6 +580,7 @@ function extractProductName(productString) {
  * GET ALL DISPATCHES WITH FILTERS
  */
 exports.getDispatches = (req, res) => {
+    const tenantId = req.tenantId || 1;
     const {
         warehouse,
         status,
@@ -575,8 +591,8 @@ exports.getDispatches = (req, res) => {
         limit = 50
     } = req.query;
 
-    const filters = [];
-    const values = [];
+    const filters = ['tenant_id = ?'];
+    const values  = [tenantId];
 
     if (warehouse) {
         filters.push('warehouse = ?');
@@ -604,7 +620,7 @@ exports.getDispatches = (req, res) => {
         values.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
-    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+    const whereClause = `WHERE ${filters.join(' AND ')}`;
     const offset = (page - 1) * limit;
 
     const sql = `

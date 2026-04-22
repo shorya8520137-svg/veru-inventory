@@ -15,6 +15,7 @@ const generateToken = (user) => {
         name: user.name,
         role_id: user.role_id,
         role_name: user.role_name || user.role,
+        tenant_id: user.tenant_id || 1,   // ← multi-tenant
         iat: Math.floor(Date.now() / 1000)
     };
 
