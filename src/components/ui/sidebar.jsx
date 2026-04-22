@@ -514,22 +514,6 @@ const InventoryMenu = ({ onOpenOperation }) => {
                             onToggle={() => setOrdersOpen(!ordersOpen)}
                             basePath="/order"
                         >
-                            {hasPermission(PERMISSIONS.OPERATIONS_DISPATCH) && (
-                                <motion.div
-                                    whileHover={{ x: 2 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    <Link 
-                                        href="/order/dispatch"
-                                        className={cn(
-                                            "block rounded-md px-2.5 py-1.5 text-xs transition-all duration-200 w-full text-left hover:scale-[1.02]",
-                                            "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                                        )}
-                                    >
-                                        Dispatch
-                                    </Link>
-                                </motion.div>
-                            )}
                             <motion.div
                                 whileHover={{ x: 2 }}
                                 whileTap={{ scale: 0.98 }}
@@ -576,8 +560,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
                     )}
 
                     {/* OPERATIONS */}
-                    {(hasPermission(PERMISSIONS.OPERATIONS_DISPATCH) || 
-                      hasPermission(PERMISSIONS.OPERATIONS_DAMAGE) || 
+                    {(hasPermission(PERMISSIONS.OPERATIONS_DAMAGE) || 
                       hasPermission(PERMISSIONS.OPERATIONS_RETURN) || 
                       hasPermission(PERMISSIONS.OPERATIONS_BULK) ||
                       hasPermission(PERMISSIONS.OPERATIONS_SELF_TRANSFER)) && (
@@ -589,22 +572,6 @@ const InventoryMenu = ({ onOpenOperation }) => {
                             onToggle={() => setOperationsExpanded(!operationsExpanded)}
                             basePath="#"
                         >
-                            {hasPermission(PERMISSIONS.OPERATIONS_DISPATCH) && (
-                                <motion.div
-                                    whileHover={{ x: 2 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    <Link 
-                                        href="/order/dispatch"
-                                        className={cn(
-                                            "block rounded-md px-2.5 py-1.5 text-xs transition-all duration-200 w-full text-left hover:scale-[1.02]",
-                                            "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                                        )}
-                                    >
-                                        📦 Dispatch
-                                    </Link>
-                                </motion.div>
-                            )}
                             {hasPermission(PERMISSIONS.OPERATIONS_DAMAGE) && (
                                 <motion.button 
                                     onClick={() => {
