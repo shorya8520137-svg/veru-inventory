@@ -124,11 +124,22 @@ SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=D
 SET @sql = IF(@col=0, 'ALTER TABLE users ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1', 'SELECT "users.tenant_id exists"');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- ── STEP 3: Add indexes ──
-ALTER TABLE warehouse_dispatch    ADD INDEX IF NOT EXISTS idx_tenant (tenant_id);
-ALTER TABLE inventory             ADD INDEX IF NOT EXISTS idx_tenant_inv (tenant_id);
-ALTER TABLE stock_batches         ADD INDEX IF NOT EXISTS idx_tenant_sb (tenant_id);
-ALTER TABLE users                 ADD INDEX IF NOT EXISTS idx_tenant_users (tenant_id);
+-- ── STEP 3: Add indexes (safe) ──
+SET @idx = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='warehouse_dispatch' AND INDEX_NAME='idx_tenant');
+SET @sql = IF(@idx=0, 'ALTER TABLE warehouse_dispatch ADD INDEX idx_tenant (tenant_id)', 'SELECT "idx exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @idx = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inventory' AND INDEX_NAME='idx_tenant_inv');
+SET @sql = IF(@idx=0, 'ALTER TABLE inventory ADD INDEX idx_tenant_inv (tenant_id)', 'SELECT "idx exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @idx = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='stock_batches' AND INDEX_NAME='idx_tenant_sb');
+SET @sql = IF(@idx=0, 'ALTER TABLE stock_batches ADD INDEX idx_tenant_sb (tenant_id)', 'SELECT "idx exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @idx = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND INDEX_NAME='idx_tenant_users');
+SET @sql = IF(@idx=0, 'ALTER TABLE users ADD INDEX idx_tenant_users (tenant_id)', 'SELECT "idx exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- ── STEP 4: Verify ──
 SELECT 'Migration 001 complete' AS status;
