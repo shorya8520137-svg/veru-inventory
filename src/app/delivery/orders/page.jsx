@@ -133,7 +133,7 @@ export default function OrdersPage() {
 
       {/* TABLE â€” horizontally scrollable */}
       <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: '1px solid #F1F5F9', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflowX: 'auto' }} className="scrollbar-hide">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: COLS.reduce((s, c) => s + c.width, 0) + 60 }}>
             <thead>
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
