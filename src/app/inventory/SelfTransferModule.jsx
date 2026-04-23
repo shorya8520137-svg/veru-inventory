@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronDown } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -11,6 +11,8 @@ export default function SelfTransferModule() {
     const [loading, setLoading] = useState(false);
     const [dataLoading, setDataLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [debugLogs, setDebugLogs] = useState([]);
+    const [showDebug, setShowDebug] = useState(true);
 
     const [formData, setFormData] = useState({
         sourceId: '',
@@ -27,6 +29,13 @@ export default function SelfTransferModule() {
     const [destinationOptions, setDestinationOptions] = useState([]);
     const [products, setProducts] = useState([]);
 
+    const addDebugLog = (message, data = null) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const log = `[${timestamp}] ${message}`;
+        console.log(log, data);
+        setDebugLogs(prev => [...prev, { message: log, data }]);
+    };
+
     // Fetch data when transfer type changes
     useEffect(() => {
         fetchData();
@@ -34,52 +43,76 @@ export default function SelfTransferModule() {
 
     const fetchData = async () => {
         setDataLoading(true);
+        addDebugLog('🔄 Starting fetchData for transfer type: ' + transferType);
+        
         try {
             const token = localStorage.getItem('token');
+            addDebugLog('🔑 Token found: ' + (token ? 'YES' : 'NO'));
             
             if (!token) {
+                addDebugLog('❌ No authentication token found');
                 setMessage('No authentication token found');
                 setDataLoading(false);
                 return;
             }
 
-            console.log('Fetching suggestions for:', transferType);
+            const apiUrl = `${API_BASE}/api/transfer-suggestions/${transferType}`;
+            addDebugLog('📡 Calling API: ' + apiUrl);
             
-            // Fetch suggestions based on transfer type
-            const res = await fetch(`${API_BASE}/api/transfer-suggestions/${transferType}`, {
+            const res = await fetch(apiUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            console.log('Response status:', res.status);
+            addDebugLog('📊 API Response Status: ' + res.status);
             const data = await res.json();
-            console.log('Suggestions data:', data);
+            addDebugLog('📦 API Response Data:', data);
             
             if (data.success) {
+                addDebugLog('✅ API Success - Sources: ' + (data.sources?.length || 0) + ', Destinations: ' + (data.destinations?.length || 0));
                 setSourceOptions(data.sources || []);
                 setDestinationOptions(data.destinations || []);
-                console.log('Sources:', data.sources?.length, 'Destinations:', data.destinations?.length);
+                
+                // Log each source
+                if (data.sources) {
+                    data.sources.forEach((s, i) => {
+                        addDebugLog(`  Source ${i}: ${s.warehouse_name || s.store_name} (ID: ${s.id})`);
+                    });
+                }
+                
+                // Log each destination
+                if (data.destinations) {
+                    data.destinations.forEach((d, i) => {
+                        addDebugLog(`  Destination ${i}: ${d.warehouse_name || d.store_name} (ID: ${d.id})`);
+                    });
+                }
             } else {
-                console.error('API error:', data.message);
+                addDebugLog('❌ API Error: ' + data.message);
                 setMessage('Error loading suggestions: ' + data.message);
             }
 
             // Fetch products
+            addDebugLog('📡 Fetching products...');
             const prRes = await fetch(`${API_BASE}/api/products?limit=1000`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const prData = await prRes.json();
             if (prData.success) {
+                addDebugLog('✅ Products loaded: ' + (prData.data?.products?.length || 0));
                 setProducts(prData.data?.products || []);
+            } else {
+                addDebugLog('❌ Products error: ' + prData.message);
             }
         } catch (error) {
-            console.error('Error fetching data:', error);
+            addDebugLog('❌ Error fetching data: ' + error.message);
             setMessage('Error loading data: ' + error.message);
         } finally {
             setDataLoading(false);
+            addDebugLog('✅ fetchData completed');
         }
     };
 
     const handleTransferTypeChange = (type) => {
+        addDebugLog('🔄 Transfer type changed to: ' + type);
         setTransferType(type);
         setFormData(prev => ({
             ...prev,
@@ -113,23 +146,27 @@ export default function SelfTransferModule() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        addDebugLog('📤 Submitting transfer...');
 
         try {
             const token = localStorage.getItem('token');
             
             if (!formData.sourceId || !formData.destinationId) {
+                addDebugLog('❌ Missing source or destination');
                 setMessage('Please select source and destination');
                 setLoading(false);
                 return;
             }
 
             if (formData.sourceId === formData.destinationId) {
+                addDebugLog('❌ Source and destination are the same');
                 setMessage('Source and destination cannot be the same');
                 setLoading(false);
                 return;
             }
 
             if (formData.items.some(item => !item.productId || item.transferQty <= 0)) {
+                addDebugLog('❌ Invalid items');
                 setMessage('Please fill all items with valid quantities');
                 setLoading(false);
                 return;
@@ -148,6 +185,8 @@ export default function SelfTransferModule() {
                 transferDate: formData.transferDate
             };
 
+            addDebugLog('📦 Submit data:', submitData);
+
             const response = await fetch(`${API_BASE}/api/self-transfer`, {
                 method: 'POST',
                 headers: {
@@ -158,15 +197,19 @@ export default function SelfTransferModule() {
             });
 
             const data = await response.json();
+            addDebugLog('📊 Submit response:', data);
+            
             if (data.success) {
+                addDebugLog('✅ Transfer created successfully');
                 setMessage('✅ Transfer initiated successfully!');
                 setShowForm(false);
                 resetForm();
             } else {
+                addDebugLog('❌ Submit failed: ' + data.message);
                 setMessage('❌ ' + (data.message || 'Failed to create transfer'));
             }
         } catch (error) {
-            console.error('Error:', error);
+            addDebugLog('❌ Submit error: ' + error.message);
             setMessage('❌ Error creating transfer: ' + error.message);
         } finally {
             setLoading(false);
@@ -222,6 +265,22 @@ export default function SelfTransferModule() {
 
     return (
         <div style={{ height: '100%', background: '#F5F7FA', fontFamily: 'Inter,sans-serif', padding: '0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {/* Debug Console */}
+            {showDebug && (
+                <div style={{ background: '#1F2937', color: '#10B981', padding: '12px', fontSize: '11px', fontFamily: 'monospace', maxHeight: '150px', overflowY: 'auto', borderBottom: '2px solid #10B981' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span>🐛 DEBUG CONSOLE</span>
+                        <button onClick={() => setShowDebug(false)} style={{ background: 'none', border: 'none', color: '#10B981', cursor: 'pointer' }}>✕</button>
+                    </div>
+                    {debugLogs.map((log, i) => (
+                        <div key={i} style={{ marginBottom: '4px', wordBreak: 'break-all' }}>
+                            {log.message}
+                            {log.data && <div style={{ color: '#60A5FA', marginLeft: '20px' }}>{JSON.stringify(log.data).substring(0, 100)}...</div>}
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Header */}
             <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '20px 24px', flexShrink: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
@@ -285,19 +344,31 @@ export default function SelfTransferModule() {
 
                         {dataLoading && (
                             <div style={{ padding: '20px', textAlign: 'center', color: '#6B7280' }}>
-                                Loading options...
+                                ⏳ Loading options...
                             </div>
                         )}
 
                         {!dataLoading && (
                             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                {/* Debug Info */}
+                                <div style={{ background: '#F0F9FF', padding: '12px', borderRadius: '8px', fontSize: '12px', color: '#0369A1' }}>
+                                    <strong>Debug Info:</strong><br/>
+                                    Transfer Type: {transferType}<br/>
+                                    Source Options: {sourceOptions.length}<br/>
+                                    Destination Options: {destinationOptions.length}<br/>
+                                    Products: {products.length}
+                                </div>
+
                                 {/* Source & Destination */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '16px', alignItems: 'flex-end' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>{getSourceLabel()} *</label>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>{getSourceLabel()} * ({sourceOptions.length})</label>
                                         <select
                                             value={formData.sourceId}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, sourceId: e.target.value }))}
+                                            onChange={(e) => {
+                                                addDebugLog('📍 Source selected: ' + e.target.value);
+                                                setFormData(prev => ({ ...prev, sourceId: e.target.value }));
+                                            }}
                                             style={{ width: '100%', padding: '10px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
                                             required
                                         >
@@ -316,6 +387,7 @@ export default function SelfTransferModule() {
                                     <button
                                         type="button"
                                         onClick={() => {
+                                            addDebugLog('🔄 Swapping source and destination');
                                             setFormData(prev => ({
                                                 ...prev,
                                                 sourceId: prev.destinationId,
@@ -344,10 +416,13 @@ export default function SelfTransferModule() {
                                     </button>
 
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>{getDestinationLabel()} *</label>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>{getDestinationLabel()} * ({destinationOptions.length})</label>
                                         <select
                                             value={formData.destinationId}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, destinationId: e.target.value }))}
+                                            onChange={(e) => {
+                                                addDebugLog('📍 Destination selected: ' + e.target.value);
+                                                setFormData(prev => ({ ...prev, destinationId: e.target.value }));
+                                            }}
                                             style={{ width: '100%', padding: '10px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
                                             required
                                         >
