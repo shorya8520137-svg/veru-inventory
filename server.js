@@ -242,6 +242,9 @@ app.use('/api/website-auth', require('./routes/websiteAuthRoutes'));
 // customer support chat routes
 app.use('/api/customer-support', require('./routes/customerSupportRoutes'));
 
+// warehouse management routes
+app.use('/api/warehouse-management', require('./routes/warehouseManagementRoutes'));
+
 // auth routes (no /api prefix for backward compatibility)
 app.use('/auth', require('./routes/authRoutes'));
 
