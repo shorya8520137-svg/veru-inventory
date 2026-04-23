@@ -245,6 +245,12 @@ app.use('/api/customer-support', require('./routes/customerSupportRoutes'));
 // warehouse management routes
 app.use('/api/warehouse-management', require('./routes/warehouseManagementRoutes'));
 
+// self transfer routes
+app.use('/api/self-transfer', require('./routes/selfTransferRoutes'));
+
+// timeline routes
+app.use('/api/timeline', require('./routes/timelineRoutes'));
+
 // auth routes (no /api prefix for backward compatibility)
 app.use('/auth', require('./routes/authRoutes'));
 
