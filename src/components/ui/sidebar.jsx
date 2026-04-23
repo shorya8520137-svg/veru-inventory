@@ -23,7 +23,8 @@ import {
     MessageSquare,
     Brain,
     Star,
-    Sparkles
+    Sparkles,
+    Building2
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { motion, AnimatePresence } from "framer-motion";
@@ -442,6 +443,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                                 >
                                     <Sparkles size={collapsed ? 16 : 16} />
                                     {!collapsed && <span>SEO</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* WAREHOUSE & STORE MANAGEMENT */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/warehouse-management" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/warehouse-management"), collapsed }))}
+                                >
+                                    <Building2 size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Warehouse & Stores</span>}
                                 </Link>
                             </motion.div>
                         </SidebarMenuItem>
