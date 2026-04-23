@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Building2, MapPin, Phone, User, Search } from "lucide-react";
+import { Plus, Building2, MapPin, Phone, User, Search, Edit2, Trash2, X } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -11,6 +11,7 @@ export default function WarehouseTab() {
     const [showForm, setShowForm] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [message, setMessage] = useState("");
+    const [editingId, setEditingId] = useState(null);
 
     const [formData, setFormData] = useState({
         warehouse_code: "",
@@ -26,10 +27,65 @@ export default function WarehouseTab() {
         capacity: ""
     });
 
-    // Load warehouses on component mount
     useEffect(() => {
         fetchWarehouses();
     }, []);
+
+    const resetForm = () => {
+        setFormData({
+            warehouse_code: "",
+            warehouse_name: "",
+            address: "",
+            city: "",
+            state: "",
+            country: "India",
+            pincode: "",
+            phone: "",
+            email: "",
+            manager_name: "",
+            capacity: ""
+        });
+        setEditingId(null);
+    };
+
+    const handleEdit = (warehouse) => {
+        setFormData({
+            warehouse_code: warehouse.warehouse_code,
+            warehouse_name: warehouse.warehouse_name,
+            address: warehouse.address,
+            city: warehouse.city,
+            state: warehouse.state,
+            country: warehouse.country || "India",
+            pincode: warehouse.pincode,
+            phone: warehouse.phone,
+            email: warehouse.email,
+            manager_name: warehouse.manager_name,
+            capacity: warehouse.capacity
+        });
+        setEditingId(warehouse.id);
+        setShowForm(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm("Delete this warehouse?")) return;
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE}/api/warehouse-management/warehouses/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setMessage("Warehouse deleted successfully!");
+                fetchWarehouses();
+            } else {
+                setMessage(data.message || "Failed to delete warehouse");
+            }
+        } catch (error) {
+            console.error('Error deleting warehouse:', error);
+            setMessage("Error deleting warehouse");
+        }
+    };
 
     const fetchWarehouses = async () => {
         setLoading(true);
@@ -59,8 +115,13 @@ export default function WarehouseTab() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/warehouse-management/warehouses`, {
-                method: 'POST',
+            const method = editingId ? 'PUT' : 'POST';
+            const url = editingId 
+                ? `${API_BASE}/api/warehouse-management/warehouses/${editingId}`
+                : `${API_BASE}/api/warehouse-management/warehouses`;
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -70,28 +131,16 @@ export default function WarehouseTab() {
 
             const data = await response.json();
             if (data.success) {
-                setMessage("Warehouse created successfully!");
+                setMessage(editingId ? "Warehouse updated successfully!" : "Warehouse created successfully!");
                 setShowForm(false);
-                setFormData({
-                    warehouse_code: "",
-                    warehouse_name: "",
-                    address: "",
-                    city: "",
-                    state: "",
-                    country: "India",
-                    pincode: "",
-                    phone: "",
-                    email: "",
-                    manager_name: "",
-                    capacity: ""
-                });
-                fetchWarehouses(); // Reload list
+                resetForm();
+                fetchWarehouses();
             } else {
-                setMessage(data.message || "Failed to create warehouse");
+                setMessage(data.message || "Failed to save warehouse");
             }
         } catch (error) {
-            console.error('Error creating warehouse:', error);
-            setMessage("Error creating warehouse");
+            console.error('Error saving warehouse:', error);
+            setMessage("Error saving warehouse");
         } finally {
             setLoading(false);
         }
@@ -114,269 +163,174 @@ export default function WarehouseTab() {
     );
 
     return (
-        <div>
-            {/* Header Actions */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search warehouses..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
-                </div>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <Plus size={20} />
-                    Add Warehouse
-                </button>
-            </div>
-
+        <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
             {/* Message Display */}
             {message && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg">
+                <div style={{padding:"12px 24px",background:"#DCFCE7",color:"#166534",fontSize:"14px",borderBottom:"1px solid #BBF7D0"}}>
                     {message}
                 </div>
             )}
 
-            {/* Add Warehouse Form */}
+            {/* Header with Search and Add Button */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #E5E7EB",background:"#fff",gap:"12px"}}>
+                <div style={{position:"relative",flex:1,maxWidth:"300px"}}>
+                    <svg style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",color:"#9CA3AF",width:"16px",height:"16px"}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input
+                        type="text"
+                        placeholder="Search warehouses..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{width:"100%",paddingLeft:"36px",paddingRight:"12px",paddingTop:"8px",paddingBottom:"8px",border:"1.5px solid #E5E7EB",borderRadius:"8px",fontSize:"13px",fontFamily:"inherit",outline:"none"}}
+                    />
+                </div>
+                <button
+                    onClick={() => {resetForm(); setShowForm(true);}}
+                    style={{display:"flex",alignItems:"center",gap:"6px",background:"#3B82F6",color:"#fff",border:"none",padding:"8px 16px",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontWeight:"600",fontFamily:"inherit"}}
+                >
+                    <Plus size={16} /> Add Warehouse
+                </button>
+            </div>
+
+            {/* Warehouses Grid - Edge to Edge */}
+            <div style={{flex:1,overflowY:"auto",padding:"0"}}>
+                {loading && warehouses.length === 0 ? (
+                    <div style={{textAlign:"center",paddingTop:"40px",color:"#9CA3AF",fontSize:"14px"}}>Loading warehouses...</div>
+                ) : filteredWarehouses.length === 0 ? (
+                    <div style={{textAlign:"center",paddingTop:"40px",color:"#9CA3AF",fontSize:"14px"}}>
+                        {searchTerm ? "No warehouses found" : "No warehouses yet"}
+                    </div>
+                ) : (
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:"0",padding:"0"}}>
+                        {filteredWarehouses.map((warehouse) => (
+                            <div key={warehouse.id} style={{background:"#fff",borderRight:"1px solid #E5E7EB",borderBottom:"1px solid #E5E7EB",padding:"16px",display:"flex",flexDirection:"column",gap:"12px"}}>
+                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"start"}}>
+                                    <div style={{display:"flex",alignItems:"center",gap:"10px",flex:1}}>
+                                        <div style={{width:"40px",height:"40px",borderRadius:"8px",background:"#DBEAFE",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                                            <Building2 size={20} color="#3B82F6" />
+                                        </div>
+                                        <div style={{minWidth:0}}>
+                                            <div style={{fontSize:"14px",fontWeight:"600",color:"#111827"}}>{warehouse.warehouse_name}</div>
+                                            <div style={{fontSize:"12px",color:"#9CA3AF"}}>{warehouse.warehouse_code}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{display:"flex",gap:"6px"}}>
+                                        <button
+                                            onClick={() => handleEdit(warehouse)}
+                                            style={{background:"none",border:"none",cursor:"pointer",padding:"4px",color:"#6B7280",transition:"color 0.2s"}}
+                                            onMouseEnter={(e) => e.target.style.color = "#3B82F6"}
+                                            onMouseLeave={(e) => e.target.style.color = "#6B7280"}
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(warehouse.id)}
+                                            style={{background:"none",border:"none",cursor:"pointer",padding:"4px",color:"#6B7280",transition:"color 0.2s"}}
+                                            onMouseEnter={(e) => e.target.style.color = "#EF4444"}
+                                            onMouseLeave={(e) => e.target.style.color = "#6B7280"}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{display:"flex",flexDirection:"column",gap:"6px",fontSize:"13px"}}>
+                                    <div style={{display:"flex",alignItems:"center",gap:"8px",color:"#6B7280"}}>
+                                        <MapPin size={14} /> {warehouse.city}, {warehouse.state}
+                                    </div>
+                                    {warehouse.phone && (
+                                        <div style={{display:"flex",alignItems:"center",gap:"8px",color:"#6B7280"}}>
+                                            <Phone size={14} /> {warehouse.phone}
+                                        </div>
+                                    )}
+                                    {warehouse.manager_name && (
+                                        <div style={{display:"flex",alignItems:"center",gap:"8px",color:"#6B7280"}}>
+                                            <User size={14} /> {warehouse.manager_name}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{fontSize:"11px",color:"#9CA3AF",paddingTop:"8px",borderTop:"1px solid #F3F4F6"}}>
+                                    Created: {new Date(warehouse.created_at).toLocaleDateString()}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Add/Edit Modal */}
             {showForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-slate-200">
-                            <h3 className="text-xl font-semibold text-slate-900">Add New Warehouse</h3>
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+                    <div style={{background:"#fff",borderRadius:"12px",padding:"24px",width:"100%",maxWidth:"500px",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
+                            <h2 style={{margin:0,fontSize:"18px",fontWeight:"700",color:"#111827"}}>{editingId ? "Edit Warehouse" : "Add Warehouse"}</h2>
+                            <button onClick={() => {setShowForm(false); resetForm();}} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:"24px"}}>×</button>
                         </div>
                         
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <form onSubmit={handleSubmit} style={{display:"flex",flexDirection:"column",gap:"16px"}}>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Warehouse Code *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="warehouse_code"
-                                        value={formData.warehouse_code}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g., GGM_WH"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        required
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Code *</label>
+                                    <input type="text" name="warehouse_code" value={formData.warehouse_code} onChange={handleInputChange} placeholder="WH001" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required disabled={!!editingId} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Warehouse Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="warehouse_name"
-                                        value={formData.warehouse_name}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g., Gurgaon Main Warehouse"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        required
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Name *</label>
+                                    <input type="text" name="warehouse_name" value={formData.warehouse_name} onChange={handleInputChange} placeholder="Main Warehouse" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Address *
-                                </label>
-                                <textarea
-                                    name="address"
-                                    value={formData.address}
-                                    onChange={handleInputChange}
-                                    placeholder="Complete address"
-                                    rows="2"
-                                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
+                                <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Address *</label>
+                                <textarea name="address" value={formData.address} onChange={handleInputChange} placeholder="Complete address" rows="2" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none",resize:"none"}} required />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px"}}>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        City *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="city"
-                                        value={formData.city}
-                                        onChange={handleInputChange}
-                                        placeholder="City"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        required
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>City *</label>
+                                    <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="City" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        State *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="state"
-                                        value={formData.state}
-                                        onChange={handleInputChange}
-                                        placeholder="State"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        required
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>State *</label>
+                                    <input type="text" name="state" value={formData.state} onChange={handleInputChange} placeholder="State" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Pincode *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="pincode"
-                                        value={formData.pincode}
-                                        onChange={handleInputChange}
-                                        placeholder="Pincode"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        required
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Pincode *</label>
+                                    <input type="text" name="pincode" value={formData.pincode} onChange={handleInputChange} placeholder="123456" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Phone
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="phone"
-                                        value={formData.phone}
-                                        onChange={handleInputChange}
-                                        placeholder="Phone number"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Phone</label>
+                                    <input type="text" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="+91-9999999999" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleInputChange}
-                                        placeholder="Email address"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Email</label>
+                                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="email@insora.in" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Manager Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="manager_name"
-                                        value={formData.manager_name}
-                                        onChange={handleInputChange}
-                                        placeholder="Manager name"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Manager</label>
+                                    <input type="text" name="manager_name" value={formData.manager_name} onChange={handleInputChange} placeholder="Manager name" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Capacity (sq ft)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        name="capacity"
-                                        value={formData.capacity}
-                                        onChange={handleInputChange}
-                                        placeholder="Capacity in sq ft"
-                                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Capacity (sq ft)</label>
+                                    <input type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} placeholder="50000" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} />
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowForm(false)}
-                                    className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    {loading ? "Creating..." : "Create Warehouse"}
+                            <div style={{display:"flex",justifyContent:"flex-end",gap:"10px",paddingTop:"12px"}}>
+                                <button type="button" onClick={() => {setShowForm(false); resetForm();}} style={{padding:"8px 16px",border:"1px solid #E5E7EB",borderRadius:"6px",background:"#fff",color:"#6B7280",cursor:"pointer",fontSize:"13px",fontWeight:"600",fontFamily:"inherit"}}>Cancel</button>
+                                <button type="submit" disabled={loading} style={{padding:"8px 16px",background:"#3B82F6",color:"#fff",border:"none",borderRadius:"6px",cursor:"pointer",fontSize:"13px",fontWeight:"600",fontFamily:"inherit",opacity:loading?0.5:1}}>
+                                    {loading ? "Saving..." : editingId ? "Update" : "Create"}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-
-            {/* Warehouses List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading && warehouses.length === 0 ? (
-                    <div className="col-span-full text-center py-8 text-slate-500">
-                        Loading warehouses...
-                    </div>
-                ) : filteredWarehouses.length === 0 ? (
-                    <div className="col-span-full text-center py-8 text-slate-500">
-                        {searchTerm ? "No warehouses found matching your search" : "No warehouses found"}
-                    </div>
-                ) : (
-                    filteredWarehouses.map((warehouse) => (
-                        <div key={warehouse.id} className="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-100 rounded-lg">
-                                        <Building2 size={20} className="text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-slate-900">{warehouse.warehouse_name}</h3>
-                                        <p className="text-sm text-slate-500">{warehouse.warehouse_code}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 text-sm">
-                                <div className="flex items-center gap-2 text-slate-600">
-                                    <MapPin size={16} />
-                                    <span>{warehouse.city}, {warehouse.state}</span>
-                                </div>
-                                {warehouse.phone && (
-                                    <div className="flex items-center gap-2 text-slate-600">
-                                        <Phone size={16} />
-                                        <span>{warehouse.phone}</span>
-                                    </div>
-                                )}
-                                {warehouse.manager_name && (
-                                    <div className="flex items-center gap-2 text-slate-600">
-                                        <User size={16} />
-                                        <span>{warehouse.manager_name}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="mt-4 pt-4 border-t border-slate-200">
-                                <p className="text-xs text-slate-500">
-                                    Created: {new Date(warehouse.created_at).toLocaleDateString()}
-                                </p>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
         </div>
     );
 }

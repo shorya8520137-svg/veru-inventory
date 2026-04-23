@@ -274,4 +274,98 @@ router.post('/stores', authenticateToken, (req, res) => {
     }
 });
 
+// PUT /api/warehouse-management/warehouses/:id - Update warehouse
+router.put('/warehouses/:id', authenticateToken, (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            warehouse_name,
+            location,
+            address,
+            city,
+            state,
+            country = 'India',
+            pincode,
+            phone,
+            email,
+            manager_name,
+            capacity = 0
+        } = req.body;
+
+        if (!warehouse_name || !city || !state) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+
+        const updateSql = `
+            UPDATE warehouses SET
+                name = ?, location = ?, address = ?, city = ?, state = ?, country = ?,
+                pincode = ?, phone = ?, email = ?, manager_name = ?, capacity = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        `;
+
+        db.query(updateSql, [
+            warehouse_name, location, address, city, state, country,
+            pincode, phone, email, manager_name, capacity, id
+        ], (err, result) => {
+            if (err) {
+                console.error('Error updating warehouse:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update warehouse',
+                    error: err.message
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Warehouse updated successfully'
+            });
+        });
+    } catch (error) {
+        console.error('Warehouse update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+// DELETE /api/warehouse-management/warehouses/:id - Delete warehouse
+router.delete('/warehouses/:id', authenticateToken, (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deleteSql = 'UPDATE warehouses SET is_active = FALSE WHERE id = ?';
+
+        db.query(deleteSql, [id], (err, result) => {
+            if (err) {
+                console.error('Error deleting warehouse:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to delete warehouse',
+                    error: err.message
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Warehouse deleted successfully'
+            });
+        });
+    } catch (error) {
+        console.error('Warehouse deletion error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+
 module.exports = router;
