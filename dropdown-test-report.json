@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-04-23T14:03:26.183Z",
+  "success": true,
+  "summary": {
+    "total": 21,
+    "passed": 3,
+    "failed": 0,
+    "warnings": 5
+  },
+  "results": [
+    {
+      "timestamp": "7:33:12 PM",
+      "message": "Starting Dropdown Selection Test",
+      "type": "test"
+    },
+    {
+      "timestamp": "7:33:12 PM",
+      "message": "Base URL: http://localhost:3000",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:12 PM",
+      "message": "Launching browser...",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:13 PM",
+      "message": "Navigating to login page...",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:14 PM",
+      "message": "Login form found",
+      "type": "success"
+    },
+    {
+      "timestamp": "7:33:14 PM",
+      "message": "Filling login credentials...",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:15 PM",
+      "message": "Submitting login form...",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:16 PM",
+      "message": "Login successful",
+      "type": "success"
+    },
+    {
+      "timestamp": "7:33:17 PM",
+      "message": "Navigating to Self Transfer module...",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "\nTesting W→W (warehouse-to-warehouse)...",
+      "type": "test"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "Could not find W→W button",
+      "type": "warning"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "\nTesting W→S (warehouse-to-store)...",
+      "type": "test"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "Could not find W→S button",
+      "type": "warning"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "\nTesting S→W (store-to-warehouse)...",
+      "type": "test"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "Could not find S→W button",
+      "type": "warning"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "\nTesting S→S (store-to-store)...",
+      "type": "test"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "Could not find S→S button",
+      "type": "warning"
+    },
+    {
+      "timestamp": "7:33:24 PM",
+      "message": "\nTesting Swap Button...",
+      "type": "test"
+    },
+    {
+      "timestamp": "7:33:25 PM",
+      "message": "Before swap - Source: in-stock, Dest: updated_at",
+      "type": "info"
+    },
+    {
+      "timestamp": "7:33:25 PM",
+      "message": "⚠️ Swap button not found",
+      "type": "warning"
+    },
+    {
+      "timestamp": "7:33:25 PM",
+      "message": "\n✅ All tests completed!",
+      "type": "success"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+[7:56:16 PM] 🧪 Starting dropdown test...
+[7:56:17 PM] 📝 Navigating to login...
+[7:56:18 PM] 📝 Logging in...
+[7:56:20 PM] ✅ Login successful
+[7:56:21 PM] 📝 Going to inventory...
+[7:56:23 PM] 📝 Looking for Transfer Stock button in navbar...
+[7:56:23 PM] 📝 Found Transfer Stock button, clicking...
+[7:56:25 PM] 🧪 Testing dropdown selection...
+[7:56:25 PM] 📝 Found 9 select elements
+[7:56:25 PM] 📝 Found Transfer Type dropdown at index 3
+[7:56:25 PM] 📝 Transfer Type options: Warehouse to Warehouse, Warehouse to Store, Store to Store, Store to Warehouse
+[7:56:25 PM] 🧪 
+Testing: W to W
+[7:56:26 PM] 📝 Dropdown value after selection: W to W
+[7:56:26 PM] ✅ ✅ W to W: Sources=3 (Transfer Type *), Destinations=5 (Source Warehouse *)
+[7:56:26 PM] 🧪 
+Testing: W to S
+[7:56:26 PM] 📝 Dropdown value after selection: W to W
+[7:56:26 PM] ✅ ✅ W to S: Sources=3 (Transfer Type *), Destinations=5 (Source Warehouse *)
+[7:56:26 PM] 🧪 
+Testing: S to W
+[7:56:27 PM] 📝 Dropdown value after selection: W to W
+[7:56:27 PM] ✅ ✅ S to W: Sources=3 (Transfer Type *), Destinations=5 (Source Warehouse *)
+[7:56:27 PM] 🧪 
+Testing: S to S
+[7:56:28 PM] 📝 Dropdown value after selection: W to W
+[7:56:28 PM] ✅ ✅ S to S: Sources=3 (Transfer Type *), Destinations=5 (Source Warehouse *)
+[7:56:28 PM] ✅ 
+✅ Test completed!

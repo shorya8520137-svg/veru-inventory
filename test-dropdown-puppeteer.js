@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 
 const TEST_CONFIG = {
-    baseUrl: 'http://localhost:3001',
+    baseUrl: 'http://localhost:3000',
     email: 'admin@company.com',
     password: 'Admin@123',
     timeout: 30000,
@@ -83,7 +83,7 @@ async function testDropdownSelection() {
         log('Login successful', 'success');
         
         // Wait for dashboard to load
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Navigate to inventory/self-transfer
         log('Navigating to Self Transfer module...', 'info');
@@ -113,7 +113,7 @@ async function testDropdownSelection() {
             await page.click('button:has-text("Create Transfer")');
         }
         
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Test all 4 transfer types
         const transferTypes = [
@@ -145,7 +145,7 @@ async function testDropdownSelection() {
             }
             
             // Wait for API call
-            await page.waitForTimeout(2000);
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Get dropdown options
             const sourceSelects = await page.$$('select');
@@ -194,7 +194,7 @@ async function testDropdownSelection() {
             }
         });
         
-        await page.waitForTimeout(500);
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Select first destination
         await page.evaluate(() => {
@@ -205,7 +205,7 @@ async function testDropdownSelection() {
             }
         });
         
-        await page.waitForTimeout(500);
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Get values before swap
         const beforeSwap = await page.evaluate(() => {
@@ -232,7 +232,7 @@ async function testDropdownSelection() {
         }
         
         if (swapClicked) {
-            await page.waitForTimeout(500);
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             // Get values after swap
             const afterSwap = await page.evaluate(() => {
