@@ -132,8 +132,8 @@ router.post('/', authenticateToken, (req, res) => {
 
             // Insert transfer items into self_transfer_items
             const itemInsertSql = `
-                INSERT INTO self_transfer_items (transfer_reference, product_id, quantity, created_at)
-                VALUES (?, ?, ?, NOW())
+                INSERT INTO self_transfer_items (transfer_id, product_name, barcode, qty)
+                VALUES (?, ?, ?, ?)
             `;
 
             let itemsInserted = 0;
@@ -147,7 +147,12 @@ router.post('/', authenticateToken, (req, res) => {
             }
 
             items.forEach(item => {
-                db.query(itemInsertSql, [transferRef, item.productId, item.transferQty], (err) => {
+                // Extract product name and barcode from productId
+                const productParts = item.productId.split('|');
+                const productName = productParts[0]?.trim() || item.productId;
+                const barcode = productParts[2]?.trim() || item.productId;
+                
+                db.query(itemInsertSql, [result.insertId, productName, barcode, item.transferQty], (err) => {
                     if (err) console.error('Error inserting item:', err);
                     itemsInserted++;
 

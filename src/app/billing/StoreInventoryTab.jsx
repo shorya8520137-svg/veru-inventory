@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Package, AlertTriangle, TrendingDown, RefreshCw } from "lucide-react";
 
-const API_BASE = ""; // Use relative URLs for local API routes
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""; // Use environment variable for API base
 const PAGE_SIZE = 20;
 
 export default function StoreInventoryTab() {
