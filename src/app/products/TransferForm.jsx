@@ -131,31 +131,54 @@ export default function TransferForm({ onClose }) {
     const submitTransfer = async () => {
         if (loading) return;
 
+        // Determine source and destination types
+        let sourceType, sourceId, destinationType, destinationId;
+        
+        if (form.transferType === 'W to W') {
+            sourceType = 'warehouse';
+            sourceId = form.sourceWarehouse;
+            destinationType = 'warehouse';
+            destinationId = form.destinationWarehouse;
+        } else if (form.transferType === 'W to S') {
+            sourceType = 'warehouse';
+            sourceId = form.sourceWarehouse;
+            destinationType = 'store';
+            destinationId = form.destinationStore;
+        } else if (form.transferType === 'S to W') {
+            sourceType = 'store';
+            sourceId = form.sourceStore;
+            destinationType = 'warehouse';
+            destinationId = form.destinationWarehouse;
+        } else if (form.transferType === 'S to S') {
+            sourceType = 'store';
+            sourceId = form.sourceStore;
+            destinationType = 'store';
+            destinationId = form.destinationStore;
+        }
+
+        // Build items array from products
+        const items = products
+            .filter(p => p.name && p.qty > 0)
+            .map(p => ({
+                productId: p.name.split('|')[2]?.trim() || p.name, // Extract barcode if available
+                transferQty: p.qty,
+                unit: 'units'
+            }));
+
+        if (items.length === 0) {
+            setError('Please add at least one product');
+            return;
+        }
+
         const payload = {
-            selectedWarehouse: form.sourceWarehouse || form.sourceStore,
-            selectedLogistics: form.logistics,
-            selectedExecutive: form.processedBy,
-            selectedPaymentMode: form.paymentMode,
-            parcelType: "Self Transfer",
-            orderRef: form.orderRef,
-            transferType: form.transferType,
-            sourceWarehouse: form.sourceWarehouse,
-            sourceStore: form.sourceStore,
-            destinationWarehouse: form.destinationWarehouse,
-            destinationStore: form.destinationStore,
-            awbNumber: form.awb,
-            dimensions: {
-                length: form.length,
-                width: form.width,
-                height: form.height,
-            },
-            weight: form.weight,
-            invoiceAmount: form.invoiceAmount,
-            remarks: form.remarks,
-            products: products.map(p => ({
-                name: p.name,
-                qty: p.qty,
-            })),
+            sourceType,
+            sourceId,
+            destinationType,
+            destinationId,
+            items,
+            requiresShipment: false,
+            notes: form.remarks,
+            transferDate: new Date().toISOString()
         };
 
         try {
@@ -163,7 +186,7 @@ export default function TransferForm({ onClose }) {
             setError("");
 
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/create`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -264,15 +287,25 @@ export default function TransferForm({ onClose }) {
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Transfer Type *</label>
                             <select 
+                                data-testid="transfer-type-select"
                                 value={form.transferType} 
                                 onChange={e => {
-                                    update("transferType", e.target.value);
-                                    // Clear all location selections when transfer type changes
-                                    update("sourceWarehouse", "");
-                                    update("sourceStore", "");
-                                    update("destinationWarehouse", "");
-                                    update("destinationStore", "");
-                                }} 
+                                    const newType = e.target.value;
+                                    console.log('Transfer type onChange fired:', newType);
+                                    console.log('Current form state:', form);
+                                    
+                                    // Update form with new transfer type and clear locations
+                                    setForm({
+                                        ...form,
+                                        transferType: newType,
+                                        sourceWarehouse: "",
+                                        sourceStore: "",
+                                        destinationWarehouse: "",
+                                        destinationStore: ""
+                                    });
+                                    
+                                    console.log('Form updated to:', newType);
+                                }}
                                 className={styles.select}
                                 required
                             >
