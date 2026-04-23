@@ -194,7 +194,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         transition={{ duration: 0.3 }}
                         className="overflow-hidden whitespace-nowrap"
                     >
-                        <div className="text-xs font-bold text-slate-900">hunyhuny</div>
+                        <div className="text-xs font-bold text-slate-900">insora.in</div>
                     </motion.div>
                 )}
             </AnimatePresence>
