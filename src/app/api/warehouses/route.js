@@ -12,11 +12,6 @@ const dbConfig = {
 // GET - Fetch all warehouses
 export async function GET(request) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-        if (!token) {
-            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-        }
-
         const connection = await mysql.createConnection(dbConfig);
         
         const [warehouses] = await connection.execute(`
@@ -62,11 +57,6 @@ export async function GET(request) {
 // POST - Create new warehouse
 export async function POST(request) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-        if (!token) {
-            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-        }
-
         const body = await request.json();
         const {
             warehouse_code,
