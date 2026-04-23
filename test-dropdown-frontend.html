@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Selection Test</title>
+    <style>
+        body {
+            font-family: Inter, sans-serif;
+            background: #F5F7FA;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+        .subtitle {
+            color: #6B7280;
+            margin-bottom: 24px;
+        }
+        .test-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #F9FAFB;
+            border-radius: 8px;
+            border-left: 4px solid #3B82F6;
+        }
+        .test-title {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 12px;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 16px;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #F3F4F6;
+        }
+        button.active {
+            background: #3B82F6;
+            color: white;
+            border-color: #3B82F6;
+        }
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .result-box {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .result-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+        .result-list {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .result-item {
+            padding: 6px;
+            border-bottom: 1px solid #F3F4F6;
+            color: #374151;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .status.loading {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+        .status.success {
+            background: #DCFCE7;
+            color: #166534;
+        }
+        .status.error {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+        .debug-console {
+            background: #1F2937;
+            color: #10B981;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        .debug-line {
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Dropdown Selection Test</h1>
+        <p class="subtitle">Test all 4 transfer types and verify dropdown population</p>
+
+        <div id="status" class="status loading">⏳ Initializing...</div>
+
+        <div class="test-section">
+            <div class="test-title">Select Transfer Type</div>
+            <div class="controls">
+                <button class="transfer-btn active" data-type="warehouse-to-warehouse">W→W</button>
+                <button class="transfer-btn" data-type="warehouse-to-store">W→S</button>
+                <button class="transfer-btn" data-type="store-to-warehouse">S→W</button>
+                <button class="transfer-btn" data-type="store-to-store">S→S</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title" id="testTitle">Testing: W→W (Warehouse to Warehouse)</div>
+            <div class="results">
+                <div class="result-box">
+                    <div class="result-label">📍 Sources (<span id="sourceCount">0</span>)</div>
+                    <div class="result-list" id="sourceList">
+                        <div class="result-item">Loading...</div>
+                    </div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">📍 Destinations (<span id="destCount">0</span>)</div>
+                    <div class="result-list" id="destList">
+                        <div class="result-item">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🐛 Debug Console</div>
+            <div class="debug-console" id="debugConsole">
+                <div class="debug-line">Initializing...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://api.giftgala.in';
+        let currentTransferType = 'warehouse-to-warehouse';
+        let debugLogs = [];
+
+        function addDebugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const log = `[${timestamp}] ${message}`;
+            console.log(log);
+            debugLogs.push(log);
+            updateDebugConsole();
+        }
+
+        function updateDebugConsole() {
+            const console = document.getElementById('debugConsole');
+            console.innerHTML = debugLogs.slice(-20).map(log => 
+                `<div class="debug-line">${log}</div>`
+            ).join('');
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function setStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        async function testTransferType(transferType) {
+            currentTransferType = transferType;
+            addDebugLog(`🔄 Testing: ${transferType}`);
+            setStatus('⏳ Loading...', 'loading');
+
+            try {
+                // Get token from localStorage
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    addDebugLog('❌ No token found in localStorage');
+                    setStatus('❌ No authentication token. Please log in first.', 'error');
+                    return;
+                }
+                addDebugLog(`🔑 Token found: ${token.substring(0, 20)}...`);
+
+                // Call API
+                const apiUrl = `${API_BASE}/api/transfer-suggestions/${transferType}`;
+                addDebugLog(`📡 Calling: ${apiUrl}`);
+
+                const response = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                addDebugLog(`📊 Status: ${response.status}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    addDebugLog(`✅ Success! Sources: ${data.sources?.length || 0}, Destinations: ${data.destinations?.length || 0}`);
+                    
+                    // Update UI
+                    updateDropdowns(data.sources, data.destinations, transferType);
+                    setStatus(`✅ Loaded ${data.sources?.length || 0} sources and ${data.destinations?.length || 0} destinations`, 'success');
+                } else {
+                    addDebugLog(`❌ API Error: ${data.message}`);
+                    setStatus(`❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                addDebugLog(`❌ Error: ${error.message}`);
+                setStatus(`❌ ${error.message}`, 'error');
+            }
+        }
+
+        function updateDropdowns(sources, destinations, transferType) {
+            // Update title
+            const titles = {
+                'warehouse-to-warehouse': 'W→W (Warehouse to Warehouse)',
+                'warehouse-to-store': 'W→S (Warehouse to Store)',
+                'store-to-warehouse': 'S→W (Store to Warehouse)',
+                'store-to-store': 'S→S (Store to Store)'
+            };
+            document.getElementById('testTitle').textContent = `Testing: ${titles[transferType]}`;
+
+            // Update sources
+            document.getElementById('sourceCount').textContent = sources?.length || 0;
+            const sourceList = document.getElementById('sourceList');
+            if (sources && sources.length > 0) {
+                sourceList.innerHTML = sources.map(s => {
+                    const name = s.warehouse_name || s.store_name;
+                    const code = s.warehouse_code || s.store_code;
+                    return `<div class="result-item">✓ ${name} (${code}) - ID: ${s.id}</div>`;
+                }).join('');
+            } else {
+                sourceList.innerHTML = '<div class="result-item">No sources available</div>';
+            }
+
+            // Update destinations
+            document.getElementById('destCount').textContent = destinations?.length || 0;
+            const destList = document.getElementById('destList');
+            if (destinations && destinations.length > 0) {
+                destList.innerHTML = destinations.map(d => {
+                    const name = d.warehouse_name || d.store_name;
+                    const code = d.warehouse_code || d.store_code;
+                    return `<div class="result-item">✓ ${name} (${code}) - ID: ${d.id}</div>`;
+                }).join('');
+            } else {
+                destList.innerHTML = '<div class="result-item">No destinations available</div>';
+            }
+        }
+
+        // Event listeners
+        document.querySelectorAll('.transfer-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.transfer-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                testTransferType(this.dataset.type);
+            });
+        });
+
+        // Initialize
+        addDebugLog('✅ Test page loaded');
+        addDebugLog('📝 Instructions: Log in first, then click transfer type buttons');
+        testTransferType('warehouse-to-warehouse');
+    </script>
+</body>
+</html>
