@@ -141,16 +141,15 @@ export default function TopNavBar() {
             width: '100%',
             boxSizing: 'border-box'
         }}>
-            {/* Left Section - Brand */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: '0 0 auto' }}>
-                <div style={{ 
-                    fontSize: '18px', 
-                    fontWeight: '700', 
-                    color: '#111827',
-                    cursor: 'pointer'
-                }} onClick={() => router.push('/dashboard')}>
-                    insora.in
-                </div>
+            {/* Left Section - Simple Brand Text Only */}
+            <div style={{ 
+                fontSize: '18px', 
+                fontWeight: '700', 
+                color: '#111827',
+                cursor: 'pointer',
+                flex: '0 0 auto'
+            }} onClick={() => router.push('/dashboard')}>
+                insora.in
             </div>
 
             {/* Center Section - Search */}
