@@ -22,8 +22,9 @@ export async function GET(request) {
         const [warehouses] = await connection.execute(`
             SELECT 
                 id,
-                warehouse_code,
-                warehouse_name,
+                code as warehouse_code,
+                name as warehouse_name,
+                location,
                 address,
                 city,
                 state,
@@ -38,7 +39,7 @@ export async function GET(request) {
                 updated_at
             FROM warehouses 
             WHERE is_active = TRUE
-            ORDER BY warehouse_name ASC
+            ORDER BY name ASC
         `);
 
         await connection.end();
@@ -70,6 +71,7 @@ export async function POST(request) {
         const {
             warehouse_code,
             warehouse_name,
+            location,
             address,
             city,
             state,
@@ -82,10 +84,10 @@ export async function POST(request) {
         } = body;
 
         // Validate required fields
-        if (!warehouse_code || !warehouse_name || !address || !city || !state || !pincode) {
+        if (!warehouse_code || !warehouse_name || !city || !state) {
             return NextResponse.json({
                 success: false,
-                message: 'Missing required fields: warehouse_code, warehouse_name, address, city, state, pincode'
+                message: 'Missing required fields: warehouse_code, warehouse_name, city, state'
             }, { status: 400 });
         }
 
@@ -93,7 +95,7 @@ export async function POST(request) {
 
         // Check if warehouse code already exists
         const [existing] = await connection.execute(
-            'SELECT id FROM warehouses WHERE warehouse_code = ?',
+            'SELECT id FROM warehouses WHERE code = ?',
             [warehouse_code]
         );
 
@@ -108,11 +110,11 @@ export async function POST(request) {
         // Insert new warehouse
         const [result] = await connection.execute(`
             INSERT INTO warehouses (
-                warehouse_code, warehouse_name, address, city, state, country,
+                code, name, location, address, city, state, country,
                 pincode, phone, email, manager_name, capacity
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            warehouse_code, warehouse_name, address, city, state, country,
+            warehouse_code, warehouse_name, location, address, city, state, country,
             pincode, phone, email, manager_name, capacity
         ]);
 

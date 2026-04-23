@@ -20,10 +20,10 @@ export async function GET(request) {
         
         // Get warehouse codes from database
         const [warehouses] = await connection.execute(`
-            SELECT warehouse_code 
+            SELECT code as warehouse_code 
             FROM warehouses 
             WHERE is_active = TRUE
-            ORDER BY warehouse_code ASC
+            ORDER BY code ASC
         `);
 
         await connection.end();
