@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { Search, Package, AlertTriangle, TrendingDown, RefreshCw } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""; // Use environment variable for API base
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in"; // Use environment variable for API base
 const PAGE_SIZE = 20;
 
 export default function StoreInventoryTab() {
     const [inventory, setInventory] = useState([]);
+    const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [stockFilter, setStockFilter] = useState("all");
+    const [storeFilter, setStoreFilter] = useState("all");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
@@ -21,6 +23,22 @@ export default function StoreInventoryTab() {
         outOfStock: 0,
         totalValue: 0
     });
+
+    // Load stores
+    const loadStores = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE}/api/products/stores`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setStores(data.data || []);
+            }
+        } catch (err) {
+            console.error('Error loading stores:', err);
+        }
+    };
 
     // Load inventory
     const loadInventory = async () => {
@@ -37,6 +55,9 @@ export default function StoreInventoryTab() {
             }
             if (stockFilter !== 'all') {
                 params.append('stock_filter', stockFilter);
+            }
+            if (storeFilter !== 'all') {
+                params.append('store_filter', storeFilter);
             }
 
             const response = await fetch(`${API_BASE}/api/billing/store-inventory?${params}`, {
@@ -62,8 +83,9 @@ export default function StoreInventoryTab() {
     };
 
     useEffect(() => {
+        loadStores();
         loadInventory();
-    }, [page, searchQuery, stockFilter]);
+    }, [page, searchQuery, stockFilter, storeFilter]);
 
     const getStockStatus = (stock) => {
         if (stock === 0) return { label: 'OUT OF STOCK', color: '#DC2626', bg: '#FEE2E2' };
@@ -138,6 +160,18 @@ export default function StoreInventoryTab() {
                         <option value="in_stock">In Stock</option>
                         <option value="low_stock">Low Stock</option>
                         <option value="out_of_stock">Out of Stock</option>
+                    </select>
+
+                    <select 
+                        value={storeFilter} 
+                        onChange={(e) => setStoreFilter(e.target.value)}
+                        style={{ padding:'10px 14px', borderRadius:10, border:'1px solid #E5E7EB', fontSize:14, outline:'none', background:'#F9FAFB', cursor:'pointer', minWidth:150 }}>
+                        <option value="all">All Stores</option>
+                        {stores.map(store => (
+                            <option key={store.store_code} value={store.store_code}>
+                                {store.store_name} - {store.city}
+                            </option>
+                        ))}
                     </select>
 
                     <button 

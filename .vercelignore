@@ -1,0 +1,80 @@
+# Exclude all unnecessary files to reduce build size
+
+# Documentation and analysis files
+*.md
+*.txt
+*.csv
+*.json.backup
+*.sql
+*.backup
+*.ps1
+*.sh
+*.cmd
+*.bat
+*.html
+
+# Test files
+test-*
+*-test.*
+*test*
+debug-*
+analyze-*
+check-*
+fix-*
+setup-*
+deploy-*
+run-*
+verify-*
+validate-*
+
+# Database backups
+db-backup/
+*.sql
+
+# Git directories
+.git/
+inventoryfullstack/
+inventoryfullstack.git/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+
+# Development files
+*.dev.*
+*.development.*
+
+# Specific large files to exclude
+SYSTEM_AUDIT_REPORT.md
+INVENTORY_ARCHITECTURE_DESIGN.md
+CUSTOMER_SUPPORT_SYSTEM_ANALYSIS.md
+TRANSLATION_BUG_REPORT.md
+CHAT_SYSTEM_COMPLETE_REPORT.md
+FRONTEND_FIX_REPORT.md
+N8N_WEBHOOK_ANALYSIS.md
+
+# All the analysis and documentation files
+*_ANALYSIS*
+*_REPORT*
+*_SUMMARY*
+*_GUIDE*
+*_DOCUMENTATION*
+*_IMPLEMENTATION*
+*_SETUP*
+*_FIX*
+*_COMPLETE*
+
+# Backend files (not needed for frontend deployment)
+server.js
+controllers/
+routes/
+middleware/
+services/
+jobs/
+config/
+db/
+migrations/
+
+# Node modules will be handled by Vercel
+node_modules/

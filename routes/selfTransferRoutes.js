@@ -105,6 +105,9 @@ router.post('/', authenticateToken, (req, res) => {
         
         const transferType = transferTypeMap[`${sourceType}_${destinationType}`] || 'W to W';
 
+        // Check if this is a store-based transfer (involves store)
+        const isStoreBased = destinationType === 'store' || sourceType === 'store';
+
         // Create transfer record in self_transfer table
         const insertSql = `
             INSERT INTO self_transfer (
@@ -137,6 +140,7 @@ router.post('/', authenticateToken, (req, res) => {
             `;
 
             let itemsInserted = 0;
+            let hasErrors = false;
             
             if (items.length === 0) {
                 return res.json({
@@ -153,15 +157,100 @@ router.post('/', authenticateToken, (req, res) => {
                 const barcode = productParts[2]?.trim() || item.productId;
                 
                 db.query(itemInsertSql, [result.insertId, productName, barcode, item.transferQty], (err) => {
-                    if (err) console.error('Error inserting item:', err);
+                    if (err) {
+                        console.error('Error inserting item:', err);
+                        hasErrors = true;
+                        return;
+                    }
                     itemsInserted++;
 
-                    // After all items inserted, send response
-                    if (itemsInserted === items.length) {
+                    // Only update store inventory for store-based transfers
+                    if (isStoreBased) {
+                        // Update store inventory when transferring to stores
+                        if (destinationType === 'store') {
+                            // Check if product exists in store inventory
+                            const checkProductSql = `SELECT id, stock FROM store_inventory WHERE barcode = ?`;
+                            db.query(checkProductSql, [barcode], (err, existingProduct) => {
+                                if (err) {
+                                    console.error('Error checking product existence:', err);
+                                    return;
+                                }
+
+                                if (existingProduct.length > 0) {
+                                    // Product exists, update stock
+                                    const updateDestSql = `
+                                        UPDATE store_inventory 
+                                        SET stock = stock + ?, last_updated = NOW()
+                                        WHERE barcode = ?
+                                    `;
+                                    db.query(updateDestSql, [item.transferQty, barcode], (err) => {
+                                        if (err) console.error('Error updating destination store inventory:', err);
+                                    });
+                                } else {
+                                    // Product doesn't exist, create it
+                                    const createProductSql = `
+                                        INSERT INTO store_inventory (product_name, barcode, category, stock, price, gst_percentage, created_at, last_updated)
+                                        VALUES (?, ?, 'Transferred', ?, 0.00, 18.00, NOW(), NOW())
+                                    `;
+                                    db.query(createProductSql, [productName, barcode, item.transferQty], (err) => {
+                                        if (err) console.error('Error creating product in store inventory:', err);
+                                    });
+                                }
+                            });
+                        }
+                        
+                        // Update store inventory when transferring from stores
+                        if (sourceType === 'store') {
+                            // Remove stock from source store
+                            const updateSourceSql = `
+                                UPDATE store_inventory 
+                                SET stock = GREATEST(0, stock - ?), last_updated = NOW()
+                                WHERE barcode = ?
+                            `;
+                            db.query(updateSourceSql, [item.transferQty, barcode], (err) => {
+                                if (err) console.error('Error updating source store inventory:', err);
+                            });
+                        }
+                    }
+
+                    // After all items inserted, create billing history ONLY for store-based transfers
+                    if (itemsInserted === items.length && !hasErrors) {
+                        if (isStoreBased) {
+                            // Create billing history entry only for store-based transfers
+                            const billingSql = `
+                                INSERT INTO bills (
+                                    invoice_number, bill_type, customer_name, customer_phone,
+                                    subtotal, grand_total, payment_mode, payment_status,
+                                    items, total_items, created_at
+                                ) VALUES (?, 'B2B', ?, 'INTERNAL', 0.00, 0.00, 'transfer', 'paid', ?, ?, NOW())
+                            `;
+                            
+                            const billingItems = JSON.stringify(items.map(item => {
+                                const productParts = item.productId.split('|');
+                                const productName = productParts[0]?.trim() || item.productId;
+                                const barcode = productParts[2]?.trim() || item.productId;
+                                return {
+                                    product_name: productName,
+                                    barcode: barcode,
+                                    quantity: item.transferQty,
+                                    price: 0,
+                                    total: 0
+                                };
+                            }));
+
+                            const customerName = `Store Transfer: ${sourceId} → ${destinationId}`;
+                            
+                            db.query(billingSql, [transferRef, customerName, billingItems, items.length], (err) => {
+                                if (err) console.error('Error creating billing history:', err);
+                            });
+                        }
+
                         res.json({
                             success: true,
                             message: 'Transfer created successfully',
-                            transferId: transferRef
+                            transferId: transferRef,
+                            isStoreBased: isStoreBased,
+                            billingCreated: isStoreBased
                         });
                     }
                 });

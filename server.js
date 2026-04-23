@@ -251,6 +251,9 @@ app.use('/api/billing', require('./routes/billingRoutes'));
 // transfer suggestions routes (smart suggestions for source/destination)
 app.use('/api/transfer-suggestions', require('./routes/transferSuggestionsRoutes'));
 
+// cleanup routes (database cleanup and maintenance)
+app.use('/api/cleanup', require('./routes/cleanupRoutes'));
+
 // self transfer routes
 app.use('/api/self-transfer', require('./routes/selfTransferRoutes'));
 

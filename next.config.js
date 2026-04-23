@@ -1,14 +1,20 @@
 /** @type {import('next').NextConfig} */
-
-// EXTREME CACHE BUST - 20260218131131
-// Force Vercel to invalidate all caches
 const nextConfig = {
-  // Disable all caching
-  generateEtags: false,
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion']
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+  },
+  output: 'standalone',
   poweredByHeader: false,
-  
-  // Use webpack instead of turbopack to avoid conflicts
-  turbo: {},
+  compress: true,
+  swcMinify: true,
+  images: {
+    unoptimized: true
+  },
+  // Disable all caching for development
+  generateEtags: false,
   
   // Cache control headers
   async headers() {
@@ -30,7 +36,7 @@ const nextConfig = {
           },
           {
             key: 'X-Cache-Bust',
-            value: '20260218131131',
+            value: '20260424',
           },
         ],
       },

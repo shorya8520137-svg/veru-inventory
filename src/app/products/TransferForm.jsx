@@ -291,10 +291,6 @@ export default function TransferForm({ onClose }) {
                                 value={form.transferType} 
                                 onChange={e => {
                                     const newType = e.target.value;
-                                    console.log('Transfer type onChange fired:', newType);
-                                    console.log('Current form state:', form);
-                                    
-                                    // Update form with new transfer type and clear locations
                                     setForm({
                                         ...form,
                                         transferType: newType,
@@ -303,8 +299,6 @@ export default function TransferForm({ onClose }) {
                                         destinationWarehouse: "",
                                         destinationStore: ""
                                     });
-                                    
-                                    console.log('Form updated to:', newType);
                                 }}
                                 className={styles.select}
                                 required

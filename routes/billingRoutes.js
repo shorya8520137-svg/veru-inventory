@@ -15,7 +15,8 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
             page = 1,
             limit = 20,
             search = '',
-            stock_filter = 'all'
+            stock_filter = 'all',
+            store_filter = 'all'
         } = req.query;
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -28,6 +29,12 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
         if (search && search.trim()) {
             whereConditions.push('(product_name LIKE ? OR barcode LIKE ?)');
             queryParams.push(`%${search.trim()}%`, `%${search.trim()}%`);
+        }
+
+        // Store filter (if store_inventory table has store_code column)
+        if (store_filter !== 'all') {
+            whereConditions.push('store_code = ?');
+            queryParams.push(store_filter);
         }
 
         // Stock filter
