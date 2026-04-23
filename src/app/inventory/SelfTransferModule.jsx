@@ -266,7 +266,7 @@ export default function SelfTransferModule() {
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             {/* Source & Destination */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '16px', alignItems: 'flex-end' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>{getSourceLabel()} *</label>
                                     <select
@@ -282,6 +282,37 @@ export default function SelfTransferModule() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* Swap Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            sourceId: prev.destinationId,
+                                            destinationId: prev.sourceId
+                                        }));
+                                    }}
+                                    style={{
+                                        padding: '10px 12px',
+                                        background: '#F3F4F6',
+                                        border: '1px solid #E5E7EB',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '18px',
+                                        fontWeight: '600',
+                                        color: '#6B7280',
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minWidth: '44px',
+                                        height: '40px'
+                                    }}
+                                    title="Swap source and destination"
+                                >
+                                    ⇄
+                                </button>
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>{getDestinationLabel()} *</label>
