@@ -118,11 +118,11 @@ const Sidebar = ({ children }) => {
 /* ================= BASIC BLOCKS ================= */
 
 const SidebarContent = ({ children, style }) => (
-    <div className="flex flex-1 flex-col overflow-y-auto py-2 scrollbar-hide" style={style}>{children}</div>
+    <div className="flex-1 overflow-y-auto scrollbar-hide" style={style}>{children}</div>
 );
 
 const SidebarMenu = ({ children }) => (
-    <ul className="flex flex-col gap-0.5 px-2">{children}</ul>
+    <ul className="flex flex-col gap-0.5 px-2 py-2">{children}</ul>
 );
 
 const SidebarMenuItem = ({ children }) => <li>{children}</li>;
@@ -264,7 +264,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-screen bg-white overflow-hidden">
             {/* No Logo Section - Completely Removed */}
 
             <SidebarContent style={{ paddingTop: '16px' }}>
@@ -695,9 +695,9 @@ const InventoryMenu = ({ onOpenOperation }) => {
 
             {/* FOOTER */}
             <motion.div 
-                className={cn("p-3 border-t border-slate-100", collapsed && "flex flex-col gap-1.5 items-center")}
+                className={cn("border-t border-slate-100 flex-shrink-0", collapsed ? "p-2 flex flex-col gap-1.5 items-center" : "p-3")}
                 initial={false}
-                animate={{ padding: collapsed ? "12px 8px" : "12px" }}
+                animate={{ padding: collapsed ? "8px" : "12px" }}
             >
                 {!collapsed ? (
                     <div className="space-y-1.5">
