@@ -37,7 +37,7 @@ const NAVIGATION_ITEMS = [
     { id: 'api-debug', title: 'API Debug', path: '/api-debug', category: 'Debug', icon: '🔧' },
 ];
 
-export default function TopNavBar() {
+export default function TopNavBar({ onTransferStock }) {
     const { user } = useAuth();
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
@@ -298,7 +298,13 @@ export default function TopNavBar() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '0 0 auto' }}>
                 {/* Transfer Stock Button */}
                 <button 
-                    onClick={() => router.push('/inventory/selftransfer')}
+                    onClick={() => {
+                        if (onTransferStock) {
+                            onTransferStock();
+                        } else {
+                            router.push('/inventory/selftransfer');
+                        }
+                    }}
                     style={{
                         display: 'flex',
                         alignItems: 'center',

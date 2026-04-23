@@ -81,7 +81,7 @@ export default function ClientLayout({ children }) {
             {/* TOP NAVIGATION BAR - Full Width Above Everything */}
             {!isInventoryGPTPage && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
-                    <TopNavBar />
+                    <TopNavBar onTransferStock={() => setOpenFIFO(true)} />
                 </div>
             )}
 
@@ -113,7 +113,35 @@ export default function ClientLayout({ children }) {
                     <SemiDial onCommand={handleCommand} />
 
                     {/* MODALS */}
-                    {openFIFO && <TransferForm onClose={() => setOpenFIFO(false)} />}
+                    {openFIFO && (
+                        <div 
+                            className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4"
+                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', zIndex: 1001 }}
+                            onClick={(e) => {
+                                if (e.target === e.currentTarget) {
+                                    setOpenFIFO(false);
+                                }
+                            }}
+                        >
+                            <div className="card-modern max-w-4xl w-full max-h-[90vh] overflow-hidden relative">
+                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
+                                    <h2 className="text-xl font-semibold text-slate-900">Transfer Stock</h2>
+                                    <button 
+                                        onClick={() => setOpenFIFO(false)}
+                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                    <TransferForm onClose={() => setOpenFIFO(false)} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Individual Operation Modals */}
                     {operationsOpen && operationTab === "dispatch" && (
