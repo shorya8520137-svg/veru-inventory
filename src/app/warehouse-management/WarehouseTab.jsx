@@ -166,13 +166,13 @@ export default function WarehouseTab() {
         <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
             {/* Message Display */}
             {message && (
-                <div style={{padding:"12px 24px",background:"#DCFCE7",color:"#166534",fontSize:"14px",borderBottom:"1px solid #BBF7D0"}}>
+                <div style={{padding:"12px 24px",background:"#DCFCE7",color:"#166534",fontSize:"14px",borderBottom:"1px solid #BBF7D0",flexShrink:0}}>
                     {message}
                 </div>
             )}
 
             {/* Header with Search and Add Button */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #E5E7EB",background:"#fff",gap:"12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 24px",borderBottom:"1px solid #E5E7EB",background:"#fff",gap:"12px",flexShrink:0}}>
                 <div style={{position:"relative",flex:1,maxWidth:"300px"}}>
                     <svg style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",color:"#9CA3AF",width:"16px",height:"16px"}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                     <input
@@ -185,14 +185,14 @@ export default function WarehouseTab() {
                 </div>
                 <button
                     onClick={() => {resetForm(); setShowForm(true);}}
-                    style={{display:"flex",alignItems:"center",gap:"6px",background:"#3B82F6",color:"#fff",border:"none",padding:"8px 16px",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontWeight:"600",fontFamily:"inherit"}}
+                    style={{display:"flex",alignItems:"center",gap:"6px",background:"#3B82F6",color:"#fff",border:"none",padding:"8px 16px",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontWeight:"600",fontFamily:"inherit",flexShrink:0}}
                 >
                     <Plus size={16} /> Add Warehouse
                 </button>
             </div>
 
             {/* Warehouses Grid - Edge to Edge */}
-            <div style={{flex:1,overflowY:"auto",padding:"0"}}>
+            <div style={{flex:1,overflowY:"auto",padding:"0",minHeight:0}}>
                 {loading && warehouses.length === 0 ? (
                     <div style={{textAlign:"center",paddingTop:"40px",color:"#9CA3AF",fontSize:"14px"}}>Loading warehouses...</div>
                 ) : filteredWarehouses.length === 0 ? (
@@ -219,6 +219,7 @@ export default function WarehouseTab() {
                                             style={{background:"none",border:"none",cursor:"pointer",padding:"4px",color:"#6B7280",transition:"color 0.2s"}}
                                             onMouseEnter={(e) => e.target.style.color = "#3B82F6"}
                                             onMouseLeave={(e) => e.target.style.color = "#6B7280"}
+                                            title="Edit"
                                         >
                                             <Edit2 size={16} />
                                         </button>
@@ -227,6 +228,7 @@ export default function WarehouseTab() {
                                             style={{background:"none",border:"none",cursor:"pointer",padding:"4px",color:"#6B7280",transition:"color 0.2s"}}
                                             onMouseEnter={(e) => e.target.style.color = "#EF4444"}
                                             onMouseLeave={(e) => e.target.style.color = "#6B7280"}
+                                            title="Delete"
                                         >
                                             <Trash2 size={16} />
                                         </button>

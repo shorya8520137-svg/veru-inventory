@@ -9,51 +9,29 @@ export default function WarehouseManagementPage() {
     const [activeTab, setActiveTab] = useState("warehouses");
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                        Warehouse & Store Management
-                    </h1>
-                    <p className="text-slate-600">
-                        Manage warehouses and stores with location details
-                    </p>
-                </div>
+        <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
+            {/* Tab Navigation - No padding, edge to edge */}
+            <div style={{background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",flexShrink:0}}>
+                <button
+                    onClick={() => setActiveTab("warehouses")}
+                    style={{display:"flex",alignItems:"center",gap:"8px",padding:"12px 24px",fontWeight:"600",fontSize:"14px",border:"none",background:"none",cursor:"pointer",color:activeTab === "warehouses" ? "#3B82F6" : "#6B7280",borderBottom:activeTab === "warehouses" ? "2px solid #3B82F6" : "none",transition:"all 0.2s"}}
+                >
+                    <Building2 size={18} />
+                    Warehouses
+                </button>
+                <button
+                    onClick={() => setActiveTab("stores")}
+                    style={{display:"flex",alignItems:"center",gap:"8px",padding:"12px 24px",fontWeight:"600",fontSize:"14px",border:"none",background:"none",cursor:"pointer",color:activeTab === "stores" ? "#3B82F6" : "#6B7280",borderBottom:activeTab === "stores" ? "2px solid #3B82F6" : "none",transition:"all 0.2s"}}
+                >
+                    <Store size={18} />
+                    Stores
+                </button>
+            </div>
 
-                {/* Tab Navigation */}
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 mb-6">
-                    <div className="flex border-b border-slate-200">
-                        <button
-                            onClick={() => setActiveTab("warehouses")}
-                            className={`flex items-center gap-3 px-6 py-4 font-medium transition-all ${
-                                activeTab === "warehouses"
-                                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                            }`}
-                        >
-                            <Building2 size={20} />
-                            Warehouses
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("stores")}
-                            className={`flex items-center gap-3 px-6 py-4 font-medium transition-all ${
-                                activeTab === "stores"
-                                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                            }`}
-                        >
-                            <Store size={20} />
-                            Stores
-                        </button>
-                    </div>
-
-                    {/* Tab Content */}
-                    <div className="p-6">
-                        {activeTab === "warehouses" && <WarehouseTab />}
-                        {activeTab === "stores" && <StoreTab />}
-                    </div>
-                </div>
+            {/* Tab Content - Full height, no padding */}
+            <div style={{flex:1,overflowY:"auto",minHeight:0}}>
+                {activeTab === "warehouses" && <WarehouseTab />}
+                {activeTab === "stores" && <StoreTab />}
             </div>
         </div>
     );

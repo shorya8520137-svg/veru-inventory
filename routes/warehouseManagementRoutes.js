@@ -369,3 +369,96 @@ router.delete('/warehouses/:id', authenticateToken, (req, res) => {
 
 
 module.exports = router;
+
+// PUT /api/warehouse-management/stores/:id - Update store
+router.put('/stores/:id', authenticateToken, (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            store_name,
+            store_type = 'retail',
+            address,
+            city,
+            state,
+            country = 'India',
+            pincode,
+            phone,
+            email,
+            manager_name,
+            area_sqft = 0
+        } = req.body;
+
+        if (!store_name || !address || !city || !state || !pincode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+
+        const updateSql = `
+            UPDATE stores SET
+                store_name = ?, store_type = ?, address = ?, city = ?, state = ?, country = ?,
+                pincode = ?, phone = ?, email = ?, manager_name = ?, area_sqft = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        `;
+
+        db.query(updateSql, [
+            store_name, store_type, address, city, state, country,
+            pincode, phone, email, manager_name, area_sqft, id
+        ], (err, result) => {
+            if (err) {
+                console.error('Error updating store:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update store',
+                    error: err.message
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Store updated successfully'
+            });
+        });
+    } catch (error) {
+        console.error('Store update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+// DELETE /api/warehouse-management/stores/:id - Delete store
+router.delete('/stores/:id', authenticateToken, (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deleteSql = 'UPDATE stores SET is_active = FALSE WHERE id = ?';
+
+        db.query(deleteSql, [id], (err, result) => {
+            if (err) {
+                console.error('Error deleting store:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to delete store',
+                    error: err.message
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Store deleted successfully'
+            });
+        });
+    } catch (error) {
+        console.error('Store deletion error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
