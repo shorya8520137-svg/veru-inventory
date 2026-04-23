@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Plus, Trash2, User, Building2, CreditCard, Wallet, Banknote, Smartphone } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const API_BASE = ""; // Use relative URLs for local API routes
 
 export default function BillingTab() {
     const [billType, setBillType] = useState("B2C"); // B2B or B2C

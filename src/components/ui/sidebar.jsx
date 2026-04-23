@@ -116,8 +116,8 @@ const Sidebar = ({ children }) => {
 
 /* ================= BASIC BLOCKS ================= */
 
-const SidebarContent = ({ children }) => (
-    <div className="flex flex-1 flex-col overflow-y-auto py-2 scrollbar-hide">{children}</div>
+const SidebarContent = ({ children, style }) => (
+    <div className="flex flex-1 flex-col overflow-y-auto py-2 scrollbar-hide" style={style}>{children}</div>
 );
 
 const SidebarMenu = ({ children }) => (
@@ -170,36 +170,6 @@ const InventoryMenu = ({ onOpenOperation }) => {
         if (isOrdersRoute) setOrdersOpen(true);
         if (isSupportRoute) setSupportOpen(true);
     }, [isInventoryRoute, isOrdersRoute, isSupportRoute]);
-
-    // Helper for rendering Logo
-    const Logo = () => (
-        <motion.div 
-            className={cn("flex items-center gap-2.5 px-3 py-3 border-b border-slate-100", collapsed && "justify-center px-2")}
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.2 }}
-        >
-            <motion.img 
-                src="/logo-dark.png" 
-                alt="Company Logo"
-                className="h-8 w-8 shrink-0 rounded-lg border border-blue-200 shadow-sm object-cover"
-                whileHover={{ rotate: 5 }}
-                transition={{ duration: 0.2 }}
-            />
-            <AnimatePresence>
-                {!collapsed && (
-                    <motion.div 
-                        initial={{ opacity: 0, width: 0 }} 
-                        animate={{ opacity: 1, width: "auto" }} 
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="overflow-hidden whitespace-nowrap"
-                    >
-                        <div className="text-xs font-bold text-slate-900">insora.in</div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
-    );
 
     // Helper for Menu Item with Submenu
     const MenuItemWithSub = ({ 
@@ -294,9 +264,9 @@ const InventoryMenu = ({ onOpenOperation }) => {
 
     return (
         <div className="flex flex-col h-full bg-white">
-            <Logo />
+            {/* No Logo Section - Completely Removed */}
 
-            <SidebarContent>
+            <SidebarContent style={{ paddingTop: '16px' }}>
                 <SidebarMenu>
                     
                     {/* DASHBOARD - DISABLED - Code removed for cleaner build */}

@@ -78,38 +78,39 @@ export default function ClientLayout({ children }) {
     const isFullScreenPage = isInventoryGPTPage || pathname.startsWith("/customer-support/");
 
     return (
-        <SidebarProvider>
-            {/* 🔑 ROOT LAYOUT */}
-            <div className="flex h-screen w-screen bg-gradient-to-br from-slate-50 to-slate-100">
-
-                {/* SIDEBAR - Always visible */}
-                <Sidebar className="shrink-0 border-r border-slate-200 bg-white/80 backdrop-blur-sm">
-                    <InventoryMenu 
-                        onOpenOperation={(tab) => {
-                            setOperationTab(tab);
-                            setOperationsOpen(true);
-                        }}
-                    />
-                </Sidebar>
-
-                {/* 🔑 MAIN CONTENT — PROFESSIONAL SCROLLING */}
-                <div className="flex-1 min-w-0 h-full flex flex-col">
-                    {/* TOP NAVIGATION BAR - Hidden on InventoryGPT page */}
-                    {!isInventoryGPTPage && (
-                        <div style={{ position: 'sticky', top: 0, zIndex: 50 }}>
-                            <TopNavBar />
-                        </div>
-                    )}
-                    
-                    {/* MAIN CONTENT */}
-                    <main className="flex-1 min-w-0 overflow-hidden relative bg-gradient-to-br from-slate-50/50 to-white">
-                        <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-hide">
-                            <div className="p-0">
-                                {children}
-                            </div>
-                        </div>
-                    </main>
+        <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-slate-50 to-slate-100">
+            {/* TOP NAVIGATION BAR - Full Width Above Everything */}
+            {!isInventoryGPTPage && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
+                    <TopNavBar />
                 </div>
+            )}
+
+            {/* MAIN LAYOUT - Below Top Navbar */}
+            <div className="flex flex-1" style={{ paddingTop: isInventoryGPTPage ? 0 : '64px' }}>
+                <SidebarProvider>
+                    {/* SIDEBAR - Starts below top navbar */}
+                    <Sidebar className="shrink-0 border-r border-slate-200 bg-white/80 backdrop-blur-sm">
+                        <InventoryMenu 
+                            onOpenOperation={(tab) => {
+                                setOperationTab(tab);
+                                setOperationsOpen(true);
+                            }}
+                        />
+                    </Sidebar>
+
+                    {/* MAIN CONTENT */}
+                    <div className="flex-1 min-w-0 h-full flex flex-col">
+                        <main className="flex-1 min-w-0 overflow-hidden relative bg-gradient-to-br from-slate-50/50 to-white">
+                            <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-hide">
+                                <div className="p-0">
+                                    {children}
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </SidebarProvider>
+            </div>
 
                 {/* COMMAND UI */}
                 <SemiDial onCommand={handleCommand} />

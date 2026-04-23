@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Download, Eye, Printer, Calendar, DollarSign, User, Package } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const API_BASE = ""; // Use relative URLs for local API routes
 const PAGE_SIZE = 15;
 
 export default function BillHistoryTab() {
