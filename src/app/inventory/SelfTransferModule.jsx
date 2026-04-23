@@ -1,17 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Download, ArrowRight, AlertCircle, CheckCircle, Clock, Trash2, Edit2, Search } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function SelfTransferModule() {
     const [transferType, setTransferType] = useState('warehouse-to-warehouse');
     const [showForm, setShowForm] = useState(false);
-    const [transfers, setTransfers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [dataLoading, setDataLoading] = useState(false);
 
     const [formData, setFormData] = useState({
         sourceType: 'warehouse',
@@ -27,60 +26,56 @@ export default function SelfTransferModule() {
         transferDate: new Date().toISOString().split('T')[0]
     });
 
-    const [warehouses, setWarehouses] = useState([]);
-    const [stores, setStores] = useState([]);
+    const [sourceOptions, setSourceOptions] = useState([]);
+    const [destinationOptions, setDestinationOptions] = useState([]);
     const [products, setProducts] = useState([]);
 
+    // Fetch suggestions when transfer type changes
     useEffect(() => {
-        fetchData();
-    }, []);
+        fetchSuggestions();
+    }, [transferType]);
 
-    const fetchData = async () => {
+    const fetchSuggestions = async () => {
+        setDataLoading(true);
         try {
             const token = localStorage.getItem('token');
             
-            // Fetch warehouses
-            const whRes = await fetch(`${API_BASE}/api/warehouse-management/warehouses`, {
+            // Fetch suggestions based on transfer type
+            const res = await fetch(`${API_BASE}/api/transfer-suggestions/${transferType}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            const whData = await whRes.json();
-            if (whData.success) setWarehouses(whData.warehouses);
-
-            // Fetch stores
-            const stRes = await fetch(`${API_BASE}/api/warehouse-management/stores`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const stData = await stRes.json();
-            if (stData.success) setStores(stData.stores);
+            const data = await res.json();
+            
+            if (data.success) {
+                setSourceOptions(data.sources || []);
+                setDestinationOptions(data.destinations || []);
+                
+                // Update form data with new types
+                setFormData(prev => ({
+                    ...prev,
+                    sourceType: data.sourceType,
+                    destinationType: data.destinationType,
+                    sourceId: '',
+                    destinationId: ''
+                }));
+            }
 
             // Fetch products
             const prRes = await fetch(`${API_BASE}/api/products?limit=1000`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const prData = await prRes.json();
-            if (prData.success) setProducts(prData.data.products);
+            if (prData.success) setProducts(prData.data.products || []);
         } catch (error) {
             console.error('Error fetching data:', error);
+            setMessage('Error loading data');
+        } finally {
+            setDataLoading(false);
         }
     };
 
     const handleTransferTypeChange = (type) => {
         setTransferType(type);
-        const typeMap = {
-            'warehouse-to-warehouse': { sourceType: 'warehouse', destinationType: 'warehouse' },
-            'warehouse-to-store': { sourceType: 'warehouse', destinationType: 'store' },
-            'store-to-warehouse': { sourceType: 'store', destinationType: 'warehouse' },
-            'store-to-store': { sourceType: 'store', destinationType: 'store' }
-        };
-        const types = typeMap[type];
-        setFormData(prev => ({
-            ...prev,
-            sourceType: types.sourceType,
-            destinationType: types.destinationType,
-            sourceId: '',
-            destinationId: '',
-            requiresShipment: type !== 'warehouse-to-warehouse' && type !== 'store-to-store'
-        }));
     };
 
     const handleAddItem = () => {
@@ -145,7 +140,6 @@ export default function SelfTransferModule() {
                 setMessage('Transfer initiated successfully!');
                 setShowForm(false);
                 resetForm();
-                fetchTransfers();
             } else {
                 setMessage(data.message || 'Failed to create transfer');
             }
@@ -173,19 +167,6 @@ export default function SelfTransferModule() {
         });
     };
 
-    const fetchTransfers = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/self-transfer`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success) setTransfers(data.transfers);
-        } catch (error) {
-            console.error('Error fetching transfers:', error);
-        }
-    };
-
     const getSourceLabel = () => {
         const map = {
             'warehouse-to-warehouse': 'Source Warehouse',
@@ -206,8 +187,19 @@ export default function SelfTransferModule() {
         return map[transferType];
     };
 
-    const sourceOptions = formData.sourceType === 'warehouse' ? warehouses : stores;
-    const destinationOptions = formData.destinationType === 'warehouse' ? warehouses : stores;
+    const getSourceName = (item) => {
+        if (formData.sourceType === 'warehouse') {
+            return `${item.warehouse_name} (${item.warehouse_code})`;
+        }
+        return `${item.store_name} (${item.store_code})`;
+    };
+
+    const getDestinationName = (item) => {
+        if (formData.destinationType === 'warehouse') {
+            return `${item.warehouse_name} (${item.warehouse_code})`;
+        }
+        return `${item.store_name} (${item.store_code})`;
+    };
 
     return (
         <div style={{ height: '100%', background: '#F5F7FA', fontFamily: 'Inter,sans-serif', padding: '0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -282,10 +274,11 @@ export default function SelfTransferModule() {
                                         onChange={(e) => setFormData(prev => ({ ...prev, sourceId: e.target.value }))}
                                         style={{ width: '100%', padding: '10px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
                                         required
+                                        disabled={dataLoading}
                                     >
                                         <option value="">Select {getSourceLabel()}</option>
                                         {sourceOptions.map(opt => (
-                                            <option key={opt.id} value={opt.id}>{opt.warehouse_name || opt.store_name} ({opt.warehouse_code || opt.store_code})</option>
+                                            <option key={opt.id} value={opt.id}>{getSourceName(opt)}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -297,10 +290,11 @@ export default function SelfTransferModule() {
                                         onChange={(e) => setFormData(prev => ({ ...prev, destinationId: e.target.value }))}
                                         style={{ width: '100%', padding: '10px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
                                         required
+                                        disabled={dataLoading}
                                     >
                                         <option value="">Select {getDestinationLabel()}</option>
                                         {destinationOptions.map(opt => (
-                                            <option key={opt.id} value={opt.id}>{opt.warehouse_name || opt.store_name} ({opt.warehouse_code || opt.store_code})</option>
+                                            <option key={opt.id} value={opt.id}>{getDestinationName(opt)}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -448,8 +442,8 @@ export default function SelfTransferModule() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={loading}
-                                    style={{ padding: '10px 16px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit', opacity: loading ? 0.5 : 1 }}
+                                    disabled={loading || dataLoading}
+                                    style={{ padding: '10px 16px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit', opacity: loading || dataLoading ? 0.5 : 1 }}
                                 >
                                     {loading ? 'Creating...' : 'Initiate Transfer'}
                                 </button>

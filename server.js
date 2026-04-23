@@ -245,6 +245,9 @@ app.use('/api/customer-support', require('./routes/customerSupportRoutes'));
 // warehouse management routes
 app.use('/api/warehouse-management', require('./routes/warehouseManagementRoutes'));
 
+// transfer suggestions routes (smart suggestions for source/destination)
+app.use('/api/transfer-suggestions', require('./routes/transferSuggestionsRoutes'));
+
 // self transfer routes
 app.use('/api/self-transfer', require('./routes/selfTransferRoutes'));
 
