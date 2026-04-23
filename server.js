@@ -245,6 +245,9 @@ app.use('/api/customer-support', require('./routes/customerSupportRoutes'));
 // warehouse management routes
 app.use('/api/warehouse-management', require('./routes/warehouseManagementRoutes'));
 
+// billing routes (store inventory management)
+app.use('/api/billing', require('./routes/billingRoutes'));
+
 // transfer suggestions routes (smart suggestions for source/destination)
 app.use('/api/transfer-suggestions', require('./routes/transferSuggestionsRoutes'));
 
