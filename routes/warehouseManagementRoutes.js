@@ -367,9 +367,6 @@ router.delete('/warehouses/:id', authenticateToken, (req, res) => {
     }
 });
 
-
-module.exports = router;
-
 // PUT /api/warehouse-management/stores/:id - Update store
 router.put('/stores/:id', authenticateToken, (req, res) => {
     try {
@@ -462,3 +459,5 @@ router.delete('/stores/:id', authenticateToken, (req, res) => {
         });
     }
 });
+
+module.exports = router;
