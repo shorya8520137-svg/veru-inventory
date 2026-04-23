@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,16 +31,16 @@ export default function ProductTracker({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    /* 🔍 SEARCH */
+    /* ðŸ” SEARCH */
     const [input, setInput] = useState("");
     const [tokens, setTokens] = useState([]);
     const [debouncedInput, setDebouncedInput] = useState("");
 
-    /* 📅 DATE FILTER */
+    /* ðŸ“… DATE FILTER */
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     
-    /* 🏢 WAREHOUSE FILTER */
+    /* ðŸ¢ WAREHOUSE FILTER */
     const [selectedWarehouse, setSelectedWarehouse] = useState("ALL");
     const [warehouses, setWarehouses] = useState(["ALL"]);
 
@@ -58,17 +58,17 @@ export default function ProductTracker({
         finalStock: 0,
     });
     
-    /* 🚚 DISPATCH DETAILS MODAL */
+    /* ðŸšš DISPATCH DETAILS MODAL */
     const [showDispatchModal, setShowDispatchModal] = useState(false);
     const [selectedDispatch, setSelectedDispatch] = useState(null);
     const [dispatchLoading, setDispatchLoading] = useState(false);
 
-    /* 📜 SCROLL TRACKING */
+    /* ðŸ“œ SCROLL TRACKING */
     const [scrollPosition, setScrollPosition] = useState(0);
     const [visibleRowIndex, setVisibleRowIndex] = useState(null);
     const [tableWrapperRef, setTableWrapperRef] = useState(null);
     
-    /* 🚚 FETCH DISPATCH DETAILS */
+    /* ðŸšš FETCH DISPATCH DETAILS */
     const fetchDispatchDetails = async (reference) => {
         // First try to find dispatch details from timeline data
         const dispatchEntry = timeline.find(entry => 
@@ -173,7 +173,7 @@ export default function ProductTracker({
                 setLoading(true);
                 setError("");
 
-                // ✅ Updated to use new timeline API
+                // âœ… Updated to use new timeline API
                 let url = `/api/timeline/${encodeURIComponent(barcode)}`;
                 
                 const params = new URLSearchParams();
@@ -222,8 +222,8 @@ export default function ProductTracker({
                     description: item.description || ''
                 }));
 
-                console.log('📊 Timeline entries:', formattedTimeline.length);
-                console.log('📊 Summary from API:', summaryData);
+                console.log('ðŸ“Š Timeline entries:', formattedTimeline.length);
+                console.log('ðŸ“Š Summary from API:', summaryData);
                 
                 // Extract unique warehouses from timeline
                 const uniqueWarehouses = ["ALL", ...new Set(timelineData.map(item => item.warehouse).filter(Boolean))];
@@ -244,7 +244,7 @@ export default function ProductTracker({
                     finalStock: summaryData.current_stock || 0,
                 };
 
-                console.log('📊 Calculated summary:', calculatedSummary);
+                console.log('ðŸ“Š Calculated summary:', calculatedSummary);
 
                 setSummary(calculatedSummary);
                 setTimeline(formattedTimeline);
@@ -385,7 +385,7 @@ export default function ProductTracker({
                     'Date': date,
                     'Time': time.slice(0, 8),
                     'Warehouse': row.warehouse,
-                    'Reference': row.reference || '—',
+                    'Reference': row.reference || 'â€”',
                     'Balance': row.balance_after,
                     'Description': row.description || ''
                 };
@@ -432,7 +432,7 @@ export default function ProductTracker({
                                         'Logistics': d.logistics || 'N/A',
                                         'Payment': d.payment_mode || 'N/A',
                                         'Invoice': d.invoice_amount || 0,
-                                        'Dimensions': `L:${d.length || 0} × W:${d.width || 0} × H:${d.height || 0}`,
+                                        'Dimensions': `L:${d.length || 0} Ã— W:${d.width || 0} Ã— H:${d.height || 0}`,
                                         'Weight': `${d.actual_weight || 0} kg`,
                                         'Date': `${date} ${time?.slice(0, 8) || ''}`
                                     });
@@ -470,408 +470,267 @@ export default function ProductTracker({
         }
     };
 
+    // â”€â”€ type â†’ badge config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const TYPE_BADGE = {
+        OPENING:       { label:'OPENING',   bg:'#1e3a5f', color:'#93C5FD' },
+        BULK_UPLOAD:   { label:'UPLOAD',    bg:'#1e3a5f', color:'#93C5FD' },
+        DISPATCH:      { label:'DISPATCH',  bg:'#7f1d1d', color:'#FCA5A5' },
+        SALE:          { label:'DISPATCH',  bg:'#7f1d1d', color:'#FCA5A5' },
+        DAMAGE:        { label:'DAMAGE',    bg:'#7f1d1d', color:'#FCA5A5' },
+        RETURN:        { label:'RETURN',    bg:'#14532d', color:'#86EFAC' },
+        RECOVER:       { label:'RECOVER',   bg:'#14532d', color:'#86EFAC' },
+        RECOVERY:      { label:'RECOVER',   bg:'#14532d', color:'#86EFAC' },
+        SELF_TRANSFER: { label:'TRANSFER',  bg:'#312e81', color:'#C4B5FD' },
+        ADJUSTMENT_IN: { label:'ADJUST',    bg:'#1e3a5f', color:'#93C5FD' },
+    };
+    const getBadge = (type) => TYPE_BADGE[type] || { label: type, bg:'#1E293B', color:'#94A3B8' };
+
+    // â”€â”€ dot colour by direction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const dotColor = (row) => {
+        if (row.direction === 'IN') return '#4ADE80';
+        if (row.direction === 'OUT') return '#F87171';
+        return '#64748B';
+    };
+
     return (
-        <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className={styles.modal}>
-                <button className={styles.closeTopBtn} onClick={onClose}>
-                    ✕
-                </button>
+        <div style={{ position:'fixed', inset:0, background:'rgba(2,6,23,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(3px)' }}
+            onClick={(e) => e.target === e.currentTarget && onClose()}>
 
-                <div className={styles.modalContent}>
-                    <h2 className={styles.header}>
-                        Product Tracker — <span>{barcode}</span>
-                    </h2>
+            {/* â”€â”€ Shell â”€â”€ */}
+            <div style={{ display:'flex', flexDirection:'column', width:'92vw', maxWidth:1100, height:'88vh', background:'#0F172A', borderRadius:16, overflow:'hidden', border:'1px solid #1E293B', boxShadow:'0 40px 100px rgba(0,0,0,0.7)' }}>
 
-                    {/* ================= SUMMARY ================= */}
-                    {loading ? (
-                        <div className={styles.skeletonSummary}>
-                            {[...Array(6)].map((_, i) => (
-                                <div key={i} className={styles.skeletonCard} />
-                            ))}
+                {/* â”€â”€ Top bar â”€â”€ */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', background:'#0B1120', borderBottom:'1px solid #1E293B', flexShrink:0 }}>
+                    <div>
+                        <div style={{ fontSize:10, color:'#475569', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:3 }}>Audit Log / Stock Control</div>
+                        <div style={{ fontSize:16, fontWeight:700, color:'#F1F5F9', letterSpacing:'-0.01em' }}>
+                            Product Ledger â€” <span style={{ color:'#60A5FA' }}>{barcode}</span>
                         </div>
-                    ) : (
-                        <motion.div 
-                            className={styles.breakdownBox}
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            key={`summary-${filteredTimeline.length}`}
-                        >
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.05 }}
-                            >
-                                Opening: <motion.strong
-                                    key={summary.opening}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.opening}</motion.strong>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.1 }}
-                            >
-                                Bulk Upload: <motion.strong
-                                    key={summary.bulkUpload}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.bulkUpload}</motion.strong>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.15 }}
-                            >
-                                Dispatch: <motion.span
-                                    key={summary.dispatch}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.dispatch}</motion.span>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.2 }}
-                            >
-                                Damage: <motion.span
-                                    key={summary.damage}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.damage}</motion.span>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.25 }}
-                            >
-                                Return: <motion.span
-                                    key={summary.returns}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.returns}</motion.span>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.3 }}
-                            >
-                                Recover: <motion.span
-                                    key={summary.recovery}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.recovery}</motion.span>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.32 }}
-                            >
-                                Transfer In: <motion.span
-                                    key={summary.selfTransferIn}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.selfTransferIn}</motion.span>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.34 }}
-                            >
-                                Transfer Out: <motion.span
-                                    key={summary.selfTransferOut}
-                                    initial={{ scale: 1.2 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >{summary.selfTransferOut}</motion.span>
-                            </motion.div>
-                            <motion.div 
-                                className={styles.finalStock}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3, delay: 0.4 }}
-                            >
-                                Final Stock: <motion.strong
-                                    key={summary.finalStock}
-                                    initial={{ scale: 1.3, color: "#2563eb" }}
-                                    animate={{ scale: 1, color: "#1d4ed8" }}
-                                    transition={{ duration: 0.4 }}
-                                >{summary.finalStock}</motion.strong>
-                            </motion.div>
-                        </motion.div>
-                    )}
-
-                    {/* ================= FILTER BAR ================= */}
-                    <div className={styles.filterBar}>
-                        <div className={styles.searchWrapper}>
-                            {tokens.map((t, i) => (
-                                <span key={i} className={styles.chip}>
-                    {t}
-                                    <button onClick={() => removeToken(t)}>×</button>
-                  </span>
-                            ))}
-
-                            <input
-                                placeholder="Search type, warehouse, reference…"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && addToken(input)}
-                                disabled={loading}
-                            />
-                        </div>
-                        
-                        <select
-                            className={styles.warehouseSelect}
-                            value={selectedWarehouse}
-                            onChange={(e) => setSelectedWarehouse(e.target.value)}
-                            disabled={loading}
-                        >
-                            {warehouses.map(wh => (
-                                <option key={wh} value={wh}>{wh}</option>
-                            ))}
-                        </select>
-
-                        <input
-                            type="date"
-                            className={styles.dateInput}
-                            value={fromDate}
-                            onChange={(e) => setFromDate(e.target.value)}
-                            disabled={loading}
-                            placeholder="From Date"
-                        />
-                        <input
-                            type="date"
-                            className={styles.dateInput}
-                            value={toDate}
-                            onChange={(e) => setToDate(e.target.value)}
-                            disabled={loading}
-                            placeholder="To Date"
-                        />
-                        
-                        <button
-                            className={styles.exportBtn}
-                            onClick={exportToExcel}
-                            disabled={loading || filteredTimeline.length === 0}
-                            title="Export to Excel"
-                        >
-                            📊 Export
+                    </div>
+                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <button onClick={exportToExcel} disabled={loading || filteredTimeline.length === 0}
+                            style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, border:'1px solid #334155', background:'#1E293B', color:'#94A3B8', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export CSV
                         </button>
+                        <button onClick={onClose} style={{ width:30, height:30, borderRadius:7, border:'1px solid #334155', background:'#1E293B', color:'#64748B', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>Ã—</button>
+                    </div>
+                </div>
+
+                {/* â”€â”€ Body: sidebar + main â”€â”€ */}
+                <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
+
+                    {/* â”€â”€ LEFT SIDEBAR â”€â”€ */}
+                    <div style={{ width:220, flexShrink:0, background:'#0B1120', borderRight:'1px solid #1E293B', display:'flex', flexDirection:'column', padding:'16px 14px', gap:16, overflowY:'auto', scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch' }}>
+                        <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
+
+                        {/* View Filters label */}
+                        <div style={{ fontSize:10, fontWeight:700, color:'#334155', letterSpacing:'0.1em', textTransform:'uppercase' }}>View Filters</div>
+
+                        {/* Search reference */}
+                        <div>
+                            <div style={{ fontSize:10, color:'#475569', marginBottom:5, fontWeight:600 }}>Search Reference</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:4, padding:'6px 8px', borderRadius:7, border:'1px solid #1E293B', background:'#0F172A', minHeight:32 }}>
+                                {tokens.map((t, i) => (
+                                    <span key={i} style={{ display:'flex', alignItems:'center', gap:3, background:'#1E293B', color:'#94A3B8', borderRadius:4, padding:'1px 6px', fontSize:10 }}>
+                                        {t}
+                                        <button onClick={() => removeToken(t)} style={{ background:'none', border:'none', color:'#64748B', cursor:'pointer', fontSize:11, lineHeight:1, padding:0 }}>Ã—</button>
+                                    </span>
+                                ))}
+                                <input value={input} onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && addToken(input)}
+                                    placeholder={tokens.length ? '' : 'e.g. REF-882'}
+                                    style={{ flex:1, minWidth:60, background:'none', border:'none', outline:'none', fontSize:11, color:'#94A3B8', padding:0 }}
+                                    disabled={loading}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Event type / warehouse */}
+                        <div>
+                            <div style={{ fontSize:10, color:'#475569', marginBottom:5, fontWeight:600 }}>Warehouse</div>
+                            <select value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)} disabled={loading}
+                                style={{ width:'100%', padding:'6px 8px', borderRadius:7, border:'1px solid #1E293B', background:'#0F172A', color:'#94A3B8', fontSize:11, outline:'none', colorScheme:'dark' }}>
+                                {warehouses.map(wh => <option key={wh} value={wh}>{wh === 'ALL' ? 'All Warehouses' : wh}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Date range */}
+                        <div>
+                            <div style={{ fontSize:10, color:'#475569', marginBottom:5, fontWeight:600 }}>Date Range</div>
+                            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={loading}
+                                style={{ width:'100%', padding:'6px 8px', borderRadius:7, border:'1px solid #1E293B', background:'#0F172A', color:'#94A3B8', fontSize:11, outline:'none', colorScheme:'dark', marginBottom:6, boxSizing:'border-box' }}/>
+                            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={loading}
+                                style={{ width:'100%', padding:'6px 8px', borderRadius:7, border:'1px solid #1E293B', background:'#0F172A', color:'#94A3B8', fontSize:11, outline:'none', colorScheme:'dark', boxSizing:'border-box' }}/>
+                        </div>
+
+                        {/* Divider */}
+                        <div style={{ borderTop:'1px solid #1E293B' }}/>
+
+                        {/* Stock Overview */}
+                        <div>
+                            <div style={{ fontSize:10, fontWeight:700, color:'#334155', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>Stock Overview</div>
+                            {loading ? (
+                                <div style={{ color:'#334155', fontSize:11 }}>Loadingâ€¦</div>
+                            ) : (
+                                <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                                    {[
+                                        { label:'Opening',      value: summary.opening,        color:'#94A3B8' },
+                                        { label:'Bulk Upload',  value: summary.bulkUpload,     color:'#94A3B8' },
+                                        { label:'Dispatch',     value: `-${summary.dispatch}`,  color:'#F87171' },
+                                        { label:'Damaged',      value: `-${summary.damage}`,    color:'#F87171' },
+                                        { label:'Returns',      value: `+${summary.returns}`,   color:'#4ADE80' },
+                                        { label:'Recovery',     value: `+${summary.recovery}`,  color:'#4ADE80' },
+                                        { label:'Transfer In',  value: `+${summary.selfTransferIn}`,  color:'#4ADE80' },
+                                        { label:'Transfer Out', value: `-${summary.selfTransferOut}`, color:'#F87171' },
+                                    ].map(r => (
+                                        <div key={r.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                            <span style={{ fontSize:11, color:'#475569' }}>{r.label}</span>
+                                            <span style={{ fontSize:12, fontWeight:600, color:r.color }}>{r.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Current Balance card */}
+                        <div style={{ marginTop:'auto', background:'#1E293B', borderRadius:10, padding:'12px 14px', border:'1px solid #334155' }}>
+                            <div style={{ fontSize:9, fontWeight:700, color:'#475569', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>Current Balance</div>
+                            <div style={{ fontSize:28, fontWeight:700, color:'#60A5FA', letterSpacing:'-0.02em' }}>{loading ? 'â€”' : summary.finalStock}</div>
+                        </div>
                     </div>
 
-                    {/* ================= TABLE ================= */}
-                    <motion.div 
-                        className={styles.tableWrapper}
-                        ref={setTableWrapperRef}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
-                    >
-                        <motion.table 
-                            className={styles.logTable}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3, delay: 0.3 }}
-                        >
-                            <thead>
-                            <tr>
-                                <th>Type</th>
-                                <th>Qty</th>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Warehouse</th>
-                                <th>Reference</th>
-                                <th>Balance</th>
-                            </tr>
-                            </thead>
+                    {/* â”€â”€ RIGHT MAIN PANEL â”€â”€ */}
+                    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-                            <motion.tbody
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.3, delay: 0.4 }}
-                            >
+                        {/* Table header row */}
+                        <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr 90px 90px', padding:'10px 20px', borderBottom:'1px solid #1E293B', flexShrink:0 }}>
+                            {['TIMESTAMP','TRANSACTION DETAIL','','IMPACT','BALANCE'].map((h,i) => (
+                                <div key={i} style={{ fontSize:9, fontWeight:700, color:'#334155', letterSpacing:'0.1em', textTransform:'uppercase' }}>{h}</div>
+                            ))}
+                        </div>
+
+                        {/* Rows */}
+                        <div ref={setTableWrapperRef} style={{ flex:1, overflowY:'auto', scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch' }}>
+                            <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
                             {loading ? (
-                                <>
-                                    {[...Array(5)].map((_, i) => (
-                                        <tr key={i}>
-                                            <td colSpan="7">
-                                                <div className={styles.skeletonRow} />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#334155', fontSize:12 }}>Loadingâ€¦</div>
                             ) : error ? (
-                                <tr>
-                                    <td colSpan="7" className={styles.status}>
-                                        <div className={styles.loadingSpinner}>
-                                            <span>⚠️</span>
-                                            <span>{error}</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#F87171', fontSize:12 }}>{error}</div>
                             ) : filteredTimeline.length === 0 ? (
-                                <motion.tr
-                                    key="no-results"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <td colSpan="7" className={styles.status}>
-                                        No records found
-                                    </td>
-                                </motion.tr>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#334155', fontSize:12 }}>No records found</div>
                             ) : (
                                 <AnimatePresence mode="popLayout" initial={false}>
                                     {filteredTimeline.map((row, i) => {
-                                        const [date, time] = row.timestamp.split("T");
-                                        const isVisible = visibleRowIndex === i;
+                                        const [date, timePart] = row.timestamp.split('T');
+                                        const time = (timePart || '').slice(0, 8);
+                                        const badge = getBadge(row.type);
+                                        const impact = row.direction === 'IN' ? `+${row.quantity}` : row.direction === 'OUT' ? `-${row.quantity}` : `${row.quantity}`;
+                                        const impactColor = row.direction === 'IN' ? '#4ADE80' : row.direction === 'OUT' ? '#F87171' : '#94A3B8';
+                                        const isDispatch = row.type === 'DISPATCH' || row.type === 'SALE';
                                         const rowKey = `${row.timestamp}-${row.reference || i}-${row.type}`;
-                                        
+
                                         return (
-                                            <motion.tr
-                                                key={rowKey}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ 
-                                                    opacity: 1, 
-                                                    x: 0
-                                                }}
-                                                exit={{ 
-                                                    opacity: 0, 
-                                                    x: 20
-                                                }}
-                                                transition={{
-                                                    opacity: { duration: 0.2 },
-                                                    x: { duration: 0.3, ease: "easeOut" }
-                                                }}
-                                                className={`${isVisible ? styles.activeRow : ''}`}
-                                                data-row-index={i}
+                                            <motion.div key={rowKey}
+                                                initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0 }}
+                                                transition={{ duration:0.18 }}
+                                                style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr 90px 90px', padding:'12px 20px', borderBottom:'1px solid #0F172A', alignItems:'center' }}
+                                                onMouseEnter={e => e.currentTarget.style.background='#0B1120'}
+                                                onMouseLeave={e => e.currentTarget.style.background='transparent'}
                                             >
-                                                <td>
-                                    <span
-                                        className={`${styles.statusTag} ${
-                                            styles[row.type]
-                                        } ${row.type === 'DISPATCH' || row.type === 'SALE' ? styles.clickable : ''}`}
-                                        onClick={() => {
-                                            if ((row.type === 'DISPATCH' || row.type === 'SALE') && row.reference) {
-                                                fetchDispatchDetails(row.reference);
-                                            }
-                                        }}
-                                        title={row.type === 'DISPATCH' || row.type === 'SALE' ? 'Click to view dispatch details' : ''}
-                                    >
-                                      {LABELS[row.type] || row.type}
-                                    </span>
-                                                </td>
-                                                <td>{row.quantity}</td>
-                                                <td>{date}</td>
-                                                <td>{time.slice(0, 8)}</td>
-                                                <td>{row.warehouse}</td>
-                                                <td>{row.reference || "—"}</td>
-                                                <td className={row.balance_after < 0 ? styles.negativeBalance : ''}>{row.balance_after}</td>
-                                            </motion.tr>
+                                                {/* Timestamp */}
+                                                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                                    <span style={{ width:7, height:7, borderRadius:'50%', background:dotColor(row), flexShrink:0, display:'inline-block' }}/>
+                                                    <div>
+                                                        <div style={{ fontSize:11, color:'#CBD5E1', fontWeight:500 }}>{date}</div>
+                                                        <div style={{ fontSize:10, color:'#475569' }}>{time}</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Badge + title */}
+                                                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                                    <span onClick={() => isDispatch && row.reference && fetchDispatchDetails(row.reference)}
+                                                        style={{ padding:'2px 7px', borderRadius:4, background:badge.bg, color:badge.color, fontSize:9, fontWeight:700, letterSpacing:'0.06em', cursor: isDispatch ? 'pointer' : 'default', userSelect:'none' }}>
+                                                        {badge.label}
+                                                    </span>
+                                                    <span style={{ fontSize:12, color:'#CBD5E1', fontWeight:500 }}>{LABELS[row.type] || row.type}</span>
+                                                </div>
+
+                                                {/* Reference + warehouse */}
+                                                <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                                                    {row.reference && <span style={{ fontSize:10, color:'#475569', fontFamily:'monospace' }}>{row.reference}</span>}
+                                                    <span style={{ fontSize:10, color:'#334155', display:'flex', alignItems:'center', gap:3 }}>
+                                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                                                        {row.warehouse}
+                                                    </span>
+                                                </div>
+
+                                                {/* Impact */}
+                                                <div style={{ fontSize:14, fontWeight:700, color:impactColor, textAlign:'right' }}>{impact}</div>
+
+                                                {/* Balance */}
+                                                <div style={{ fontSize:13, fontWeight:500, color: row.balance_after < 0 ? '#F87171' : '#94A3B8', textAlign:'right' }}>{row.balance_after?.toFixed ? row.balance_after.toFixed(0) : row.balance_after}</div>
+                                            </motion.div>
                                         );
                                     })}
                                 </AnimatePresence>
                             )}
-                            </motion.tbody>
-                        </motion.table>
-                    </motion.div>
+                        </div>
+
+                        {/* Footer status bar */}
+                        <div style={{ padding:'8px 20px', borderTop:'1px solid #1E293B', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+                            <div style={{ display:'flex', gap:16, alignItems:'center' }}>
+                                <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:'#334155' }}>
+                                    <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ADE80', display:'inline-block' }}/>
+                                    System Online
+                                </span>
+                                <span style={{ fontSize:10, color:'#334155' }}>Records: {filteredTimeline.length}</span>
+                            </div>
+                            <span style={{ fontSize:10, color:'#334155' }}>Showing {filteredTimeline.length} entries</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            {/* 🚚 DISPATCH DETAILS MODAL */}
+
+            {/* â”€â”€ Dispatch detail overlay â”€â”€ */}
             {showDispatchModal && (
-                <>
-                    <div className={styles.dispatchOverlay} onClick={closeDispatchModal} />
-                    <div className={styles.dispatchModal}>
-                        <div className={styles.dispatchHeader}>
-                            <h3>Dispatch Details</h3>
-                            <button className={styles.closeBtn} onClick={closeDispatchModal}>✕</button>
+                <div style={{ position:'absolute', inset:0, background:'rgba(2,6,23,0.7)', zIndex:10, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={closeDispatchModal}>
+                    <div style={{ background:'#0F172A', borderRadius:14, width:480, border:'1px solid #1E293B', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', overflow:'hidden' }} onClick={e=>e.stopPropagation()}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #1E293B', background:'#0B1120' }}>
+                            <span style={{ fontSize:13, fontWeight:700, color:'#F1F5F9' }}>Dispatch Details</span>
+                            <button onClick={closeDispatchModal} style={{ background:'#1E293B', border:'1px solid #334155', borderRadius:6, width:26, height:26, cursor:'pointer', color:'#64748B', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>Ã—</button>
                         </div>
-                        
-                        <div className={styles.dispatchContent}>
+                        <div style={{ padding:'16px 18px', maxHeight:400, overflowY:'auto' }}>
                             {dispatchLoading ? (
-                                <div className={styles.loadingSpinner}>
-                                    <span>⏳</span>
-                                    <span>Loading dispatch details...</span>
-                                </div>
+                                <div style={{ color:'#475569', fontSize:12, textAlign:'center', padding:24 }}>Loadingâ€¦</div>
                             ) : selectedDispatch ? (
-                                <>
-                                    {/* Dispatch Summary */}
-                                    <div className={styles.dispatchSummary}>
-                                        <div className={styles.summaryGrid}>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>CUSTOMER:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.customer || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>PRODUCT:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.product_name || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>AWB:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.awb || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>ORDER REF:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.order_ref || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>QUANTITY:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.qty || selectedDispatch.quantity || 0}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>WAREHOUSE:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.warehouse || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>STATUS:</span>
-                                                <span className={styles.statusBadge}>{selectedDispatch.status || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>LOGISTICS:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.logistics || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>PAYMENT MODE:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.payment_mode || 'N/A'}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>INVOICE AMOUNT:</span>
-                                                <span className={styles.summaryValue}>₹{selectedDispatch.invoice_amount || 0}</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>DIMENSIONS:</span>
-                                                <span className={styles.summaryValue}>
-                                                    L: {selectedDispatch.length || 0} × W: {selectedDispatch.width || 0} × H: {selectedDispatch.height || 0}
-                                                </span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>WEIGHT:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.actual_weight || 0} kg</span>
-                                            </div>
-                                            <div className={styles.summaryItem}>
-                                                <span className={styles.summaryLabel}>BARCODE:</span>
-                                                <span className={styles.summaryValue}>{selectedDispatch.barcode || barcode}</span>
-                                            </div>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px 16px' }}>
+                                    {[
+                                        ['Customer',      selectedDispatch.customer],
+                                        ['AWB',           selectedDispatch.awb],
+                                        ['Order Ref',     selectedDispatch.order_ref],
+                                        ['Quantity',      selectedDispatch.qty || selectedDispatch.quantity],
+                                        ['Warehouse',     selectedDispatch.warehouse],
+                                        ['Status',        selectedDispatch.status],
+                                        ['Logistics',     selectedDispatch.logistics],
+                                        ['Payment',       selectedDispatch.payment_mode],
+                                        ['Invoice',       selectedDispatch.invoice_amount ? `â‚¹${selectedDispatch.invoice_amount}` : null],
+                                        ['Weight',        selectedDispatch.actual_weight ? `${selectedDispatch.actual_weight} kg` : null],
+                                        ['Dimensions',    selectedDispatch.length ? `${selectedDispatch.length}Ã—${selectedDispatch.width}Ã—${selectedDispatch.height}` : null],
+                                        ['Barcode',       selectedDispatch.barcode || barcode],
+                                    ].map(([label, val]) => (
+                                        <div key={label}>
+                                            <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:2 }}>{label}</div>
+                                            <div style={{ fontSize:12, color:'#94A3B8', fontWeight:500 }}>{val || 'â€”'}</div>
                                         </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className={styles.noData}>
-                                    <span>⚠️</span>
-                                    <span>No dispatch details available</span>
+                                    ))}
                                 </div>
+                            ) : (
+                                <div style={{ color:'#475569', fontSize:12, textAlign:'center', padding:24 }}>No details available</div>
                             )}
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

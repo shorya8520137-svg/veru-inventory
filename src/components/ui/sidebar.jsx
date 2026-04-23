@@ -477,6 +477,60 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </SidebarMenuItem>
                     )}
 
+                    {/* STORE BILLING */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link
+                                    href="/billing/create"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/billing/create", collapsed }))}
+                                >
+                                    <Package size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Create Bill</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* BILL HISTORY */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link
+                                    href="/billing/history"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/billing/history", collapsed }))}
+                                >
+                                    <Activity size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Bill History</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* STORE INVENTORY */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link
+                                    href="/billing/store-inventory"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/billing/store-inventory", collapsed }))}
+                                >
+                                    <Box size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Store Inventory</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
                     {/* INVENTORY */}
                     {hasAnyInventoryAccess() && (
                         <MenuItemWithSub

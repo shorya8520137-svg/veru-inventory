@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { Search, Filter, Download, Package, MapPin, BarChart3, Eye, RefreshCw, Calendar, TrendingUp, X, ChevronDown } from "lucide-react";
+import { Search, Filter, Download, Package, MapPin, BarChart3, Eye, RefreshCw, Calendar, TrendingUp, X, ChevronDown, Pencil, Activity } from "lucide-react";
 import styles from "./inventory.module.css";
 import { getMockInventoryResponse } from "../../utils/mockInventoryData";
 import ProductTracker from "./ProductTracker";
@@ -17,6 +17,236 @@ const WAREHOUSES = [
     { code: "AMD_WH", name: "Ahmedabad Warehouse", city: "Ahmedabad" },
     { code: "HYD_WH", name: "Hyderabad Warehouse", city: "Hyderabad" },
 ];
+
+/* ── Growth Trajectory Modal — fetches real timeline data ── */
+function GrowthTrajectoryModal({ item, onClose }) {
+    const [timeline, setTimeline] = useState([]);   // last 20, newest-first (for display)
+    const [summary, setSummary] = useState(null);   // backend summary (full history stats)
+    const [loading, setLoading] = useState(true);
+    const [hoveredIdx, setHoveredIdx] = useState(null);
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+
+    const fetchTimeline = () => {
+        setLoading(true);
+        const barcode = item.code || item.barcode;
+        const warehouse = item.warehouse || '';
+        const token = localStorage.getItem('token');
+        // Use correct route /api/timeline/ with limit=20 so graph has enough points
+        let url = `${API_BASE}/api/timeline/${barcode}?warehouse=${warehouse}&limit=20`;
+        if (dateFrom) url += `&dateFrom=${dateFrom}`;
+        if (dateTo) url += `&dateTo=${dateTo}`;
+        fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(d => {
+                // timeline comes newest-first from backend; keep that order for display
+                const entries = d.data?.timeline || [];
+                setTimeline(entries);
+                setSummary(d.data?.summary || null);
+            })
+            .catch(() => { setTimeline([]); setSummary(null); })
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => { fetchTimeline(); }, [item, dateFrom, dateTo]);
+
+    // ── KPI values from backend summary (full history, not just last 20) ──────
+    const openingStock = summary?.opening_stock ?? 0;
+    const totalIn      = summary?.total_in      ?? 0;
+    const totalOut     = summary?.total_out     ?? 0;
+    const currentStock = summary?.current_stock ?? item.stock ?? 0;
+
+    // ── Graph: plot balance_after (running stock level) oldest→newest ─────────
+    // timeline is newest-first; reverse for chronological order on chart
+    const chartData = [...timeline].reverse();
+
+    // Line chart geometry — plot balance_after so the line shows stock trajectory
+    const W = 500, H = 180, PAD = { top:18, right:18, bottom:28, left:40 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
+    const balances = chartData.map(t => Number(t.balance_after ?? 0));
+    const maxQ = Math.max(...balances, 1);
+    const minQ = Math.min(...balances, 0);
+    const range = maxQ - minQ || 1;
+
+    const pts = chartData.map((t, i) => {
+        const x = PAD.left + (chartData.length === 1 ? chartW/2 : (i / (chartData.length - 1)) * chartW);
+        const bal = Number(t.balance_after ?? 0);
+        const y = PAD.top + chartH - ((bal - minQ) / range) * chartH;
+        return { x, y, t, i };
+    });
+
+    const polyline = pts.map(p => `${p.x},${p.y}`).join(' ');
+    // Area fill path
+    const areaPath = pts.length > 0
+        ? `M${pts[0].x},${PAD.top + chartH} ` + pts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length-1].x},${PAD.top + chartH} Z`
+        : '';
+
+    // Y-axis ticks
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+        y: PAD.top + chartH - f * chartH,
+        label: Math.round(minQ + f * range),
+    }));
+
+    const hovered   = hoveredIdx !== null ? chartData[hoveredIdx] : null;
+    const hoveredPt = hoveredIdx !== null ? pts[hoveredIdx] : null;
+
+    return (
+        <div style={{ position:'fixed', inset:0, background:'rgba(2,6,23,0.72)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(2px)' }} onClick={onClose}>
+            <div style={{ background:'#0F172A', borderRadius:18, padding:'26px 28px', width:600, boxShadow:'0 40px 100px rgba(0,0,0,0.6)', maxHeight:'90vh', overflowY:'auto', border:'1px solid #1E293B' }} onClick={e=>e.stopPropagation()}>
+
+                {/* Header */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <span style={{ fontSize:15, fontWeight:700, color:'#F1F5F9', letterSpacing:'-0.01em' }}>Stock Trajectory</span>
+                        <span style={{ fontSize:10, fontWeight:600, color:'#475569', background:'#1E293B', padding:'2px 8px', borderRadius:20, border:'1px solid #334155' }}>Timeline</span>
+                    </div>
+                    <button onClick={onClose} style={{ background:'#1E293B', border:'1px solid #334155', cursor:'pointer', fontSize:14, color:'#64748B', lineHeight:1, borderRadius:6, width:26, height:26, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+                </div>
+
+                {/* Product info */}
+                <div style={{ fontSize:12, color:'#475569', marginBottom:18, display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ color:'#CBD5E1', fontWeight:600 }}>{item.product || item.product_name}</span>
+                    <span style={{ fontFamily:'monospace', background:'#1E293B', color:'#64748B', padding:'2px 7px', borderRadius:4, fontSize:11, border:'1px solid #334155' }}>{item.code || item.barcode}</span>
+                    <span style={{ marginLeft:'auto', background:'#1E293B', color:'#475569', padding:'2px 8px', borderRadius:4, fontSize:11, border:'1px solid #334155' }}>{item.warehouse || '—'}</span>
+                </div>
+
+                {/* KPI cards */}
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:20 }}>
+                    {[
+                        { label:'Opening',   value: openingStock,    sub:'initial stock',    accent:'#334155', val:'#94A3B8' },
+                        { label:'Received',  value:`+${totalIn}`,    sub:'total inbound',    accent:'#166534', val:'#4ADE80' },
+                        { label:'Dispatched',value:`−${totalOut}`,   sub:'total outbound',   accent:'#7f1d1d', val:'#F87171' },
+                        { label:'Live Stock',value: currentStock,    sub:'available now',    accent:'#1e3a5f', val:'#60A5FA' },
+                    ].map(c => (
+                        <div key={c.label} style={{ background:'#1E293B', borderRadius:10, padding:'12px 14px', border:`1px solid #334155` }}>
+                            <div style={{ fontSize:10, color:'#475569', fontWeight:600, marginBottom:6, textTransform:'uppercase', letterSpacing:'0.06em' }}>{c.label}</div>
+                            <div style={{ fontSize:18, fontWeight:700, color:c.val, letterSpacing:'-0.02em', lineHeight:1 }}>{c.value}</div>
+                            <div style={{ fontSize:10, color:'#334155', marginTop:4 }}>{c.sub}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Date filter */}
+                <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center' }}>
+                    <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+                        style={{ padding:'6px 10px', borderRadius:7, border:'1px solid #334155', fontSize:11, outline:'none', flex:1, background:'#1E293B', color:'#94A3B8', colorScheme:'dark' }}/>
+                    <span style={{ fontSize:11, color:'#334155' }}>–</span>
+                    <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+                        style={{ padding:'6px 10px', borderRadius:7, border:'1px solid #334155', fontSize:11, outline:'none', flex:1, background:'#1E293B', color:'#94A3B8', colorScheme:'dark' }}/>
+                    {(dateFrom||dateTo) && <button onClick={()=>{setDateFrom('');setDateTo('');}} style={{ fontSize:11, color:'#64748B', background:'#1E293B', border:'1px solid #334155', borderRadius:6, padding:'5px 10px', cursor:'pointer' }}>Clear</button>}
+                </div>
+
+                {/* Line Chart */}
+                {loading ? (
+                    <div style={{ height:H, display:'flex', alignItems:'center', justifyContent:'center', color:'#334155', fontSize:12 }}>Loading…</div>
+                ) : chartData.length === 0 ? (
+                    <div style={{ height:H, display:'flex', alignItems:'center', justifyContent:'center', color:'#334155', fontSize:12 }}>No timeline data</div>
+                ) : (
+                    <div style={{ position:'relative', borderRadius:12, background:'#0B1120', border:'1px solid #1E293B', padding:'4px 0 0' }}>
+                        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:'block', overflow:'visible' }}>
+                            <defs>
+                                <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.15"/>
+                                    <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
+                                </linearGradient>
+                            </defs>
+
+                            {/* Grid lines */}
+                            {yTicks.map((tk, i) => (
+                                <g key={i}>
+                                    <line x1={PAD.left} y1={tk.y} x2={W - PAD.right} y2={tk.y} stroke="#1E293B" strokeWidth="1"/>
+                                    <text x={PAD.left - 6} y={tk.y + 4} textAnchor="end" fontSize="9" fill="#334155">{tk.label}</text>
+                                </g>
+                            ))}
+
+                            {/* Area fill */}
+                            {areaPath && <path d={areaPath} fill="url(#tGrad)"/>}
+
+                            {/* Line */}
+                            <polyline points={polyline} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+
+                            {/* X-axis labels */}
+                            {pts.map((p, i) => (
+                                <text key={i} x={p.x} y={H - 5} textAnchor="middle" fontSize="8" fill="#334155">
+                                    {new Date(p.t.timestamp).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}
+                                </text>
+                            ))}
+
+                            {/* Hover vertical line */}
+                            {hoveredPt && (
+                                <line x1={hoveredPt.x} y1={PAD.top} x2={hoveredPt.x} y2={PAD.top + chartH} stroke="#3B82F6" strokeWidth="1" strokeDasharray="3 3" opacity="0.4"/>
+                            )}
+
+                            {/* Hit areas + dots */}
+                            {pts.map((p, i) => {
+                                const isOut = p.t.direction === 'OUT';
+                                const isHov = hoveredIdx === i;
+                                return (
+                                    <g key={i}>
+                                        <rect x={p.x - 18} y={PAD.top} width={36} height={chartH}
+                                            fill="transparent"
+                                            onMouseEnter={() => setHoveredIdx(i)}
+                                            onMouseLeave={() => setHoveredIdx(null)}
+                                            style={{ cursor:'crosshair' }}
+                                        />
+                                        <circle cx={p.x} cy={p.y} r={isHov ? 5 : 3}
+                                            fill={isOut ? '#F87171' : '#4ADE80'}
+                                            stroke="#0B1120" strokeWidth="1.5"
+                                            style={{ pointerEvents:'none' }}
+                                        />
+                                    </g>
+                                );
+                            })}
+                        </svg>
+
+                        {/* Hover tooltip */}
+                        {hovered && hoveredPt && (
+                            <div style={{
+                                position:'absolute',
+                                left: Math.min(hoveredPt.x / W * 100, 66) + '%',
+                                top: 6,
+                                transform:'translateX(-50%)',
+                                background:'#1E293B',
+                                color:'#CBD5E1',
+                                borderRadius:8,
+                                padding:'8px 12px',
+                                fontSize:11,
+                                pointerEvents:'none',
+                                whiteSpace:'nowrap',
+                                boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+                                border:'1px solid #334155',
+                                zIndex:10,
+                            }}>
+                                <div style={{ fontWeight:700, color: hovered.direction==='OUT'?'#F87171':'#4ADE80', marginBottom:4, fontSize:12 }}>
+                                    {hovered.type}
+                                </div>
+                                <div style={{ color:'#64748B', marginBottom:2 }}>
+                                    Moved <span style={{ color: hovered.direction==='OUT'?'#F87171':'#4ADE80', fontWeight:600 }}>{hovered.direction==='OUT'?'−':'+' }{hovered.quantity}</span>
+                                </div>
+                                <div style={{ color:'#64748B', marginBottom:4 }}>
+                                    Balance <span style={{ color:'#60A5FA', fontWeight:600 }}>{hovered.balance_after}</span>
+                                </div>
+                                {hovered.reference && <div style={{ color:'#334155', fontSize:10, marginBottom:2 }}>{hovered.reference}</div>}
+                                <div style={{ color:'#334155', fontSize:10 }}>
+                                    {new Date(hovered.timestamp).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Legend */}
+                        <div style={{ display:'flex', gap:14, justifyContent:'flex-end', padding:'6px 14px 8px', fontSize:10, color:'#334155' }}>
+                            <span style={{ display:'flex', alignItems:'center', gap:4 }}><span style={{ width:6, height:6, borderRadius:'50%', background:'#4ADE80', display:'inline-block' }}/>IN</span>
+                            <span style={{ display:'flex', alignItems:'center', gap:4 }}><span style={{ width:6, height:6, borderRadius:'50%', background:'#F87171', display:'inline-block' }}/>OUT</span>
+                            <span style={{ marginLeft:6 }}>{chartData.length} movements · hover for details</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function InventorySheet() {
     const { hasPermission, getAccessibleWarehouses } = usePermissions();
@@ -50,6 +280,8 @@ export default function InventorySheet() {
     // Timeline states - restored for modal
     const [selectedItem, setSelectedItem] = useState(null);
     const [showTimeline, setShowTimeline] = useState(false);
+    const [showGrowthModal, setShowGrowthModal] = useState(false);
+    const [growthItem, setGrowthItem] = useState(null);
 
     // Manual Stock Update states
     const [showStockUpdateModal, setShowStockUpdateModal] = useState(false);
@@ -707,9 +939,7 @@ export default function InventorySheet() {
                     { label:'URGENT RESTOCK', value: stats.outOfStockItems, sub:'Out of stock SKUs', color:'#EF4444', icon:'⚠', alert: stats.outOfStockItems > 0 },
                     { label:'LOW STOCK', value: stats.lowStockItems, sub:'Below 10 units', color:'#F59E0B', icon:'📉' },
                 ].map((kpi,i) => (
-                    <div key={i} style={{ background:'#fff', borderRadius:14, padding:'16px 18px', boxShadow:'0 1px 6px rgba(0,0,0,0.06)', border: kpi.alert ? '1.5px solid #FCA5A5' : '1px solid #F1F5F9', transition:'all 0.2s' }}
-                        onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
-                        onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
+                    <div key={i} className={styles.kpiCard} style={{ background:'#fff', borderRadius:14, padding:'16px 18px', boxShadow:'0 1px 6px rgba(0,0,0,0.06)', border: kpi.alert ? '1.5px solid #FCA5A5' : '1px solid #F1F5F9' }}
                     >
                         <div style={{ fontSize:10, fontWeight:700, color:'#94A3B8', letterSpacing:'0.08em', marginBottom:8 }}>{kpi.label}</div>
                         <div style={{ fontSize:26, fontWeight:900, color: kpi.alert ? '#DC2626' : '#0F172A', marginBottom:4 }}>{kpi.value}</div>
@@ -849,8 +1079,8 @@ export default function InventorySheet() {
                                         onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                                     >
                                         {/* Product Info */}
-                                        <td style={{ padding:'12px 16px', maxWidth:180 }}>
-                                            <div style={{ fontWeight:700, color:'#0F172A', fontSize:13, lineHeight:1.3 }}>{item.product || item.product_name || 'N/A'}</div>
+                                        <td style={{ padding:'12px 16px', maxWidth:180, overflow:'hidden' }}>
+                                            <div style={{ fontWeight:500, color:'#1E293B', fontSize:13, lineHeight:1.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={item.product || item.product_name || 'N/A'}>{item.product || item.product_name || 'N/A'}</div>
                                             {(item.variant || item.product_variant) && (
                                                 <div style={{ fontSize:11, color:'#94A3B8', marginTop:2 }}>{item.variant || item.product_variant}</div>
                                             )}
@@ -861,21 +1091,14 @@ export default function InventorySheet() {
                                                 {item.code || item.barcode || 'N/A'}
                                             </span>
                                         </td>
-                                        {/* Stock */}
+                                        {/* Stock — just show number, no buttons */}
                                         <td style={{ padding:'12px 16px', textAlign:'center' }}>
-                                            <span
-                                                style={{ fontSize:18, fontWeight:900, color: stock === 0 ? '#DC2626' : stock <= 10 ? '#D97706' : '#0F172A', cursor: hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? 'pointer' : 'default' }}
-                                                onClick={hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? () => openTimeline(item) : undefined}
-                                                title={hasPermission(PERMISSIONS.INVENTORY_TIMELINE) ? 'View timeline' : ''}
-                                            >
+                                            <span style={{ fontSize:15, fontWeight:600, color: stock === 0 ? '#94A3B8' : stock <= 10 ? '#B45309' : '#374151' }}>
                                                 {stock}
                                             </span>
-                                            {hasPermission(PERMISSIONS.INVENTORY_EDIT) && (
-                                                <button onClick={e=>{e.stopPropagation();openStockUpdateModal(item);}} style={{ marginLeft:6, background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#94A3B8' }} title="Edit stock">✏️</button>
-                                            )}
                                         </td>
                                         {/* Damage */}
-                                        <td style={{ padding:'12px 16px', textAlign:'center', fontSize:13, color: (item.damage_count||0)>0?'#DC2626':'#94A3B8', fontWeight: (item.damage_count||0)>0?700:400 }}>
+                                        <td style={{ padding:'12px 16px', textAlign:'center', fontSize:13, color: (item.damage_count||0)>0?'#B45309':'#94A3B8', fontWeight: (item.damage_count||0)>0?500:400 }}>
                                             {item.damage_count || 0}
                                         </td>
                                         {/* Warehouse */}
@@ -894,17 +1117,35 @@ export default function InventorySheet() {
                                         </td>
                                         {/* Actions */}
                                         <td style={{ padding:'12px 16px', textAlign:'center' }}>
-                                            <div style={{ display:'flex', gap:4, justifyContent:'center' }}>
+                                            <div style={{ display:'flex', gap:4, justifyContent:'center', alignItems:'center' }}>
                                                 {hasPermission(PERMISSIONS.INVENTORY_TIMELINE) && (
-                                                    <button onClick={() => openTimeline(item)} style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid #E5E7EB', background:'#fff', cursor:'pointer', fontSize:10, fontWeight:600, color:'#6366F1' }} title="Timeline">
-                                                        <BarChart3 size={11} />
+                                                    <button onClick={() => openTimeline(item)}
+                                                        title="Timeline"
+                                                        style={{ width:28, height:28, borderRadius:6, border:'1px solid #E2E8F0', background:'#F8FAFC', cursor:'pointer', color:'#64748B', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
+                                                        onMouseEnter={e=>{ e.currentTarget.style.background='#F1F5F9'; e.currentTarget.style.color='#334155'; }}
+                                                        onMouseLeave={e=>{ e.currentTarget.style.background='#F8FAFC'; e.currentTarget.style.color='#64748B'; }}
+                                                    >
+                                                        <BarChart3 size={13} />
                                                     </button>
                                                 )}
                                                 {hasPermission(PERMISSIONS.INVENTORY_EDIT) && (
-                                                    <button onClick={() => openStockUpdateModal(item)} style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid #E5E7EB', background:'#fff', cursor:'pointer', fontSize:10, fontWeight:600, color:'#374151' }} title="Edit">
-                                                        ✏️
+                                                    <button onClick={() => openStockUpdateModal(item)}
+                                                        title="Edit Stock"
+                                                        style={{ width:28, height:28, borderRadius:6, border:'1px solid #E2E8F0', background:'#F8FAFC', cursor:'pointer', color:'#64748B', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
+                                                        onMouseEnter={e=>{ e.currentTarget.style.background='#F1F5F9'; e.currentTarget.style.color='#334155'; }}
+                                                        onMouseLeave={e=>{ e.currentTarget.style.background='#F8FAFC'; e.currentTarget.style.color='#64748B'; }}
+                                                    >
+                                                        <Pencil size={13} />
                                                     </button>
                                                 )}
+                                                <button onClick={() => { setGrowthItem(item); setShowGrowthModal(true); }}
+                                                    title="Stock Trajectory"
+                                                    style={{ width:28, height:28, borderRadius:6, border:'1px solid #E2E8F0', background:'#F8FAFC', cursor:'pointer', color:'#64748B', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
+                                                    onMouseEnter={e=>{ e.currentTarget.style.background='#F1F5F9'; e.currentTarget.style.color='#334155'; }}
+                                                    onMouseLeave={e=>{ e.currentTarget.style.background='#F8FAFC'; e.currentTarget.style.color='#64748B'; }}
+                                                >
+                                                    <Activity size={13} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1077,6 +1318,14 @@ export default function InventorySheet() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Growth Trajectory Modal — real timeline data */}
+            {showGrowthModal && growthItem && (
+                <GrowthTrajectoryModal
+                    item={growthItem}
+                    onClose={() => { setShowGrowthModal(false); setGrowthItem(null); }}
+                />
             )}
 
             {/* Use ProductTracker Component */}

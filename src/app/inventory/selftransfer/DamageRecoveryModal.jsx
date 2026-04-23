@@ -6,13 +6,13 @@ import styles from "./damageRecovery.module.css";
 
 const API = `${process.env.NEXT_PUBLIC_API_BASE}/api/dispatch`;
 
-export default function DamageRecoveryModal({ onClose }) {
+export default function DamageRecoveryModal({ onClose, initialMode = 'damage' }) {
     const [locationType, setLocationType] = useState("WAREHOUSE");
     const [locationQuery, setLocationQuery] = useState("");
     const [locations, setLocations] = useState([]);
     const [selectedLocation, setSelectedLocation] = useState(null);
 
-    const [action, setAction] = useState("damage");
+    const [action, setAction] = useState(initialMode); // Use initialMode prop
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState("");
 

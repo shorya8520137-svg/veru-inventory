@@ -95,7 +95,11 @@ export default function ClientLayout({ children }) {
                 {/* 🔑 MAIN CONTENT — PROFESSIONAL SCROLLING */}
                 <div className="flex-1 min-w-0 h-full flex flex-col">
                     {/* TOP NAVIGATION BAR - Hidden on InventoryGPT page */}
-                    {!isInventoryGPTPage && <TopNavBar />}
+                    {!isInventoryGPTPage && (
+                        <div style={{ position: 'sticky', top: 0, zIndex: 50 }}>
+                            <TopNavBar />
+                        </div>
+                    )}
                     
                     {/* MAIN CONTENT */}
                     <main className="flex-1 min-w-0 overflow-hidden relative bg-gradient-to-br from-slate-50/50 to-white">
