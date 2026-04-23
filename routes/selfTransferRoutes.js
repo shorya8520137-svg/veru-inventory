@@ -6,6 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 /**
  * SELF TRANSFER ROUTES
  * Handle inventory transfers between warehouses and stores
+ * Uses existing self_transfer and self_transfer_items tables
  */
 
 // GET /api/self-transfer - Get all transfers
@@ -14,20 +15,20 @@ router.get('/', authenticateToken, (req, res) => {
         const sql = `
             SELECT 
                 id,
-                sourceType,
-                sourceId,
-                destinationType,
-                destinationId,
-                transferStatus,
-                requiresShipment,
-                courierPartner,
-                trackingId,
-                estimatedDelivery,
-                notes,
-                transferDate,
-                created_at,
-                updated_at
-            FROM inventory_transfers
+                transfer_reference,
+                order_ref,
+                transfer_type,
+                source_location,
+                destination_location,
+                awb_number,
+                logistics,
+                payment_mode,
+                executive,
+                invoice_amount,
+                remarks,
+                status,
+                created_at
+            FROM self_transfer
             ORDER BY created_at DESC
             LIMIT 100
         `;
@@ -66,12 +67,7 @@ router.post('/', authenticateToken, (req, res) => {
             destinationType,
             destinationId,
             items,
-            requiresShipment,
-            courierPartner,
-            trackingId,
-            estimatedDelivery,
-            notes,
-            transferDate
+            notes
         } = req.body;
 
         // Validate
@@ -96,24 +92,34 @@ router.post('/', authenticateToken, (req, res) => {
             });
         }
 
-        // Generate transfer ID
-        const transferId = `TRF_${Date.now()}`;
-        const shipmentId = requiresShipment ? `SHP_${Date.now()}` : null;
+        // Generate transfer reference
+        const transferRef = `TRF_${Date.now()}`;
+        
+        // Build transfer type string
+        const transferTypeMap = {
+            'warehouse_warehouse': 'W to W',
+            'warehouse_store': 'W to S',
+            'store_warehouse': 'S to W',
+            'store_store': 'S to S'
+        };
+        
+        const transferType = transferTypeMap[`${sourceType}_${destinationType}`] || 'W to W';
 
-        // Create transfer record
+        // Create transfer record in self_transfer table
         const insertSql = `
-            INSERT INTO inventory_transfers (
-                transferId, sourceType, sourceId, destinationType, destinationId,
-                transferStatus, requiresShipment, courierPartner, trackingId,
-                estimatedDelivery, notes, transferDate, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO self_transfer (
+                transfer_reference, transfer_type, source_location, destination_location,
+                remarks, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW())
         `;
 
         db.query(insertSql, [
-            transferId, sourceType, sourceId, destinationType, destinationId,
-            requiresShipment ? 'IN_TRANSIT' : 'COMPLETED',
-            requiresShipment, courierPartner, trackingId || shipmentId,
-            estimatedDelivery, notes, transferDate
+            transferRef, 
+            transferType, 
+            sourceId, 
+            destinationId,
+            notes || '',
+            'Completed'
         ], (err, result) => {
             if (err) {
                 console.error('Error creating transfer:', err);
@@ -124,30 +130,36 @@ router.post('/', authenticateToken, (req, res) => {
                 });
             }
 
-            // Insert transfer items
+            // Insert transfer items into self_transfer_items
             const itemInsertSql = `
-                INSERT INTO transfer_items (transferId, productId, quantity, unit, created_at)
-                VALUES (?, ?, ?, ?, NOW())
+                INSERT INTO self_transfer_items (transfer_reference, product_id, quantity, created_at)
+                VALUES (?, ?, ?, NOW())
             `;
 
             let itemsInserted = 0;
+            
+            if (items.length === 0) {
+                return res.json({
+                    success: true,
+                    message: 'Transfer created successfully',
+                    transferId: transferRef
+                });
+            }
+
             items.forEach(item => {
-                db.query(itemInsertSql, [transferId, item.productId, item.transferQty, item.unit], (err) => {
+                db.query(itemInsertSql, [transferRef, item.productId, item.transferQty], (err) => {
                     if (err) console.error('Error inserting item:', err);
                     itemsInserted++;
 
-                    // After all items inserted, create timeline events
+                    // After all items inserted, send response
                     if (itemsInserted === items.length) {
-                        createTimelineEvents(transferId, sourceType, sourceId, destinationType, destinationId, items);
+                        res.json({
+                            success: true,
+                            message: 'Transfer created successfully',
+                            transferId: transferRef
+                        });
                     }
                 });
-            });
-
-            res.json({
-                success: true,
-                message: 'Transfer initiated successfully',
-                transferId: transferId,
-                shipmentId: shipmentId
             });
         });
     } catch (error) {
@@ -160,43 +172,6 @@ router.post('/', authenticateToken, (req, res) => {
     }
 });
 
-// Helper function to create timeline events
-function createTimelineEvents(transferId, sourceType, sourceId, destinationType, destinationId, items) {
-    const totalQty = items.reduce((sum, item) => sum + item.transferQty, 0);
-
-    // TRANSFER_OUT event for source
-    const outEventSql = `
-        INSERT INTO timeline_events (
-            entityType, entityId, eventType, source, destination, quantity,
-            stockBefore, stockAfter, notes, transferId, isInitialTransfer, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `;
-
-    db.query(outEventSql, [
-        sourceType, sourceId, 'TRANSFER_OUT',
-        `${sourceType}_${sourceId}`, `${destinationType}_${destinationId}`,
-        -totalQty, 0, 0, `Transferred to ${destinationType}`, transferId, false, 'COMPLETED'
-    ], (err) => {
-        if (err) console.error('Error creating TRANSFER_OUT event:', err);
-    });
-
-    // TRANSFER_IN event for destination
-    const inEventSql = `
-        INSERT INTO timeline_events (
-            entityType, entityId, eventType, source, destination, quantity,
-            stockBefore, stockAfter, notes, transferId, isInitialTransfer, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `;
-
-    db.query(inEventSql, [
-        destinationType, destinationId, 'TRANSFER_IN',
-        `${sourceType}_${sourceId}`, `${destinationType}_${destinationId}`,
-        totalQty, 0, totalQty, `Received from ${sourceType}`, transferId, false, 'COMPLETED'
-    ], (err) => {
-        if (err) console.error('Error creating TRANSFER_IN event:', err);
-    });
-}
-
 // GET /api/self-transfer/:id - Get transfer details
 router.get('/:id', authenticateToken, (req, res) => {
     try {
@@ -207,14 +182,13 @@ router.get('/:id', authenticateToken, (req, res) => {
                 t.*,
                 GROUP_CONCAT(
                     JSON_OBJECT(
-                        'productId', ti.productId,
-                        'quantity', ti.quantity,
-                        'unit', ti.unit
+                        'productId', sti.product_id,
+                        'quantity', sti.quantity
                     )
                 ) as items
-            FROM inventory_transfers t
-            LEFT JOIN transfer_items ti ON t.transferId = ti.transferId
-            WHERE t.transferId = ?
+            FROM self_transfer t
+            LEFT JOIN self_transfer_items sti ON t.transfer_reference = sti.transfer_reference
+            WHERE t.transfer_reference = ?
             GROUP BY t.id
         `;
 
@@ -254,15 +228,15 @@ router.get('/:id', authenticateToken, (req, res) => {
 router.put('/:id', authenticateToken, (req, res) => {
     try {
         const { id } = req.params;
-        const { transferStatus, trackingId } = req.body;
+        const { status } = req.body;
 
         const updateSql = `
-            UPDATE inventory_transfers
-            SET transferStatus = ?, trackingId = ?, updated_at = NOW()
-            WHERE transferId = ?
+            UPDATE self_transfer
+            SET status = ?
+            WHERE transfer_reference = ?
         `;
 
-        db.query(updateSql, [transferStatus, trackingId, id], (err, result) => {
+        db.query(updateSql, [status, id], (err, result) => {
             if (err) {
                 console.error('Error updating transfer:', err);
                 return res.status(500).json({
