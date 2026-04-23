@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 // GET - Fetch all warehouses
-export async function GET(request) {
+export async function GET() {
     try {
         const connection = await pool.getConnection();
         
@@ -37,32 +37,12 @@ export async function GET(request) {
         });
 
     } catch (error) {
-        console.error('Warehouse API Error:', error.message);
-        
-        // Return mock data if database fails
-        return NextResponse.json({
-            success: true,
-            warehouses: [
-                {
-                    id: 1,
-                    warehouse_code: 'WH001',
-                    warehouse_name: 'Main Warehouse',
-                    location: 'Gurgaon',
-                    address: 'Plot 123, Industrial Area',
-                    city: 'Gurgaon',
-                    state: 'Haryana',
-                    country: 'India',
-                    pincode: '122001',
-                    phone: '+91-9876543210',
-                    email: 'wh1@insora.in',
-                    manager_name: 'Rajesh Kumar',
-                    capacity: 50000,
-                    is_active: true,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }
-            ]
-        });
+        console.error('Error fetching warehouses:', error.message);
+        return NextResponse.json({ 
+            success: false, 
+            message: 'Failed to fetch warehouses',
+            error: error.message
+        }, { status: 500 });
     }
 }
 

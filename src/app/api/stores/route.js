@@ -2,10 +2,8 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 // GET - Fetch all stores
-export async function GET(request) {
+export async function GET() {
     try {
-        console.log('Stores API - Fetching from pool');
-
         const connection = await pool.getConnection();
         
         const [stores] = await connection.execute(`
@@ -40,12 +38,10 @@ export async function GET(request) {
 
     } catch (error) {
         console.error('Error fetching stores:', error.message);
-        console.error('Error code:', error.code);
         return NextResponse.json({ 
             success: false, 
             message: 'Failed to fetch stores',
-            error: error.message,
-            code: error.code
+            error: error.message
         }, { status: 500 });
     }
 }

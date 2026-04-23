@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Store, MapPin, Phone, User, Search } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+const API_BASE = "";
 
 export default function StoreTab() {
     const [stores, setStores] = useState([]);
@@ -36,7 +36,7 @@ export default function StoreTab() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/warehouse-management/stores`, {
+            const response = await fetch(`${API_BASE}/api/stores`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -60,7 +60,7 @@ export default function StoreTab() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/warehouse-management/stores`, {
+            const response = await fetch(`${API_BASE}/api/stores`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
