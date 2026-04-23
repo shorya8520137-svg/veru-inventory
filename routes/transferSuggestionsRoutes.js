@@ -91,8 +91,8 @@ function getWarehouses() {
         const sql = `
             SELECT 
                 id,
-                code as warehouse_code,
-                name as warehouse_name,
+                code,
+                name,
                 location,
                 city,
                 state,
@@ -111,7 +111,21 @@ function getWarehouses() {
                 console.error('Error fetching warehouses:', err);
                 reject(err);
             } else {
-                resolve(results);
+                // Map to expected format
+                const mapped = results.map(w => ({
+                    id: w.id,
+                    warehouse_code: w.code,
+                    warehouse_name: w.name,
+                    location: w.location,
+                    city: w.city,
+                    state: w.state,
+                    country: w.country,
+                    manager_name: w.manager_name,
+                    capacity: w.capacity,
+                    is_active: w.is_active,
+                    created_at: w.created_at
+                }));
+                resolve(mapped);
             }
         });
     });
@@ -157,8 +171,8 @@ router.get('/warehouses/all', authenticateToken, (req, res) => {
         const sql = `
             SELECT 
                 id,
-                code as warehouse_code,
-                name as warehouse_name,
+                code,
+                name,
                 location,
                 city,
                 state,
@@ -182,10 +196,25 @@ router.get('/warehouses/all', authenticateToken, (req, res) => {
                 });
             }
 
+            // Map to expected format
+            const mapped = results.map(w => ({
+                id: w.id,
+                warehouse_code: w.code,
+                warehouse_name: w.name,
+                location: w.location,
+                city: w.city,
+                state: w.state,
+                country: w.country,
+                manager_name: w.manager_name,
+                capacity: w.capacity,
+                is_active: w.is_active,
+                created_at: w.created_at
+            }));
+
             res.json({
                 success: true,
                 type: 'warehouse',
-                data: results
+                data: mapped
             });
         });
     } catch (error) {
@@ -256,8 +285,8 @@ router.get('/warehouse/:id', authenticateToken, (req, res) => {
         const sql = `
             SELECT 
                 id,
-                code as warehouse_code,
-                name as warehouse_name,
+                code,
+                name,
                 location,
                 address,
                 city,
@@ -292,9 +321,29 @@ router.get('/warehouse/:id', authenticateToken, (req, res) => {
                 });
             }
 
+            const w = results[0];
+            const mapped = {
+                id: w.id,
+                warehouse_code: w.code,
+                warehouse_name: w.name,
+                location: w.location,
+                address: w.address,
+                city: w.city,
+                state: w.state,
+                country: w.country,
+                pincode: w.pincode,
+                phone: w.phone,
+                email: w.email,
+                manager_name: w.manager_name,
+                capacity: w.capacity,
+                is_active: w.is_active,
+                created_at: w.created_at,
+                updated_at: w.updated_at
+            };
+
             res.json({
                 success: true,
-                warehouse: results[0]
+                warehouse: mapped
             });
         });
     } catch (error) {
