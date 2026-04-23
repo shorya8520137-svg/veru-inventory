@@ -1,18 +1,12 @@
 import { NextResponse } from 'next/server';
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'inventory_db',
-    port: process.env.DB_PORT || 3306,
-};
+import pool from '@/lib/db';
 
 // GET - Fetch all warehouses
 export async function GET(request) {
     try {
-        const connection = await mysql.createConnection(dbConfig);
+        console.log('Warehouse API - Fetching from pool');
+        
+        const connection = await pool.getConnection();
         
         const [warehouses] = await connection.execute(`
             SELECT 
@@ -37,7 +31,7 @@ export async function GET(request) {
             ORDER BY name ASC
         `);
 
-        await connection.end();
+        connection.release();
 
         return NextResponse.json({
             success: true,
@@ -45,11 +39,13 @@ export async function GET(request) {
         });
 
     } catch (error) {
-        console.error('Error fetching warehouses:', error);
+        console.error('Error fetching warehouses:', error.message);
+        console.error('Error code:', error.code);
         return NextResponse.json({ 
             success: false, 
             message: 'Failed to fetch warehouses',
-            error: error.message 
+            error: error.message,
+            code: error.code
         }, { status: 500 });
     }
 }
@@ -81,7 +77,7 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        const connection = await mysql.createConnection(dbConfig);
+        const connection = await pool.getConnection();
 
         // Check if warehouse code already exists
         const [existing] = await connection.execute(
@@ -90,7 +86,7 @@ export async function POST(request) {
         );
 
         if (existing.length > 0) {
-            await connection.end();
+            connection.release();
             return NextResponse.json({
                 success: false,
                 message: 'Warehouse code already exists'
@@ -108,7 +104,7 @@ export async function POST(request) {
             pincode, phone, email, manager_name, capacity
         ]);
 
-        await connection.end();
+        connection.release();
 
         return NextResponse.json({
             success: true,
