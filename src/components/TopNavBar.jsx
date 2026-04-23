@@ -141,7 +141,7 @@ export default function TopNavBar() {
             width: '100%',
             boxSizing: 'border-box'
         }}>
-            {/* Left Section - Simple Brand Text Only */}
+            {/* Left Section - Company Name */}
             <div style={{ 
                 fontSize: '18px', 
                 fontWeight: '700', 
