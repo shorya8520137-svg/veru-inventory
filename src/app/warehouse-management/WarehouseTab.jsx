@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Building2, MapPin, Phone, User, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Building2, MapPin, Phone, User, Search } from "lucide-react";
 
-const API_BASE = "";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function WarehouseTab() {
     const [warehouses, setWarehouses] = useState([]);
@@ -35,7 +35,7 @@ export default function WarehouseTab() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/warehouses`, {
+            const response = await fetch(`${API_BASE}/api/warehouse-management/warehouses`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -59,7 +59,7 @@ export default function WarehouseTab() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/warehouses`, {
+            const response = await fetch(`${API_BASE}/api/warehouse-management/warehouses`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
