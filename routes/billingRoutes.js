@@ -82,7 +82,7 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
                     si.last_updated,
                     si.created_at
                 FROM store_inventory si
-                LEFT JOIN dispatch_product dp ON si.barcode COLLATE utf8mb4_unicode_ci = dp.barcode COLLATE utf8mb4_unicode_ci
+                LEFT JOIN dispatch_product dp ON si.barcode = dp.barcode
                 LEFT JOIN product_categories pc ON dp.category_id = pc.id
                 ${whereClause}
                 ORDER BY COALESCE(dp.product_name, si.product_name, si.barcode) ASC

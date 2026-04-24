@@ -45,7 +45,7 @@ exports.getProductTimeline = (req, res) => {
         values.push(`${dateTo} 23:59:59`);
     }
 
-    // Simple timeline query using only inventory_ledger_base to avoid duplicates
+    // Simple timeline query combining inventory_ledger_base and self_transfer_timeline
     const timelineSql = `
         SELECT 
             ilb.id,
@@ -77,11 +77,57 @@ exports.getProductTimeline = (req, res) => {
             AND ilb.barcode = wd.barcode
         )
         WHERE ${filters.join(' AND ')}
-        ORDER BY ilb.event_time DESC
+        
+        UNION ALL
+        
+        SELECT 
+            stt.id,
+            stt.event_time as timestamp,
+            stt.movement_type as type,
+            stt.barcode,
+            stt.product_name,
+            stt.location_code as warehouse,
+            stt.qty as quantity,
+            stt.direction,
+            stt.transfer_reference as reference,
+            'self_transfer' as source,
+            -- No dispatch details for self-transfers
+            NULL as customer,
+            NULL as awb,
+            NULL as order_ref,
+            NULL as logistics,
+            NULL as payment_mode,
+            NULL as invoice_amount,
+            NULL as length,
+            NULL as width,
+            NULL as height,
+            NULL as actual_weight,
+            NULL as dispatch_status
+        FROM self_transfer_timeline stt
+        WHERE stt.barcode = ?
+        ${warehouse && warehouse !== 'ALL' ? 'AND stt.location_code = ?' : ''}
+        ${dateFrom ? 'AND stt.event_time >= ?' : ''}
+        ${dateTo ? 'AND stt.event_time <= ?' : ''}
+        
+        ORDER BY timestamp DESC
         LIMIT ?
     `;
 
-    const timelineValues = [...values, parseInt(limit)];
+    const timelineValues = [...values];
+    
+    // Add values for self_transfer_timeline part of UNION
+    timelineValues.push(productCode); // barcode for self_transfer_timeline
+    if (warehouse && warehouse !== 'ALL') {
+        timelineValues.push(warehouse);
+    }
+    if (dateFrom) {
+        timelineValues.push(`${dateFrom} 00:00:00`);
+    }
+    if (dateTo) {
+        timelineValues.push(`${dateTo} 23:59:59`);
+    }
+    
+    timelineValues.push(parseInt(limit)); // LIMIT for final query
 
     console.log('🔍 Simple Timeline SQL (ledger only):', timelineSql);
     console.log('🔍 Timeline Values:', timelineValues);

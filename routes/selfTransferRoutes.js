@@ -195,12 +195,16 @@ router.post('/', authenticateToken, (req, res) => {
                         }
                         itemsInserted++;
 
+                        // ALWAYS CREATE TIMELINE ENTRIES for all transfers
+                        console.log(`📋 Creating timeline entries for ${transferType} transfer`);
+                        createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
+
                         // CRITICAL LOGIC: Only process store systems for store-based transfers
                         if (isStoreBased && !isWarehouseToWarehouse) {
                             console.log(`📋 Processing store documentation for ${transferType} transfer`);
                             processStoreDocumentation(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, item, productName, barcode);
                         } else {
-                            console.log(`🏭 W to W transfer - skipping store system updates`);
+                            console.log(`🏭 ${transferType} transfer - skipping store system updates`);
                         }
 
                         // After all items processed
@@ -227,9 +231,9 @@ router.post('/', authenticateToken, (req, res) => {
                                     documentation: {
                                         transfer_record: true,
                                         items_recorded: itemsInserted,
+                                        timeline_created: true,
                                         store_inventory_updated: isStoreBased && !isWarehouseToWarehouse,
-                                        billing_created: isStoreBased && !isWarehouseToWarehouse,
-                                        timeline_created: isStoreBased && !isWarehouseToWarehouse
+                                        billing_created: isStoreBased && !isWarehouseToWarehouse
                                     }
                                 });
                             });
@@ -250,10 +254,7 @@ router.post('/', authenticateToken, (req, res) => {
                 updateSourceStoreInventory(barcode, item.transferQty);
             }
 
-            // 2. WAREHOUSE TIMELINE DOCUMENTATION (only for warehouse transfers)
-            createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
-
-            // 3. STORE BILLING DOCUMENTATION
+            // 2. STORE BILLING DOCUMENTATION
             createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items);
         }
 
@@ -344,41 +345,51 @@ router.post('/', authenticateToken, (req, res) => {
             const timelineSql = `
                 INSERT INTO inventory_ledger_base (
                     event_time, movement_type, barcode, product_name, 
-                    location_code, qty, direction, reference
-                ) VALUES (NOW(), 'SELF_TRANSFER', ?, ?, ?, ?, ?, ?)
+                    location_code, qty, direction, reference, tenant_id
+                ) VALUES (NOW(), 'SELF_TRANSFER', ?, ?, ?, ?, ?, ?, 1)
             `;
+            
+            console.log(`🔄 Creating timeline entries for ${transferType}: ${sourceId} → ${destinationId}`);
+            console.log(`📊 Source: ${sourceType}, Destination: ${destinationType}`);
             
             // SMART TIMELINE LOGIC:
             // Only create timeline entries for warehouse locations
             // S to S transfers should not appear in warehouse timeline
             
-            // IN entry for destination (only if it's a warehouse)
-            if (destinationType === 'warehouse') {
-                db.query(timelineSql, [
-                    barcode, productName, destinationId, 
-                    quantity, 'IN', transferRef
-                ], (err) => {
-                    if (err) console.error('Error creating destination timeline entry:', err);
-                    else console.log(`✅ Created timeline IN entry for warehouse ${destinationId}`);
-                });
-            }
-            
             // OUT entry for source (only if it's a warehouse)
             if (sourceType === 'warehouse') {
+                console.log(`📤 Creating OUT entry for source warehouse: ${sourceId}`);
                 db.query(timelineSql, [
                     barcode, productName, sourceId, 
                     quantity, 'OUT', transferRef
-                ], (err) => {
-                    if (err) console.error('Error creating source timeline entry:', err);
-                    else console.log(`✅ Created timeline OUT entry for warehouse ${sourceId}`);
+                ], (err, result) => {
+                    if (err) {
+                        console.error('❌ Error creating source timeline entry:', err);
+                    } else {
+                        console.log(`✅ Created timeline OUT entry for warehouse ${sourceId} - Insert ID: ${result.insertId}`);
+                    }
                 });
             }
             
-            // Result:
-            // W to W: Both entries created ✅
-            // W to S: Only warehouse OUT entry ✅
-            // S to W: Only warehouse IN entry ✅
-            // S to S: No entries (correct!) ✅
+            // IN entry for destination (only if it's a warehouse)
+            if (destinationType === 'warehouse') {
+                console.log(`📥 Creating IN entry for destination warehouse: ${destinationId}`);
+                db.query(timelineSql, [
+                    barcode, productName, destinationId, 
+                    quantity, 'IN', transferRef
+                ], (err, result) => {
+                    if (err) {
+                        console.error('❌ Error creating destination timeline entry:', err);
+                    } else {
+                        console.log(`✅ Created timeline IN entry for warehouse ${destinationId} - Insert ID: ${result.insertId}`);
+                    }
+                });
+            }
+            
+            // Summary log
+            console.log(`📋 Timeline entries summary for ${transferType}:`);
+            console.log(`   - Source (${sourceType}): ${sourceType === 'warehouse' ? 'OUT entry created' : 'No entry (store)'}`);
+            console.log(`   - Destination (${destinationType}): ${destinationType === 'warehouse' ? 'IN entry created' : 'No entry (store)'}`);
         }
 
         function createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items) {
