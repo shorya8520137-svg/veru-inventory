@@ -1,29 +1,27 @@
 const mysql = require('mysql2');
 require('dotenv').config();
 
-// Database configuration from environment variables
+// Simple database connection (no pooling for better compatibility)
 const dbConfig = {
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'inventory_user',
     password: process.env.DB_PASSWORD || 'StrongPass@123',
     database: process.env.DB_NAME || 'inventory_db',
     port: process.env.DB_PORT || 3306,
-    connectionLimit: 10,
-    queueLimit: 0,
     multipleStatements: true
 };
 
-console.log('🔧 Database Configuration:');
+console.log('🔧 Database Configuration (Simple Connection):');
 console.log(`   Host: ${dbConfig.host}`);
 console.log(`   Port: ${dbConfig.port}`);
 console.log(`   Database: ${dbConfig.database}`);
 console.log(`   User: ${dbConfig.user}`);
 
-// Create connection pool for better performance (with promise support)
-const pool = mysql.createPool(dbConfig);
+// Create simple connection (not pool)
+const connection = mysql.createConnection(dbConfig);
 
 // Test connection
-pool.getConnection((err, connection) => {
+connection.connect((err) => {
     if (err) {
         console.error('❌ Database connection failed:', err.message);
         if (err.code === 'ECONNREFUSED') {
@@ -34,17 +32,17 @@ pool.getConnection((err, connection) => {
             console.error('💡 Host not found - check database host address');
         }
     } else {
-        console.log('✅ Database connected successfully');
-        connection.release();
+        console.log('✅ Database connected successfully (Simple Connection)');
     }
 });
 
 // Handle connection errors
-pool.on('error', (err) => {
-    console.error('Database pool error:', err);
+connection.on('error', (err) => {
+    console.error('Database connection error:', err);
     if (err.code === 'PROTOCOL_CONNECTION_LOST') {
         console.log('Database connection was closed. Reconnecting...');
+        connection.connect();
     }
 });
 
-module.exports = pool;
+module.exports = connection;
