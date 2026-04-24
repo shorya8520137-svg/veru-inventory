@@ -188,15 +188,43 @@ router.post('/', authenticateToken, (req, res) => {
                                     });
                                 } else {
                                     // Product doesn't exist, create it
-                                    const createProductSql = `
-                                        INSERT INTO store_inventory (product_name, barcode, category, stock, price, gst_percentage, created_at, last_updated)
-                                        VALUES (?, ?, 'Transferred', ?, 0.00, 18.00, NOW(), NOW())
+                                    // Get actual product details from dispatch_product table
+                                    const getProductSql = `
+                                        SELECT product_name, category_id 
+                                        FROM dispatch_product 
+                                        WHERE barcode = ?
                                     `;
-                                    db.query(createProductSql, [productName, barcode, item.transferQty], (err) => {
-                                        if (err) console.error('Error creating product in store inventory:', err);
+                                    
+                                    db.query(getProductSql, [barcode], (err, productResult) => {
+                                        let actualProductName = productName;
+                                        let actualCategory = 'General';
+                                        
+                                        if (!err && productResult.length > 0) {
+                                            actualProductName = productResult[0].product_name || productName;
+                                            // Get category name if category_id exists
+                                            if (productResult[0].category_id) {
+                                                const getCategorySql = `SELECT name FROM product_categories WHERE id = ?`;
+                                                db.query(getCategorySql, [productResult[0].category_id], (err, catResult) => {
+                                                    if (!err && catResult.length > 0) {
+                                                        actualCategory = catResult[0].name;
+                                                    }
+                                                    createStoreInventoryRecord();
+                                                });
+                                                return;
+                                            }
+                                        }
+                                        createStoreInventoryRecord();
+                                        
+                                        function createStoreInventoryRecord() {
+                                            const createProductSql = `
+                                                INSERT INTO store_inventory (product_name, barcode, category, stock, price, gst_percentage, created_at, last_updated)
+                                                VALUES (?, ?, ?, ?, 0.00, 18.00, NOW(), NOW())
+                                            `;
+                                            db.query(createProductSql, [actualProductName, barcode, actualCategory, item.transferQty], (err) => {
+                                                if (err) console.error('Error creating product in store inventory:', err);
+                                            });
+                                        }
                                     });
-                                }
-                            });
                         }
                         
                         // Update store inventory when transferring from stores

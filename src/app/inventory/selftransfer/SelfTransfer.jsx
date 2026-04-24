@@ -27,23 +27,45 @@ export default function SelfTransfer() {
     const [summary, setSummary] = useState({ total_in: 0, total_out: 0, net: 0 });
     const [selectedRef, setSelectedRef] = useState(null);
 
-    /* LOAD DATA (UNCHANGED) */
+    /* LOAD DATA - Fixed to use correct API endpoints */
     const loadLedger = useCallback(async () => {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/api/inventory-ledger`, {
+        // Load actual self-transfer records instead of generic ledger
+        const res = await fetch(`${API_BASE}/api/self-transfer`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data.success) setLedger(data.data || []);
+        if (data.success) {
+            // Convert self-transfer records to ledger format for display
+            const ledgerData = data.transfers?.map(transfer => ({
+                event_time: transfer.created_at,
+                movement_type: 'SELF_TRANSFER',
+                barcode: transfer.transfer_reference,
+                product_name: transfer.transfer_type,
+                location_code: `${transfer.source_location} → ${transfer.destination_location}`,
+                qty: 1, // Each transfer is one record
+                direction: 'TRANSFER',
+                reference: transfer.transfer_reference
+            })) || [];
+            setLedger(ledgerData);
+        }
     }, []);
 
     const loadSummary = useCallback(async () => {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/api/inventory-ledger/summary`, {
+        // Calculate summary from self-transfer data
+        const res = await fetch(`${API_BASE}/api/self-transfer`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data.success) setSummary(data.data);
+        if (data.success) {
+            const transfers = data.transfers || [];
+            setSummary({
+                total_in: transfers.filter(t => t.transfer_type.includes('to S')).length,
+                total_out: transfers.filter(t => t.transfer_type.includes('S to')).length,
+                net: transfers.length
+            });
+        }
     }, []);
 
     useEffect(() => {

@@ -511,9 +511,10 @@ function extractBarcode(productString) {
  * Helper function to extract product name from product string
  */
 function extractProductName(productString) {
-    if (!productString || !productString.includes('|')) return productString;
+    if (!productString) return 'Unknown Product';
+    if (!productString.includes('|')) return productString.trim();
     const parts = productString.split('|').map(s => s.trim());
-    return parts[0];
+    return parts[0] || 'Unknown Product';
 }
 
 module.exports = exports;

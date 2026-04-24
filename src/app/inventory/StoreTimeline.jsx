@@ -97,7 +97,16 @@ export default function StoreTimeline() {
     const selectedStoreData = stores.find(s => s.id === parseInt(selectedStore));
 
     return (
-        <div style={{ height: '100%', background: '#F5F7FA', fontFamily: 'Inter,sans-serif', padding: '0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ 
+            height: '100vh', 
+            maxHeight: '800px',
+            background: '#F5F7FA', 
+            fontFamily: 'Inter,sans-serif', 
+            padding: '0', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
             {/* Header */}
             <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '20px 24px', flexShrink: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
