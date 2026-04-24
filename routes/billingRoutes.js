@@ -27,13 +27,13 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
 
         // Search filter
         if (search && search.trim()) {
-            whereConditions.push('(product_name LIKE ? OR barcode LIKE ?)');
+            whereConditions.push('(si.product_name LIKE ? OR si.barcode LIKE ?)');
             queryParams.push(`%${search.trim()}%`, `%${search.trim()}%`);
         }
 
         // Store filter (if store_inventory table has store_code column)
         if (store_filter !== 'all') {
-            whereConditions.push('store_code = ?');
+            whereConditions.push('si.store_code = ?');
             queryParams.push(store_filter);
         }
 
@@ -41,13 +41,13 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
         if (stock_filter !== 'all') {
             switch (stock_filter) {
                 case 'in_stock':
-                    whereConditions.push('stock > 10');
+                    whereConditions.push('si.stock > 10');
                     break;
                 case 'low_stock':
-                    whereConditions.push('stock > 0 AND stock <= 10');
+                    whereConditions.push('si.stock > 0 AND si.stock <= 10');
                     break;
                 case 'out_of_stock':
-                    whereConditions.push('stock = 0');
+                    whereConditions.push('si.stock = 0');
                     break;
             }
         }
@@ -55,7 +55,7 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
         const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
         // Get total count
-        const countSql = `SELECT COUNT(*) as total FROM store_inventory ${whereClause}`;
+        const countSql = `SELECT COUNT(*) as total FROM store_inventory si ${whereClause}`;
         
         db.query(countSql, queryParams, (err, countResult) => {
             if (err) {
@@ -69,21 +69,23 @@ router.get('/store-inventory', authenticateToken, (req, res) => {
 
             const total = countResult[0].total;
 
-            // Get inventory data
+            // Get inventory data with proper product names from dispatch_product table
             const dataSql = `
                 SELECT 
-                    id,
-                    product_name,
-                    barcode,
-                    category,
-                    stock,
-                    price,
-                    gst_percentage,
-                    last_updated,
-                    created_at
-                FROM store_inventory 
+                    si.id,
+                    COALESCE(dp.product_name, si.product_name, si.barcode) as product_name,
+                    si.barcode,
+                    COALESCE(pc.name, si.category, 'General') as category,
+                    si.stock,
+                    si.price,
+                    si.gst_percentage,
+                    si.last_updated,
+                    si.created_at
+                FROM store_inventory si
+                LEFT JOIN dispatch_product dp ON si.barcode = dp.barcode
+                LEFT JOIN product_categories pc ON dp.category_id = pc.id
                 ${whereClause}
-                ORDER BY product_name ASC
+                ORDER BY COALESCE(dp.product_name, si.product_name, si.barcode) ASC
                 LIMIT ? OFFSET ?
             `;
 
@@ -240,6 +242,86 @@ router.put('/store-inventory/:id', authenticateToken, (req, res) => {
 
     } catch (error) {
         console.error('Store inventory update API error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+// POST /api/billing/fix-product-names - Fix product names in store inventory
+router.post('/fix-product-names', authenticateToken, (req, res) => {
+    try {
+        console.log('🔧 Starting product name fix for store inventory...');
+        
+        // Update product names where they are currently showing barcode or "Transferred"
+        const updateProductNamesSql = `
+            UPDATE store_inventory si
+            JOIN dispatch_product dp ON si.barcode = dp.barcode
+            SET si.product_name = dp.product_name
+            WHERE si.product_name = si.barcode 
+               OR si.product_name = 'Transferred'
+               OR si.product_name IS NULL
+               OR si.product_name = ''
+        `;
+
+        db.query(updateProductNamesSql, (err, result) => {
+            if (err) {
+                console.error('Error updating product names:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update product names',
+                    error: err.message
+                });
+            }
+
+            console.log(`✅ Updated ${result.affectedRows} product names`);
+
+            // Update categories as well
+            const updateCategoriesSql = `
+                UPDATE store_inventory si
+                JOIN dispatch_product dp ON si.barcode = dp.barcode
+                JOIN product_categories pc ON dp.category_id = pc.id
+                SET si.category = pc.name
+                WHERE si.category = 'Transferred'
+                   OR si.category IS NULL
+                   OR si.category = ''
+            `;
+
+            db.query(updateCategoriesSql, (err, categoryResult) => {
+                if (err) {
+                    console.error('Error updating categories:', err);
+                    // Don't fail the whole operation for category update
+                }
+
+                console.log(`✅ Updated ${categoryResult?.affectedRows || 0} categories`);
+
+                // Get sample of fixed products
+                const sampleSql = `
+                    SELECT 
+                        barcode,
+                        product_name,
+                        category,
+                        stock
+                    FROM store_inventory 
+                    ORDER BY last_updated DESC
+                    LIMIT 10
+                `;
+
+                db.query(sampleSql, (err, sampleResults) => {
+                    res.json({
+                        success: true,
+                        message: `Fixed ${result.affectedRows} product names and ${categoryResult?.affectedRows || 0} categories`,
+                        productNamesFixed: result.affectedRows,
+                        categoriesFixed: categoryResult?.affectedRows || 0,
+                        sampleProducts: sampleResults || []
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Fix product names error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error',
