@@ -258,7 +258,7 @@ router.post('/fix-product-names', authenticateToken, (req, res) => {
         // Update product names where they are currently showing barcode or "Transferred"
         const updateProductNamesSql = `
             UPDATE store_inventory si
-            JOIN dispatch_product dp ON si.barcode COLLATE utf8mb4_unicode_ci = dp.barcode COLLATE utf8mb4_unicode_ci
+            JOIN dispatch_product dp ON si.barcode = dp.barcode
             SET si.product_name = dp.product_name
             WHERE si.product_name = si.barcode 
                OR si.product_name = 'Transferred'
@@ -281,7 +281,7 @@ router.post('/fix-product-names', authenticateToken, (req, res) => {
             // Update categories as well
             const updateCategoriesSql = `
                 UPDATE store_inventory si
-                JOIN dispatch_product dp ON si.barcode COLLATE utf8mb4_unicode_ci = dp.barcode COLLATE utf8mb4_unicode_ci
+                JOIN dispatch_product dp ON si.barcode = dp.barcode
                 JOIN product_categories pc ON dp.category_id = pc.id
                 SET si.category = pc.name
                 WHERE si.category = 'Transferred'
