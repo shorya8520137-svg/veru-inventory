@@ -227,9 +227,9 @@ exports.getProductTimeline = (req, res) => {
                 sum + parseInt(batch.current_stock || 0), 0
             );
 
-            // Calculate opening stock (earliest entries)
+            // Calculate opening stock (earliest entries with OPENING type)
             const openingEntries = formattedTimeline.filter(item => 
-                item.type === 'BULK_UPLOAD' || item.type === 'OPENING'
+                item.type === 'OPENING'
             );
             const openingStock = openingEntries.reduce((sum, item) => 
                 item.direction === 'IN' ? sum + item.quantity : sum - item.quantity, 0
@@ -251,12 +251,24 @@ exports.getProductTimeline = (req, res) => {
                         current_stock: currentStockFromBatches,
                         // Breakdown by operation type for this warehouse
                         breakdown: {
-                            opening: formattedTimeline.filter(t => t.type === 'OPENING').reduce((sum, t) => sum + (t.direction === 'IN' ? t.quantity : 0), 0),
-                            bulk_upload: formattedTimeline.filter(t => t.type === 'BULK_UPLOAD').reduce((sum, t) => sum + (t.direction === 'IN' ? t.quantity : 0), 0),
-                            dispatch: formattedTimeline.filter(t => t.type === 'DISPATCH').reduce((sum, t) => sum + t.quantity, 0),
-                            damage: formattedTimeline.filter(t => t.type === 'DAMAGE').reduce((sum, t) => sum + t.quantity, 0),
-                            recovery: formattedTimeline.filter(t => t.type === 'RECOVER').reduce((sum, t) => sum + t.quantity, 0),
-                            returns: formattedTimeline.filter(t => t.type === 'RETURN').reduce((sum, t) => sum + t.quantity, 0),
+                            opening: formattedTimeline.filter(t => t.type === 'OPENING').reduce((sum, t) => {
+                                return t.direction === 'IN' ? sum + t.quantity : sum - t.quantity;
+                            }, 0),
+                            bulk_upload: formattedTimeline.filter(t => t.type === 'BULK_UPLOAD').reduce((sum, t) => {
+                                return t.direction === 'IN' ? sum + t.quantity : sum - t.quantity;
+                            }, 0),
+                            dispatch: Math.abs(formattedTimeline.filter(t => t.type === 'DISPATCH').reduce((sum, t) => {
+                                return t.direction === 'OUT' ? sum + t.quantity : sum;
+                            }, 0)),
+                            damage: Math.abs(formattedTimeline.filter(t => t.type === 'DAMAGE').reduce((sum, t) => {
+                                return t.direction === 'OUT' ? sum + t.quantity : sum;
+                            }, 0)),
+                            recovery: formattedTimeline.filter(t => t.type === 'RECOVER').reduce((sum, t) => {
+                                return t.direction === 'IN' ? sum + t.quantity : sum;
+                            }, 0),
+                            returns: formattedTimeline.filter(t => t.type === 'RETURN').reduce((sum, t) => {
+                                return t.direction === 'IN' ? sum + t.quantity : sum;
+                            }, 0),
                             self_transfer_in: formattedTimeline.filter(t => t.type === 'SELF_TRANSFER' && t.direction === 'IN').reduce((sum, t) => sum + t.quantity, 0),
                             self_transfer_out: formattedTimeline.filter(t => t.type === 'SELF_TRANSFER' && t.direction === 'OUT').reduce((sum, t) => sum + t.quantity, 0)
                         }
