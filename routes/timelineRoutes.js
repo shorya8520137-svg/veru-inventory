@@ -135,6 +135,80 @@ router.post('/', authenticateToken, (req, res) => {
     }
 });
 
+// GET /api/timeline/:barcode - Get timeline for specific product barcode
+router.get('/:barcode', authenticateToken, (req, res) => {
+    try {
+        const { barcode } = req.params;
+        const { warehouse, limit = 50, dateFrom, dateTo } = req.query;
+
+        let sql = `
+            SELECT 
+                id,
+                entityType,
+                entityId,
+                eventType,
+                source,
+                destination,
+                quantity,
+                unit,
+                stockBefore,
+                stockAfter,
+                notes,
+                transferId,
+                isInitialTransfer,
+                status,
+                created_at as timestamp
+            FROM timeline_events
+            WHERE entityId = ?
+        `;
+
+        const params = [barcode];
+
+        if (warehouse) {
+            sql += ` AND (source = ? OR destination = ?)`;
+            params.push(warehouse, warehouse);
+        }
+
+        if (dateFrom) {
+            sql += ` AND created_at >= ?`;
+            params.push(dateFrom);
+        }
+
+        if (dateTo) {
+            sql += ` AND created_at <= ?`;
+            params.push(dateTo);
+        }
+
+        sql += ` ORDER BY created_at DESC LIMIT ?`;
+        params.push(parseInt(limit));
+
+        db.query(sql, params, (err, results) => {
+            if (err) {
+                console.error('Error fetching product timeline:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch product timeline',
+                    error: err.message
+                });
+            }
+
+            res.json({
+                success: true,
+                timeline: results,
+                barcode: barcode,
+                count: results.length
+            });
+        });
+    } catch (error) {
+        console.error('Product timeline error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
 // GET /api/timeline/summary - Get timeline summary for dashboard
 router.get('/summary/:entityType/:entityId', authenticateToken, (req, res) => {
     try {
