@@ -250,8 +250,8 @@ router.post('/', authenticateToken, (req, res) => {
                 updateSourceStoreInventory(barcode, item.transferQty);
             }
 
-            // 2. STORE TIMELINE DOCUMENTATION
-            createStoreTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
+            // 2. TIMELINE DOCUMENTATION (for all locations)
+            createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
 
             // 3. STORE BILLING DOCUMENTATION
             createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items);
@@ -340,7 +340,7 @@ router.post('/', authenticateToken, (req, res) => {
             });
         }
 
-        function createStoreTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, quantity) {
+        function createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, quantity) {
             const timelineSql = `
                 INSERT INTO inventory_ledger_base (
                     event_time, movement_type, barcode, product_name, 
@@ -348,28 +348,24 @@ router.post('/', authenticateToken, (req, res) => {
                 ) VALUES (NOW(), 'SELF_TRANSFER', ?, ?, ?, ?, ?, ?)
             `;
             
-            // Create timeline entries only for store locations
-            if (destinationType === 'store') {
-                // IN entry for destination store
-                db.query(timelineSql, [
-                    barcode, productName, destinationId, 
-                    quantity, 'IN', transferRef
-                ], (err) => {
-                    if (err) console.error('Error creating destination timeline entry:', err);
-                    else console.log(`✅ Created timeline IN entry for store ${destinationId}`);
-                });
-            }
+            // Create timeline entries for ALL locations (warehouse and store)
+            // IN entry for destination (warehouse or store)
+            db.query(timelineSql, [
+                barcode, productName, destinationId, 
+                quantity, 'IN', transferRef
+            ], (err) => {
+                if (err) console.error('Error creating destination timeline entry:', err);
+                else console.log(`✅ Created timeline IN entry for ${destinationType} ${destinationId}`);
+            });
             
-            if (sourceType === 'store') {
-                // OUT entry for source store
-                db.query(timelineSql, [
-                    barcode, productName, sourceId, 
-                    quantity, 'OUT', transferRef
-                ], (err) => {
-                    if (err) console.error('Error creating source timeline entry:', err);
-                    else console.log(`✅ Created timeline OUT entry for store ${sourceId}`);
-                });
-            }
+            // OUT entry for source (warehouse or store)
+            db.query(timelineSql, [
+                barcode, productName, sourceId, 
+                quantity, 'OUT', transferRef
+            ], (err) => {
+                if (err) console.error('Error creating source timeline entry:', err);
+                else console.log(`✅ Created timeline OUT entry for ${sourceType} ${sourceId}`);
+            });
         }
 
         function createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items) {
