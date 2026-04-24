@@ -113,26 +113,15 @@ router.post('/', authenticateToken, (req, res) => {
         console.log(`📊 Store-based: ${isStoreBased}, W to W: ${isWarehouseToWarehouse}`);
 
         // Start database transaction for data consistency
-        db.getConnection((connErr, connection) => {
-            if (connErr) {
-                console.error('Connection error:', connErr);
+        db.beginTransaction((err) => {
+            if (err) {
+                console.error('Transaction start error:', err);
                 return res.status(500).json({
                     success: false,
-                    message: 'Database connection failed',
-                    error: connErr.message
+                    message: 'Failed to start transaction',
+                    error: err.message
                 });
             }
-
-            connection.beginTransaction((err) => {
-                if (err) {
-                    console.error('Transaction start error:', err);
-                    connection.release();
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Failed to start transaction',
-                        error: err.message
-                    });
-                }
 
             // Create transfer record in self_transfer table
             const insertSql = `
@@ -142,7 +131,7 @@ router.post('/', authenticateToken, (req, res) => {
                 ) VALUES (?, ?, ?, ?, ?, ?, NOW())
             `;
 
-            connection.query(insertSql, [
+            db.query(insertSql, [
                 transferRef, 
                 transferType, 
                 sourceId, 
@@ -152,8 +141,7 @@ router.post('/', authenticateToken, (req, res) => {
             ], (err, result) => {
                 if (err) {
                     console.error('Error creating transfer:', err);
-                    return connection.rollback(() => {
-                        connection.release();
+                    return db.rollback(() => {
                         res.status(500).json({
                             success: false,
                             message: 'Failed to create transfer',
@@ -174,17 +162,15 @@ router.post('/', authenticateToken, (req, res) => {
                 let hasErrors = false;
                 
                 if (items.length === 0) {
-                    return connection.commit((err) => {
+                    return db.commit((err) => {
                         if (err) {
-                            return connection.rollback(() => {
-                                connection.release();
+                            return db.rollback(() => {
                                 res.status(500).json({
                                     success: false,
                                     message: 'Transaction commit failed'
                                 });
                             });
                         }
-                        connection.release();
                         res.json({
                             success: true,
                             message: 'Transfer created successfully',
@@ -201,7 +187,7 @@ router.post('/', authenticateToken, (req, res) => {
                     const productName = productParts[0]?.trim() || item.productId;
                     const barcode = productParts[2]?.trim() || item.productId;
                     
-                    connection.query(itemInsertSql, [transferId, productName, barcode, item.transferQty], (err) => {
+                    db.query(itemInsertSql, [transferId, productName, barcode, item.transferQty], (err) => {
                         if (err) {
                             console.error('Error inserting item:', err);
                             hasErrors = true;
@@ -220,11 +206,10 @@ router.post('/', authenticateToken, (req, res) => {
                         // After all items processed
                         if (itemsInserted === items.length && !hasErrors) {
                             // Commit transaction
-                            connection.commit((err) => {
+                            db.commit((err) => {
                                 if (err) {
                                     console.error('Transaction commit error:', err);
-                                    return connection.rollback(() => {
-                                        connection.release();
+                                    return db.rollback(() => {
                                         res.status(500).json({
                                             success: false,
                                             message: 'Transaction commit failed'
@@ -232,7 +217,6 @@ router.post('/', authenticateToken, (req, res) => {
                                     });
                                 }
 
-                                connection.release();
                                 // Return comprehensive response
                                 res.json({
                                     success: true,
