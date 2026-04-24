@@ -225,6 +225,8 @@ router.post('/', authenticateToken, (req, res) => {
                                             });
                                         }
                                     });
+                                }
+                            });
                         }
                         
                         // Update store inventory when transferring from stores
