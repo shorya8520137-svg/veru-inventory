@@ -603,6 +603,76 @@ export default function ProductTracker({
                     {/* â”€â”€ RIGHT MAIN PANEL â”€â”€ */}
                     <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
+                        {/* KPI Cards Row */}
+                        <div style={{ display:'flex', gap:12, padding:'16px 20px', flexShrink:0 }}>
+                            {[
+                                { 
+                                    label: 'OPENING', 
+                                    value: summary.opening || 0, 
+                                    subtitle: 'Initial Stock',
+                                    color: '#94A3B8',
+                                    bgColor: 'rgba(148, 163, 184, 0.1)'
+                                },
+                                { 
+                                    label: 'RECEIVED', 
+                                    value: `+${(summary.bulkUpload || 0) + (summary.returns || 0) + (summary.recovery || 0) + (summary.selfTransferIn || 0)}`, 
+                                    subtitle: 'Total Inbound',
+                                    color: '#4ADE80',
+                                    bgColor: 'rgba(74, 222, 128, 0.1)'
+                                },
+                                { 
+                                    label: 'DISPATCHED', 
+                                    value: `-${(summary.dispatch || 0) + (summary.damage || 0) + (summary.selfTransferOut || 0)}`, 
+                                    subtitle: 'Total Outbound',
+                                    color: '#F87171',
+                                    bgColor: 'rgba(248, 113, 113, 0.1)'
+                                },
+                                { 
+                                    label: 'LIVE STOCK', 
+                                    value: summary.finalStock || 0, 
+                                    subtitle: 'Available Now',
+                                    color: '#60A5FA',
+                                    bgColor: 'rgba(96, 165, 250, 0.1)'
+                                }
+                            ].map((kpi, index) => (
+                                <div key={index} style={{ 
+                                    flex: 1, 
+                                    background: kpi.bgColor, 
+                                    borderRadius: 12, 
+                                    padding: '16px 20px', 
+                                    border: `1px solid ${kpi.color}20`,
+                                    textAlign: 'center'
+                                }}>
+                                    <div style={{ 
+                                        fontSize: 10, 
+                                        fontWeight: 700, 
+                                        color: '#64748B', 
+                                        letterSpacing: '0.1em', 
+                                        textTransform: 'uppercase', 
+                                        marginBottom: 8 
+                                    }}>
+                                        {kpi.label}
+                                    </div>
+                                    <div style={{ 
+                                        fontSize: 28, 
+                                        fontWeight: 700, 
+                                        color: kpi.color, 
+                                        letterSpacing: '-0.02em',
+                                        marginBottom: 4
+                                    }}>
+                                        {loading ? '—' : kpi.value}
+                                    </div>
+                                    <div style={{ 
+                                        fontSize: 9, 
+                                        color: '#64748B', 
+                                        fontWeight: 500 
+                                    }}>
+                                        {kpi.subtitle}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
                         {/* Table header row */}
                         <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr 90px 90px', padding:'10px 20px', borderBottom:'1px solid #1E293B', flexShrink:0 }}>
                             {['TIMESTAMP','TRANSACTION DETAIL','','IMPACT','BALANCE'].map((h,i) => (
