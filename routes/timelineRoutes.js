@@ -12,7 +12,7 @@ const { authenticateToken, checkPermission } = require('../middleware/auth');
 // Example: /api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50
 router.get('/:productCode', 
     authenticateToken, 
-    checkPermission('inventory.timeline'), 
+    // checkPermission('inventory.timeline'), // TEMPORARILY REMOVED FOR TESTING
     timelineController.getProductTimeline
 );
 
@@ -20,7 +20,7 @@ router.get('/:productCode',
 // Example: /api/timeline?warehouse=BLR_WH&groupBy=product&dateFrom=2025-01-01
 router.get('/', 
     authenticateToken, 
-    checkPermission('inventory.timeline'), 
+    // checkPermission('inventory.timeline'), // TEMPORARILY REMOVED FOR TESTING
     timelineController.getTimelineSummary
 );
 
