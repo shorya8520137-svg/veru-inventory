@@ -63,6 +63,11 @@ export default function ProductTracker({
     const [selectedDispatch, setSelectedDispatch] = useState(null);
     const [dispatchLoading, setDispatchLoading] = useState(false);
 
+    /* 🔄 SELF TRANSFER DETAILS MODAL */
+    const [showSelfTransferModal, setShowSelfTransferModal] = useState(false);
+    const [selectedSelfTransfer, setSelectedSelfTransfer] = useState(null);
+    const [selfTransferLoading, setSelfTransferLoading] = useState(false);
+
     /* ðŸ“œ SCROLL TRACKING */
     const [scrollPosition, setScrollPosition] = useState(0);
     const [visibleRowIndex, setVisibleRowIndex] = useState(null);
@@ -156,6 +161,52 @@ export default function ProductTracker({
     const closeDispatchModal = () => {
         setShowDispatchModal(false);
         setSelectedDispatch(null);
+    };
+
+    /* 🔄 FETCH SELF TRANSFER DETAILS */
+    const fetchSelfTransferDetails = async (reference) => {
+        console.log('Fetching self-transfer details for reference:', reference);
+        
+        setSelfTransferLoading(true);
+        setShowSelfTransferModal(true);
+        
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/${reference}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.status === 404) {
+                console.error('Self-transfer not found:', reference);
+                setSelectedSelfTransfer(null);
+                setShowSelfTransferModal(false);
+                alert(`Self-transfer ${reference} not found in the system.`);
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.data && data.data.transfer) {
+                setSelectedSelfTransfer(data.data.transfer);
+            } else {
+                console.error('Failed to fetch self-transfer details');
+                setSelectedSelfTransfer(null);
+                setShowSelfTransferModal(false);
+                alert('Failed to load self-transfer details. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error fetching self-transfer details:', error);
+            setSelectedSelfTransfer(null);
+            setShowSelfTransferModal(false);
+            alert('Error loading self-transfer details. Please check your connection and try again.');
+        } finally {
+            setSelfTransferLoading(false);
+        }
+    };
+    
+    const closeSelfTransferModal = () => {
+        setShowSelfTransferModal(false);
+        setSelectedSelfTransfer(null);
     };
 
     /* ================= FETCH DATA ================= */
@@ -719,8 +770,24 @@ export default function ProductTracker({
 
                                                 {/* Badge + title */}
                                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                                    <span onClick={() => isDispatch && row.reference && fetchDispatchDetails(row.reference)}
-                                                        style={{ padding:'2px 7px', borderRadius:4, background:badge.bg, color:badge.color, fontSize:9, fontWeight:700, letterSpacing:'0.06em', cursor: isDispatch ? 'pointer' : 'default', userSelect:'none' }}>
+                                                    <span onClick={() => {
+                                                        if (isDispatch && row.reference) {
+                                                            fetchDispatchDetails(row.reference);
+                                                        } else if (row.type === 'SELF_TRANSFER' && row.reference) {
+                                                            fetchSelfTransferDetails(row.reference);
+                                                        }
+                                                    }}
+                                                        style={{ 
+                                                            padding:'2px 7px', 
+                                                            borderRadius:4, 
+                                                            background:badge.bg, 
+                                                            color:badge.color, 
+                                                            fontSize:9, 
+                                                            fontWeight:700, 
+                                                            letterSpacing:'0.06em', 
+                                                            cursor: (isDispatch || row.type === 'SELF_TRANSFER') && row.reference ? 'pointer' : 'default', 
+                                                            userSelect:'none' 
+                                                        }}>
                                                         {badge.label}
                                                     </span>
                                                     <span style={{ fontSize:12, color:'#CBD5E1', fontWeight:500 }}>{LABELS[row.type] || row.type}</span>
@@ -794,6 +861,106 @@ export default function ProductTracker({
                                             <div style={{ fontSize:12, color:'#94A3B8', fontWeight:500 }}>{val || 'â€”'}</div>
                                         </div>
                                     ))}
+                                </div>
+                            ) : (
+                                <div style={{ color:'#475569', fontSize:12, textAlign:'center', padding:24 }}>No details available</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 🔄 Self Transfer detail overlay */}
+            {showSelfTransferModal && (
+                <div style={{ position:'absolute', inset:0, background:'rgba(2,6,23,0.7)', zIndex:10, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={closeSelfTransferModal}>
+                    <div style={{ background:'#0F172A', borderRadius:14, width:520, border:'1px solid #1E293B', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', overflow:'hidden' }} onClick={e=>e.stopPropagation()}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #1E293B', background:'#0B1120' }}>
+                            <span style={{ fontSize:13, fontWeight:700, color:'#F1F5F9' }}>Self Transfer Details</span>
+                            <button onClick={closeSelfTransferModal} style={{ background:'#1E293B', border:'1px solid #334155', borderRadius:6, width:26, height:26, cursor:'pointer', color:'#64748B', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+                        </div>
+                        <div style={{ padding:'16px 18px', maxHeight:500, overflowY:'auto' }}>
+                            {selfTransferLoading ? (
+                                <div style={{ color:'#475569', fontSize:12, textAlign:'center', padding:24 }}>Loading…</div>
+                            ) : selectedSelfTransfer ? (
+                                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                                    {/* Transfer Overview */}
+                                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px 16px', padding:'12px', background:'#1E293B', borderRadius:8 }}>
+                                        {[
+                                            ['Transfer ID',     selectedSelfTransfer.transfer_reference],
+                                            ['Transfer Type',   selectedSelfTransfer.transfer_type],
+                                            ['Status',          selectedSelfTransfer.status],
+                                            ['Created',         selectedSelfTransfer.created_at ? new Date(selectedSelfTransfer.created_at).toLocaleString() : '—'],
+                                        ].map(([label, val]) => (
+                                            <div key={label}>
+                                                <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:2 }}>{label}</div>
+                                                <div style={{ fontSize:12, color:'#94A3B8', fontWeight:500 }}>{val || '—'}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Source & Destination */}
+                                    <div style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:12, alignItems:'center' }}>
+                                        <div style={{ padding:'12px', background:'#0B1120', borderRadius:8, border:'1px solid #1E293B' }}>
+                                            <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:4 }}>FROM</div>
+                                            <div style={{ fontSize:13, color:'#F87171', fontWeight:600 }}>{selectedSelfTransfer.source_display || selectedSelfTransfer.source_location}</div>
+                                        </div>
+                                        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:32, height:32, background:'#312e81', borderRadius:'50%' }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B5FD" strokeWidth="2">
+                                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                                            </svg>
+                                        </div>
+                                        <div style={{ padding:'12px', background:'#0B1120', borderRadius:8, border:'1px solid #1E293B' }}>
+                                            <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:4 }}>TO</div>
+                                            <div style={{ fontSize:13, color:'#4ADE80', fontWeight:600 }}>{selectedSelfTransfer.destination_display || selectedSelfTransfer.destination_location}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Additional Details */}
+                                    {(selectedSelfTransfer.awb_number || selectedSelfTransfer.logistics || selectedSelfTransfer.executive || selectedSelfTransfer.remarks) && (
+                                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px 16px' }}>
+                                            {[
+                                                ['AWB Number',      selectedSelfTransfer.awb_number],
+                                                ['Logistics',       selectedSelfTransfer.logistics],
+                                                ['Executive',       selectedSelfTransfer.executive],
+                                                ['Payment Mode',    selectedSelfTransfer.payment_mode],
+                                                ['Invoice Amount',  selectedSelfTransfer.invoice_amount ? `₹${selectedSelfTransfer.invoice_amount}` : null],
+                                                ['Order Ref',       selectedSelfTransfer.order_ref],
+                                            ].filter(([, val]) => val).map(([label, val]) => (
+                                                <div key={label}>
+                                                    <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:2 }}>{label}</div>
+                                                    <div style={{ fontSize:12, color:'#94A3B8', fontWeight:500 }}>{val}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Remarks */}
+                                    {selectedSelfTransfer.remarks && (
+                                        <div>
+                                            <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:4 }}>REMARKS</div>
+                                            <div style={{ fontSize:12, color:'#94A3B8', fontWeight:500, padding:'8px 12px', background:'#0B1120', borderRadius:6, border:'1px solid #1E293B' }}>
+                                                {selectedSelfTransfer.remarks}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Items List */}
+                                    {selectedSelfTransfer.items && selectedSelfTransfer.items.length > 0 && (
+                                        <div>
+                                            <div style={{ fontSize:9, color:'#334155', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:8 }}>TRANSFERRED ITEMS</div>
+                                            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                                                {selectedSelfTransfer.items.map((item, index) => (
+                                                    <div key={index} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 12px', background:'#0B1120', borderRadius:6, border:'1px solid #1E293B' }}>
+                                                        <div>
+                                                            <div style={{ fontSize:12, color:'#CBD5E1', fontWeight:500 }}>{item.product_name}</div>
+                                                            <div style={{ fontSize:10, color:'#475569', fontFamily:'monospace' }}>{item.barcode}</div>
+                                                        </div>
+                                                        <div style={{ fontSize:13, color:'#60A5FA', fontWeight:600 }}>×{item.quantity}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div style={{ color:'#475569', fontSize:12, textAlign:'center', padding:24 }}>No details available</div>

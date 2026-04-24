@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import styles from "./selfTransfer.module.css";
 
-const API_BASE = "https://api.hunyhuny.org";
+const API_BASE = "https://api.giftgala.in";
 
 const MOVEMENT_META = {
     OPENING: { label: "Opening", color: "#22c55e" },

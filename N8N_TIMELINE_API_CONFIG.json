@@ -1,0 +1,109 @@
+{
+  "api_config": {
+    "base_url": "https://api.giftgala.in",
+    "authentication": {
+      "type": "bearer_token",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjb21wYW55LmNvbSIsIm5hbWUiOiJTeXN0ZW0gQWRtaW5pc3RyYXRvciIsInJvbGVfaWQiOjEsInJvbGVfbmFtZSI6InN1cGVyX2FkbWluIiwidGVuYW50X2lkIjoxLCJpYXQiOjE3NzcwMzE2ODcsImV4cCI6MTc3NzExODA4NywiYXVkIjoiaW52ZW50b3J5LXVzZXJzIiwiaXNzIjoiaW52ZW50b3J5LXN5c3RlbSJ9.i7rzBWxTT0PQMsnaVFwkZahQCumvwfKSdLVwegQDVNs"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjb21wYW55LmNvbSIsIm5hbWUiOiJTeXN0ZW0gQWRtaW5pc3RyYXRvciIsInJvbGVfaWQiOjEsInJvbGVfbmFtZSI6InN1cGVyX2FkbWluIiwidGVuYW50X2lkIjoxLCJpYXQiOjE3NzcwMzE2ODcsImV4cCI6MTc3NzExODA4NywiYXVkIjoiaW52ZW50b3J5LXVzZXJzIiwiaXNzIjoiaW52ZW50b3J5LXN5c3RlbSJ9.i7rzBWxTT0PQMsnaVFwkZahQCumvwfKSdLVwegQDVNs"
+    }
+  },
+  "endpoints": {
+    "product_timeline": {
+      "method": "GET",
+      "url": "https://api.giftgala.in/api/timeline/{{barcode}}",
+      "parameters": {
+        "warehouse": "BLR_WH",
+        "dateFrom": "2026-01-01",
+        "dateTo": "2026-01-31",
+        "limit": 1000
+      }
+    },
+    "timeline_summary": {
+      "method": "GET",
+      "url": "https://api.giftgala.in/api/timeline",
+      "parameters": {
+        "groupBy": "product"
+      }
+    },
+    "warehouse_summary": {
+      "method": "GET",
+      "url": "https://api.giftgala.in/api/timeline",
+      "parameters": {
+        "groupBy": "warehouse"
+      }
+    }
+  },
+  "sample_response": {
+    "success": true,
+    "data": {
+      "product_code": "2005-999",
+      "warehouse_filter": "BLR_WH",
+      "timeline": [
+        {
+          "id": 2679,
+          "timestamp": "2026-02-07T07:24:54.000Z",
+          "type": "DAMAGE",
+          "product_name": "Baby Cloth Set (7 piece set) Blue",
+          "barcode": "2005-999",
+          "warehouse": "BLR_WH",
+          "quantity": 1,
+          "direction": "OUT",
+          "reference": "damage#85",
+          "balance_after": 5,
+          "description": "Reported 1 units as damaged"
+        }
+      ],
+      "summary": {
+        "total_entries": 12,
+        "total_in": 14,
+        "total_out": 9,
+        "current_stock": 5,
+        "breakdown": {
+          "opening": 0,
+          "bulk_upload": 0,
+          "dispatch": 2,
+          "damage": 5,
+          "recovery": 1,
+          "returns": 0,
+          "self_transfer_in": 0,
+          "self_transfer_out": 0
+        }
+      }
+    }
+  },
+  "n8n_http_request_config": {
+    "method": "GET",
+    "url": "https://api.giftgala.in/api/timeline/2005-999",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "httpHeaderAuth": {
+      "name": "Authorization",
+      "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjb21wYW55LmNvbSIsIm5hbWUiOiJTeXN0ZW0gQWRtaW5pc3RyYXRvciIsInJvbGVfaWQiOjEsInJvbGVfbmFtZSI6InN1cGVyX2FkbWluIiwidGVuYW50X2lkIjoxLCJpYXQiOjE3NzcwMzE2ODcsImV4cCI6MTc3NzExODA4NywiYXVkIjoiaW52ZW50b3J5LXVzZXJzIiwiaXNzIjoiaW52ZW50b3J5LXN5c3RlbSJ9.i7rzBWxTT0PQMsnaVFwkZahQCumvwfKSdLVwegQDVNs"
+    },
+    "sendQuery": true,
+    "queryParameters": {
+      "parameters": [
+        {
+          "name": "warehouse",
+          "value": "BLR_WH"
+        },
+        {
+          "name": "dateFrom", 
+          "value": "2026-01-01"
+        },
+        {
+          "name": "dateTo",
+          "value": "2026-01-31"
+        },
+        {
+          "name": "limit",
+          "value": "1000"
+        }
+      ]
+    },
+    "options": {}
+  }
+}

@@ -58,7 +58,7 @@ router.get('/', authenticateToken, (req, res) => {
     }
 });
 
-// POST /api/self-transfer - Create new transfer
+// POST /api/self-transfer - Create new transfer with proper isolation
 router.post('/', authenticateToken, (req, res) => {
     try {
         const {
@@ -105,187 +105,342 @@ router.post('/', authenticateToken, (req, res) => {
         
         const transferType = transferTypeMap[`${sourceType}_${destinationType}`] || 'W to W';
 
-        // Check if this is a store-based transfer (involves store)
+        // CRITICAL: Determine if this affects store systems
         const isStoreBased = destinationType === 'store' || sourceType === 'store';
+        const isWarehouseToWarehouse = sourceType === 'warehouse' && destinationType === 'warehouse';
 
-        // Create transfer record in self_transfer table
-        const insertSql = `
-            INSERT INTO self_transfer (
-                transfer_reference, transfer_type, source_location, destination_location,
-                remarks, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-        `;
+        console.log(`🔄 Processing ${transferType} transfer: ${sourceId} → ${destinationId}`);
+        console.log(`📊 Store-based: ${isStoreBased}, W to W: ${isWarehouseToWarehouse}`);
 
-        db.query(insertSql, [
-            transferRef, 
-            transferType, 
-            sourceId, 
-            destinationId,
-            notes || '',
-            'Completed'
-        ], (err, result) => {
+        // Start database transaction for data consistency
+        db.beginTransaction((err) => {
             if (err) {
-                console.error('Error creating transfer:', err);
+                console.error('Transaction start error:', err);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to create transfer',
+                    message: 'Failed to start transaction',
                     error: err.message
                 });
             }
 
-            // Insert transfer items into self_transfer_items
-            const itemInsertSql = `
-                INSERT INTO self_transfer_items (transfer_id, product_name, barcode, qty)
-                VALUES (?, ?, ?, ?)
+            // Create transfer record in self_transfer table
+            const insertSql = `
+                INSERT INTO self_transfer (
+                    transfer_reference, transfer_type, source_location, destination_location,
+                    remarks, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, NOW())
             `;
 
-            let itemsInserted = 0;
-            let hasErrors = false;
-            
-            if (items.length === 0) {
-                return res.json({
-                    success: true,
-                    message: 'Transfer created successfully',
-                    transferId: transferRef
-                });
-            }
+            db.query(insertSql, [
+                transferRef, 
+                transferType, 
+                sourceId, 
+                destinationId,
+                notes || '',
+                'Completed'
+            ], (err, result) => {
+                if (err) {
+                    console.error('Error creating transfer:', err);
+                    return db.rollback(() => {
+                        res.status(500).json({
+                            success: false,
+                            message: 'Failed to create transfer',
+                            error: err.message
+                        });
+                    });
+                }
 
-            items.forEach(item => {
-                // Extract product name and barcode from productId
-                const productParts = item.productId.split('|');
-                const productName = productParts[0]?.trim() || item.productId;
-                const barcode = productParts[2]?.trim() || item.productId;
+                const transferId = result.insertId;
+
+                // Insert transfer items into self_transfer_items
+                const itemInsertSql = `
+                    INSERT INTO self_transfer_items (transfer_id, product_name, barcode, qty)
+                    VALUES (?, ?, ?, ?)
+                `;
+
+                let itemsInserted = 0;
+                let hasErrors = false;
                 
-                db.query(itemInsertSql, [result.insertId, productName, barcode, item.transferQty], (err) => {
-                    if (err) {
-                        console.error('Error inserting item:', err);
-                        hasErrors = true;
-                        return;
-                    }
-                    itemsInserted++;
-
-                    // Only update store inventory for store-based transfers
-                    if (isStoreBased) {
-                        // Update store inventory when transferring to stores
-                        if (destinationType === 'store') {
-                            // Check if product exists in store inventory
-                            const checkProductSql = `SELECT id, stock FROM store_inventory WHERE barcode = ?`;
-                            db.query(checkProductSql, [barcode], (err, existingProduct) => {
-                                if (err) {
-                                    console.error('Error checking product existence:', err);
-                                    return;
-                                }
-
-                                if (existingProduct.length > 0) {
-                                    // Product exists, update stock
-                                    const updateDestSql = `
-                                        UPDATE store_inventory 
-                                        SET stock = stock + ?, last_updated = NOW()
-                                        WHERE barcode = ?
-                                    `;
-                                    db.query(updateDestSql, [item.transferQty, barcode], (err) => {
-                                        if (err) console.error('Error updating destination store inventory:', err);
-                                    });
-                                } else {
-                                    // Product doesn't exist, create it
-                                    // Get actual product details from dispatch_product table
-                                    const getProductSql = `
-                                        SELECT product_name, category_id 
-                                        FROM dispatch_product 
-                                        WHERE barcode = ?
-                                    `;
-                                    
-                                    db.query(getProductSql, [barcode], (err, productResult) => {
-                                        let actualProductName = productName;
-                                        let actualCategory = 'General';
-                                        
-                                        if (!err && productResult.length > 0) {
-                                            actualProductName = productResult[0].product_name || productName;
-                                            // Get category name if category_id exists
-                                            if (productResult[0].category_id) {
-                                                const getCategorySql = `SELECT name FROM product_categories WHERE id = ?`;
-                                                db.query(getCategorySql, [productResult[0].category_id], (err, catResult) => {
-                                                    if (!err && catResult.length > 0) {
-                                                        actualCategory = catResult[0].name;
-                                                    }
-                                                    createStoreInventoryRecord();
-                                                });
-                                                return;
-                                            }
-                                        }
-                                        createStoreInventoryRecord();
-                                        
-                                        function createStoreInventoryRecord() {
-                                            const createProductSql = `
-                                                INSERT INTO store_inventory (product_name, barcode, category, stock, price, gst_percentage, created_at, last_updated)
-                                                VALUES (?, ?, ?, ?, 0.00, 18.00, NOW(), NOW())
-                                            `;
-                                            db.query(createProductSql, [actualProductName, barcode, actualCategory, item.transferQty], (err) => {
-                                                if (err) console.error('Error creating product in store inventory:', err);
-                                            });
-                                        }
-                                    });
-                                }
+                if (items.length === 0) {
+                    return db.commit((err) => {
+                        if (err) {
+                            return db.rollback(() => {
+                                res.status(500).json({
+                                    success: false,
+                                    message: 'Transaction commit failed'
+                                });
                             });
                         }
-                        
-                        // Update store inventory when transferring from stores
-                        if (sourceType === 'store') {
-                            // Remove stock from source store
-                            const updateSourceSql = `
-                                UPDATE store_inventory 
-                                SET stock = GREATEST(0, stock - ?), last_updated = NOW()
-                                WHERE barcode = ?
-                            `;
-                            db.query(updateSourceSql, [item.transferQty, barcode], (err) => {
-                                if (err) console.error('Error updating source store inventory:', err);
-                            });
-                        }
-                    }
-
-                    // After all items inserted, create billing history ONLY for store-based transfers
-                    if (itemsInserted === items.length && !hasErrors) {
-                        if (isStoreBased) {
-                            // Create billing history entry only for store-based transfers
-                            const billingSql = `
-                                INSERT INTO bills (
-                                    invoice_number, bill_type, customer_name, customer_phone,
-                                    subtotal, grand_total, payment_mode, payment_status,
-                                    items, total_items, created_at
-                                ) VALUES (?, 'B2B', ?, 'INTERNAL', 0.00, 0.00, 'transfer', 'paid', ?, ?, NOW())
-                            `;
-                            
-                            const billingItems = JSON.stringify(items.map(item => {
-                                const productParts = item.productId.split('|');
-                                const productName = productParts[0]?.trim() || item.productId;
-                                const barcode = productParts[2]?.trim() || item.productId;
-                                return {
-                                    product_name: productName,
-                                    barcode: barcode,
-                                    quantity: item.transferQty,
-                                    price: 0,
-                                    total: 0
-                                };
-                            }));
-
-                            const customerName = `Store Transfer: ${sourceId} → ${destinationId}`;
-                            
-                            db.query(billingSql, [transferRef, customerName, billingItems, items.length], (err) => {
-                                if (err) console.error('Error creating billing history:', err);
-                            });
-                        }
-
                         res.json({
                             success: true,
                             message: 'Transfer created successfully',
                             transferId: transferRef,
-                            isStoreBased: isStoreBased,
-                            billingCreated: isStoreBased
+                            transferType: transferType,
+                            affectsStoreSystem: false
                         });
-                    }
+                    });
+                }
+
+                items.forEach(item => {
+                    // Extract product name and barcode from productId
+                    const productParts = item.productId.split('|');
+                    const productName = productParts[0]?.trim() || item.productId;
+                    const barcode = productParts[2]?.trim() || item.productId;
+                    
+                    db.query(itemInsertSql, [transferId, productName, barcode, item.transferQty], (err) => {
+                        if (err) {
+                            console.error('Error inserting item:', err);
+                            hasErrors = true;
+                            return;
+                        }
+                        itemsInserted++;
+
+                        // CRITICAL LOGIC: Only process store systems for store-based transfers
+                        if (isStoreBased && !isWarehouseToWarehouse) {
+                            console.log(`📋 Processing store documentation for ${transferType} transfer`);
+                            processStoreDocumentation(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, item, productName, barcode);
+                        } else {
+                            console.log(`🏭 W to W transfer - skipping store system updates`);
+                        }
+
+                        // After all items processed
+                        if (itemsInserted === items.length && !hasErrors) {
+                            // Commit transaction
+                            db.commit((err) => {
+                                if (err) {
+                                    console.error('Transaction commit error:', err);
+                                    return db.rollback(() => {
+                                        res.status(500).json({
+                                            success: false,
+                                            message: 'Transaction commit failed'
+                                        });
+                                    });
+                                }
+
+                                // Return comprehensive response
+                                res.json({
+                                    success: true,
+                                    message: `${transferType} transfer completed successfully`,
+                                    transferId: transferRef,
+                                    transferType: transferType,
+                                    affectsStoreSystem: isStoreBased && !isWarehouseToWarehouse,
+                                    documentation: {
+                                        transfer_record: true,
+                                        items_recorded: itemsInserted,
+                                        store_inventory_updated: isStoreBased && !isWarehouseToWarehouse,
+                                        billing_created: isStoreBased && !isWarehouseToWarehouse,
+                                        timeline_created: isStoreBased && !isWarehouseToWarehouse
+                                    }
+                                });
+                            });
+                        }
+                    });
                 });
             });
         });
+
+        // Helper function to process store documentation
+        function processStoreDocumentation(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, item, productName, barcode) {
+            // 1. STORE INVENTORY MANAGEMENT
+            if (destinationType === 'store') {
+                updateDestinationStoreInventory(barcode, productName, item.transferQty);
+            }
+            
+            if (sourceType === 'store') {
+                updateSourceStoreInventory(barcode, item.transferQty);
+            }
+
+            // 2. STORE TIMELINE DOCUMENTATION
+            createStoreTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
+
+            // 3. STORE BILLING DOCUMENTATION
+            createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items);
+        }
+
+        function updateDestinationStoreInventory(barcode, productName, quantity) {
+            const checkProductSql = `SELECT id, stock, price FROM store_inventory WHERE barcode = ?`;
+            db.query(checkProductSql, [barcode], (err, existingProduct) => {
+                if (err) {
+                    console.error('Error checking product existence:', err);
+                    return;
+                }
+
+                if (existingProduct.length > 0) {
+                    // Product exists - UPDATE ONLY STOCK
+                    const updateDestSql = `
+                        UPDATE store_inventory 
+                        SET stock = stock + ?, 
+                            last_updated = NOW()
+                        WHERE barcode = ?
+                    `;
+                    db.query(updateDestSql, [quantity, barcode], (err) => {
+                        if (err) console.error('Error updating destination store inventory:', err);
+                        else console.log(`✅ Updated stock for existing product ${barcode}: +${quantity}`);
+                    });
+                } else {
+                    // Product doesn't exist - CREATE NEW RECORD with complete details
+                    createNewStoreInventoryProduct(barcode, productName, quantity);
+                }
+            });
+        }
+
+        function createNewStoreInventoryProduct(barcode, productName, quantity) {
+            const getProductSql = `
+                SELECT dp.product_name, dp.category_id, pc.name as category_name,
+                       sb.price, sb.gst_percentage
+                FROM dispatch_product dp
+                LEFT JOIN product_categories pc ON dp.category_id = pc.id
+                LEFT JOIN stock_batches sb ON dp.barcode = sb.barcode
+                WHERE dp.barcode = ?
+                LIMIT 1
+            `;
+            
+            db.query(getProductSql, [barcode], (err, productResult) => {
+                let actualProductName = productName;
+                let actualCategory = 'General';
+                let actualPrice = 0.00;
+                let actualGST = 18.00;
+                
+                if (!err && productResult.length > 0) {
+                    const product = productResult[0];
+                    actualProductName = product.product_name || productName;
+                    actualCategory = product.category_name || 'General';
+                    actualPrice = parseFloat(product.price) || 0.00;
+                    actualGST = parseFloat(product.gst_percentage) || 18.00;
+                }
+                
+                // CREATE complete store inventory record
+                const createProductSql = `
+                    INSERT INTO store_inventory (
+                        product_name, barcode, category, stock, price, 
+                        gst_percentage, created_at, last_updated
+                    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                `;
+                
+                db.query(createProductSql, [
+                    actualProductName, barcode, actualCategory, 
+                    quantity, actualPrice, actualGST
+                ], (err) => {
+                    if (err) console.error('Error creating product in store inventory:', err);
+                    else console.log(`✅ Created new product in store inventory: ${actualProductName} (${barcode}) - Stock: ${quantity}`);
+                });
+            });
+        }
+
+        function updateSourceStoreInventory(barcode, quantity) {
+            const updateSourceSql = `
+                UPDATE store_inventory 
+                SET stock = GREATEST(0, stock - ?), 
+                    last_updated = NOW()
+                WHERE barcode = ?
+            `;
+            db.query(updateSourceSql, [quantity, barcode], (err) => {
+                if (err) console.error('Error updating source store inventory:', err);
+                else console.log(`✅ Reduced stock from source store: -${quantity}`);
+            });
+        }
+
+        function createStoreTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, quantity) {
+            const timelineSql = `
+                INSERT INTO inventory_ledger_base (
+                    event_time, movement_type, barcode, product_name, 
+                    location_code, qty, direction, reference
+                ) VALUES (NOW(), 'SELF_TRANSFER', ?, ?, ?, ?, ?, ?)
+            `;
+            
+            // Create timeline entries only for store locations
+            if (destinationType === 'store') {
+                // IN entry for destination store
+                db.query(timelineSql, [
+                    barcode, productName, destinationId, 
+                    quantity, 'IN', transferRef
+                ], (err) => {
+                    if (err) console.error('Error creating destination timeline entry:', err);
+                    else console.log(`✅ Created timeline IN entry for store ${destinationId}`);
+                });
+            }
+            
+            if (sourceType === 'store') {
+                // OUT entry for source store
+                db.query(timelineSql, [
+                    barcode, productName, sourceId, 
+                    quantity, 'OUT', transferRef
+                ], (err) => {
+                    if (err) console.error('Error creating source timeline entry:', err);
+                    else console.log(`✅ Created timeline OUT entry for store ${sourceId}`);
+                });
+            }
+        }
+
+        function createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items) {
+            // Create internal operation documentation using B2B bill type
+            const billingSql = `
+                INSERT INTO bills (
+                    invoice_number, 
+                    bill_type, 
+                    customer_name, 
+                    customer_phone,
+                    subtotal, 
+                    grand_total, 
+                    payment_mode, 
+                    payment_status,
+                    items, 
+                    total_items, 
+                    created_at
+                ) VALUES (?, 'B2B', ?, 'INTERNAL-OP', 0.00, 0.00, 'internal_transfer', 'completed', ?, ?, NOW())
+            `;
+            
+            // Create proper internal operation documentation
+            const getLocationDisplayName = (locationCode, locationType) => {
+                const locationMap = {
+                    'BLR_WH': 'Bangalore Warehouse',
+                    'GGM_WH': 'Gurgaon Warehouse',
+                    'DEL_WH': 'Delhi Warehouse',
+                    'MUM_WH': 'Mumbai Warehouse',
+                    'STORE_001': 'Main Store Delhi',
+                    'STORE_002': 'Store Mumbai',
+                    'STORE_003': 'Store Bangalore'
+                };
+                
+                return locationMap[locationCode] || `${locationType.toUpperCase()} ${locationCode}`;
+            };
+            
+            // Internal operation name (not customer name)
+            const operationName = `Internal ${transferType}: ${getLocationDisplayName(sourceId, sourceType)} → ${getLocationDisplayName(destinationId, destinationType)}`;
+            
+            // Create detailed internal operation items
+            const operationItems = items.map(item => {
+                const productParts = item.productId.split('|');
+                const productName = productParts[0]?.trim() || item.productId;
+                const barcode = productParts[2]?.trim() || item.productId;
+                
+                return {
+                    product_name: productName,
+                    barcode: barcode,
+                    quantity: item.transferQty,
+                    unit_price: 0.00,  // No monetary value for internal transfers
+                    total: 0.00,
+                    operation_details: {
+                        type: transferType,
+                        source: sourceId,
+                        destination: destinationId,
+                        reference: transferRef,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+            });
+            
+            db.query(billingSql, [
+                transferRef,
+                operationName,
+                JSON.stringify(operationItems),
+                items.length
+            ], (err) => {
+                if (err) console.error('Error creating internal operation documentation:', err);
+                else console.log(`✅ Created internal operation documentation: ${transferRef}`);
+            });
+        }
+
     } catch (error) {
         console.error('Transfer creation error:', error);
         res.status(500).json({
@@ -304,14 +459,19 @@ router.get('/:id', authenticateToken, (req, res) => {
         const sql = `
             SELECT 
                 t.*,
-                GROUP_CONCAT(
-                    JSON_OBJECT(
-                        'productId', sti.product_id,
-                        'quantity', sti.quantity
-                    )
+                JSON_ARRAYAGG(
+                    CASE 
+                        WHEN sti.id IS NOT NULL THEN
+                            JSON_OBJECT(
+                                'product_name', sti.product_name,
+                                'barcode', sti.barcode,
+                                'quantity', sti.qty
+                            )
+                        ELSE NULL
+                    END
                 ) as items
             FROM self_transfer t
-            LEFT JOIN self_transfer_items sti ON t.transfer_reference = sti.transfer_reference
+            LEFT JOIN self_transfer_items sti ON t.id = sti.transfer_id
             WHERE t.transfer_reference = ?
             GROUP BY t.id
         `;
@@ -333,9 +493,48 @@ router.get('/:id', authenticateToken, (req, res) => {
                 });
             }
 
+            const transfer = results[0];
+            
+            // Handle items array - filter out null values and ensure it's an array
+            if (transfer.items) {
+                if (typeof transfer.items === 'string') {
+                    try {
+                        transfer.items = JSON.parse(transfer.items);
+                    } catch (e) {
+                        console.error('Error parsing items JSON:', e);
+                        transfer.items = [];
+                    }
+                }
+                
+                // Filter out null values from JSON_ARRAYAGG
+                if (Array.isArray(transfer.items)) {
+                    transfer.items = transfer.items.filter(item => item !== null);
+                } else {
+                    transfer.items = [];
+                }
+            } else {
+                transfer.items = [];
+            }
+
+            // Add location display names
+            const locationMap = {
+                'BLR_WH': 'Bangalore Warehouse',
+                'GGM_WH': 'Gurgaon Warehouse', 
+                'DEL_WH': 'Delhi Warehouse',
+                'MUM_WH': 'Mumbai Warehouse',
+                'STORE_001': 'Main Store Delhi',
+                'STORE_002': 'Store Mumbai',
+                'STORE_003': 'Store Bangalore'
+            };
+
+            transfer.source_display = locationMap[transfer.source_location] || transfer.source_location;
+            transfer.destination_display = locationMap[transfer.destination_location] || transfer.destination_location;
+
             res.json({
                 success: true,
-                transfer: results[0]
+                data: {
+                    transfer: transfer
+                }
             });
         });
     } catch (error) {
