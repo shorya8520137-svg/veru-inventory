@@ -575,14 +575,14 @@ export default function ProductTracker({
                             ) : (
                                 <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
                                     {[
-                                        { label:'Opening',      value: summary.opening,        color:'#94A3B8' },
-                                        { label:'Bulk Upload',  value: summary.bulkUpload,     color:'#94A3B8' },
-                                        { label:'Dispatch',     value: `-${summary.dispatch}`,  color:'#F87171' },
-                                        { label:'Damaged',      value: `-${summary.damage}`,    color:'#F87171' },
-                                        { label:'Returns',      value: `+${summary.returns}`,   color:'#4ADE80' },
-                                        { label:'Recovery',     value: `+${summary.recovery}`,  color:'#4ADE80' },
-                                        { label:'Transfer In',  value: `+${summary.selfTransferIn}`,  color:'#4ADE80' },
-                                        { label:'Transfer Out', value: `-${summary.selfTransferOut}`, color:'#F87171' },
+                                        { label:'Opening',      value: summary.opening || 0,        color:'#94A3B8' },
+                                        { label:'Bulk Upload',  value: summary.bulkUpload || 0,     color:'#94A3B8' },
+                                        { label:'Dispatch',     value: summary.dispatch ? `-${summary.dispatch}` : '0',  color:'#F87171' },
+                                        { label:'Damaged',      value: summary.damage ? `-${summary.damage}` : '0',    color:'#F87171' },
+                                        { label:'Returns',      value: summary.returns ? `+${summary.returns}` : '0',   color:'#4ADE80' },
+                                        { label:'Recovery',     value: summary.recovery ? `+${summary.recovery}` : '0',  color:'#4ADE80' },
+                                        { label:'Transfer In',  value: summary.selfTransferIn ? `+${summary.selfTransferIn}` : '0',  color:'#4ADE80' },
+                                        { label:'Transfer Out', value: summary.selfTransferOut ? `-${summary.selfTransferOut}` : '0', color:'#F87171' },
                                     ].map(r => (
                                         <div key={r.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                                             <span style={{ fontSize:11, color:'#475569' }}>{r.label}</span>
