@@ -250,7 +250,7 @@ router.post('/', authenticateToken, (req, res) => {
                 updateSourceStoreInventory(barcode, item.transferQty);
             }
 
-            // 2. TIMELINE DOCUMENTATION (for all locations)
+            // 2. WAREHOUSE TIMELINE DOCUMENTATION (only for warehouse transfers)
             createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
 
             // 3. STORE BILLING DOCUMENTATION
@@ -348,24 +348,37 @@ router.post('/', authenticateToken, (req, res) => {
                 ) VALUES (NOW(), 'SELF_TRANSFER', ?, ?, ?, ?, ?, ?)
             `;
             
-            // Create timeline entries for ALL locations (warehouse and store)
-            // IN entry for destination (warehouse or store)
-            db.query(timelineSql, [
-                barcode, productName, destinationId, 
-                quantity, 'IN', transferRef
-            ], (err) => {
-                if (err) console.error('Error creating destination timeline entry:', err);
-                else console.log(`✅ Created timeline IN entry for ${destinationType} ${destinationId}`);
-            });
+            // SMART TIMELINE LOGIC:
+            // Only create timeline entries for warehouse locations
+            // S to S transfers should not appear in warehouse timeline
             
-            // OUT entry for source (warehouse or store)
-            db.query(timelineSql, [
-                barcode, productName, sourceId, 
-                quantity, 'OUT', transferRef
-            ], (err) => {
-                if (err) console.error('Error creating source timeline entry:', err);
-                else console.log(`✅ Created timeline OUT entry for ${sourceType} ${sourceId}`);
-            });
+            // IN entry for destination (only if it's a warehouse)
+            if (destinationType === 'warehouse') {
+                db.query(timelineSql, [
+                    barcode, productName, destinationId, 
+                    quantity, 'IN', transferRef
+                ], (err) => {
+                    if (err) console.error('Error creating destination timeline entry:', err);
+                    else console.log(`✅ Created timeline IN entry for warehouse ${destinationId}`);
+                });
+            }
+            
+            // OUT entry for source (only if it's a warehouse)
+            if (sourceType === 'warehouse') {
+                db.query(timelineSql, [
+                    barcode, productName, sourceId, 
+                    quantity, 'OUT', transferRef
+                ], (err) => {
+                    if (err) console.error('Error creating source timeline entry:', err);
+                    else console.log(`✅ Created timeline OUT entry for warehouse ${sourceId}`);
+                });
+            }
+            
+            // Result:
+            // W to W: Both entries created ✅
+            // W to S: Only warehouse OUT entry ✅
+            // S to W: Only warehouse IN entry ✅
+            // S to S: No entries (correct!) ✅
         }
 
         function createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items) {
