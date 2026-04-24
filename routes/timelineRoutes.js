@@ -16,33 +16,30 @@ router.get('/', authenticateToken, (req, res) => {
         let sql = `
             SELECT 
                 id,
-                entityType,
-                entityId,
-                eventType,
-                source,
+                awb,
+                customer_name,
+                address,
+                payment_mode,
+                amount,
+                origin,
                 destination,
-                quantity,
-                unit,
-                stockBefore,
-                stockAfter,
-                notes,
-                transferId,
-                isInitialTransfer,
+                courier_partner,
                 status,
+                location,
                 created_at as timestamp
-            FROM timeline_events
+            FROM tracking_history
             WHERE 1=1
         `;
 
         const params = [];
 
-        if (entityType && entityId) {
-            sql += ` AND entityType = ? AND entityId = ?`;
-            params.push(entityType, entityId);
+        if (entityId) {
+            sql += ` AND (awb LIKE ? OR customer_name LIKE ?)`;
+            params.push(`%${entityId}%`, `%${entityId}%`);
         }
 
         if (type && type !== 'all') {
-            sql += ` AND eventType = ?`;
+            sql += ` AND status = ?`;
             params.push(type);
         }
 
@@ -144,30 +141,23 @@ router.get('/:barcode', authenticateToken, (req, res) => {
         let sql = `
             SELECT 
                 id,
-                entityType,
-                entityId,
-                eventType,
-                source,
+                awb,
+                customer_name,
+                address,
+                payment_mode,
+                amount,
+                origin,
                 destination,
-                quantity,
-                unit,
-                stockBefore,
-                stockAfter,
-                notes,
-                transferId,
-                isInitialTransfer,
+                courier_partner,
                 status,
+                location,
                 created_at as timestamp
-            FROM timeline_events
-            WHERE entityId = ?
+            FROM tracking_history
+            WHERE awb LIKE ? OR customer_name LIKE ?
         `;
 
-        const params = [barcode];
-
-        if (warehouse) {
-            sql += ` AND (source = ? OR destination = ?)`;
-            params.push(warehouse, warehouse);
-        }
+        const searchTerm = `%${barcode}%`;
+        const params = [searchTerm, searchTerm];
 
         if (dateFrom) {
             sql += ` AND created_at >= ?`;
