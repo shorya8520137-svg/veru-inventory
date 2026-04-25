@@ -104,8 +104,9 @@ class ApiKeysController {
                 });
             }
 
-            // Generate API key before the database operations
-            const apiKey = generateApiKey();
+            // Generate JWT token instead of API key
+            const { generateToken } = require('../middleware/auth');
+            const jwtToken = generateToken(req.user);
 
             // Check if user already has a key with this name
             db.query('SELECT id FROM api_keys WHERE user_id = ? AND name = ?', [userId, name.trim()], (err, existing) => {
@@ -136,7 +137,7 @@ class ApiKeysController {
                     userId,
                     name.trim(),
                     description?.trim() || null,
-                    apiKey,
+                    jwtToken,
                     rate_limit_per_hour,
                     true
                 ], (err, result) => {
@@ -151,11 +152,12 @@ class ApiKeysController {
 
                     res.status(201).json({
                         success: true,
-                        message: 'API key created successfully',
+                        message: 'JWT token created successfully',
                         data: {
                             id: result.insertId,
                             name: name.trim(),
-                            api_key: apiKey // Only return the key once during creation
+                            api_key: jwtToken, // Return JWT token
+                            key: jwtToken // Also return as 'key' for compatibility
                         }
                     });
                 });
