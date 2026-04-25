@@ -12,6 +12,12 @@ const apiKeysController = require('../controllers/apiKeysController');
 
 // Middleware to support both JWT and API Key authentication
 const authenticateRequest = (req, res, next) => {
+    console.log('🔍 authenticateRequest middleware called');
+    console.log('Headers:', {
+        'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing',
+        'authorization': req.headers['authorization'] ? 'present' : 'missing'
+    });
+    
     const apiKey = req.headers['x-api-key'];
     const authHeader = req.headers['authorization'];
     
@@ -38,6 +44,7 @@ const authenticateRequest = (req, res, next) => {
     }
     
     // No authentication provided
+    console.log('❌ No authentication provided');
     return res.status(401).json({
         success: false,
         message: 'Authentication required. Provide either X-API-Key header or Authorization Bearer token'
