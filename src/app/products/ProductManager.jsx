@@ -40,6 +40,7 @@ const ProductManager = () => {
     const [showTransferForm, setShowTransferForm] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
     const [importProgress, setImportProgress] = useState(null);
     const [currentImportItem, setCurrentImportItem] = useState(null);
 
@@ -62,6 +63,7 @@ const ProductManager = () => {
     const handleSearchChange = async (e) => {
         const query = e.target.value;
         setSearchTerm(query);
+        setSelectedSuggestionIndex(-1); // Reset selection on new search
         if (!query.trim()) { setSuggestions([]); setShowSuggestions(false); return; }
         if (query.length >= 2) {
             try {
@@ -78,7 +80,34 @@ const ProductManager = () => {
         } else { setSuggestions([]); setShowSuggestions(false); }
     };
 
-    const selectSuggestion = (p) => { setSearchTerm(p.product_name); setSuggestions([]); setShowSuggestions(false); };
+    const handleKeyDown = (e) => {
+        if (!showSuggestions || suggestions.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setSelectedSuggestionIndex(prev => 
+                    prev < suggestions.length - 1 ? prev + 1 : prev
+                );
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.length) {
+                    selectSuggestion(suggestions[selectedSuggestionIndex]);
+                }
+                break;
+            case 'Escape':
+                setShowSuggestions(false);
+                setSelectedSuggestionIndex(-1);
+                break;
+        }
+    };
+
+    const selectSuggestion = (p) => { setSearchTerm(p.product_name); setSuggestions([]); setShowSuggestions(false); setSelectedSuggestionIndex(-1); };
 
     const showNotification = (message, type = 'success') => {
         setNotification({ message, type });
@@ -250,6 +279,25 @@ const ProductManager = () => {
     };
     return (
         <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"24px 24px 0 24px",display:"flex",flexDirection:"column",minHeight:0}}>
+            
+            {/* Custom CSS for dropdown options */}
+            <style jsx>{`
+                select option {
+                    background: #ffffff !important;
+                    color: #374151 !important;
+                    padding: 8px 12px !important;
+                    font-weight: 400 !important;
+                }
+                select option:checked,
+                select option:hover {
+                    background: #F3F4F6 !important;
+                    color: #111827 !important;
+                    font-weight: 500 !important;
+                }
+                select:focus option:checked {
+                    background: linear-gradient(0deg, #E5E7EB 0%, #E5E7EB 100%) !important;
+                }
+            `}</style>
 
             {/* Notification */}
             {notification&&(<div style={{position:"fixed",top:20,right:20,zIndex:9999,display:"flex",alignItems:"center",gap:10,padding:"12px 20px",borderRadius:12,background:notification.type==="success"?"#DCFCE7":"#FEE2E2",color:notification.type==="success"?"#166534":"#991B1B",boxShadow:"0 4px 20px rgba(0,0,0,0.1)"}}>{notification.type==="success"?<CheckCircle size={18}/>:<AlertCircle size={18}/>}<span style={{fontSize:14}}>{notification.message}</span><button onClick={()=>setNotification(null)} style={{background:"none",border:"none",cursor:"pointer",marginLeft:8}}><X size={14}/></button></div>)}
@@ -303,8 +351,8 @@ const ProductManager = () => {
                 <div style={{flex:1}}/>
                 <div style={{position:"relative"}}>
                     <Search size={15} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"#9CA3AF"}}/>
-                    <input type="text" placeholder="Search products..." value={searchTerm} onChange={handleSearchChange} onFocus={()=>suggestions.length>0&&setShowSuggestions(true)} onBlur={()=>setTimeout(()=>setShowSuggestions(false),200)} style={{paddingLeft:38,paddingRight:16,paddingTop:8,paddingBottom:8,borderRadius:20,border:"1.5px solid #E5E7EB",background:"#fff",fontSize:13,color:"#374151",outline:"none",width:220,fontFamily:"inherit"}}/>
-                    {showSuggestions&&suggestions.length>0&&(<div style={{position:"absolute",top:"110%",left:0,right:0,background:"#fff",borderRadius:12,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,overflow:"hidden"}}>{suggestions.map((p,i)=>(<div key={p.p_id||i} onClick={()=>selectSuggestion(p)} style={{padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#374151",borderBottom:"1px solid #F3F4F6"}} onMouseEnter={e=>e.currentTarget.style.background="#F9FAFB"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}><div style={{fontWeight:500}}>{p.product_name}</div><div style={{fontSize:11,color:"#9CA3AF"}}>Barcode: {p.barcode}</div></div>))}</div>)}
+                    <input type="text" placeholder="Search products..." value={searchTerm} onChange={handleSearchChange} onKeyDown={handleKeyDown} onFocus={()=>suggestions.length>0&&setShowSuggestions(true)} onBlur={()=>setTimeout(()=>setShowSuggestions(false),200)} style={{paddingLeft:38,paddingRight:16,paddingTop:8,paddingBottom:8,borderRadius:20,border:"1.5px solid #E5E7EB",background:"#fff",fontSize:13,color:"#374151",outline:"none",width:220,fontFamily:"inherit"}}/>
+                    {showSuggestions&&suggestions.length>0&&(<div style={{position:"absolute",top:"110%",left:0,right:0,background:"#fff",borderRadius:12,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,overflow:"hidden",maxHeight:"300px",overflowY:"auto"}}>{suggestions.map((p,i)=>(<div key={p.p_id||i} onClick={()=>selectSuggestion(p)} onMouseEnter={()=>setSelectedSuggestionIndex(i)} style={{padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#374151",borderBottom:i<suggestions.length-1?"1px solid #F3F4F6":"none",background:selectedSuggestionIndex===i?"#F3F4F6":"#fff",transition:"background 0.15s"}}><div style={{fontWeight:500}}>{p.product_name}</div><div style={{fontSize:11,color:"#9CA3AF"}}>Barcode: {p.barcode}</div></div>))}</div>)}
                 </div>
                 {hasPermission(PERMISSIONS.PRODUCTS_BULK_IMPORT)&&(<button onClick={()=>setShowBulkImport(true)} style={{background:"none",border:"none",fontSize:13,color:"#6B7280",cursor:"pointer",padding:"6px 12px",borderRadius:8,fontFamily:"inherit"}}>Bulk Import</button>)}
                 <button onClick={()=>setShowCategoryForm(true)} style={{background:"none",border:"none",fontSize:13,color:"#6B7280",cursor:"pointer",padding:"6px 12px",borderRadius:8,fontFamily:"inherit"}}>+ Add Category</button>
