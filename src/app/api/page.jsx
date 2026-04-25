@@ -9,6 +9,7 @@ const ApiPage = () => {
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newKeyName, setNewKeyName] = useState('');
+    const [tokenType, setTokenType] = useState('jwt'); // 'jwt' or 'api_key'
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [generatedKey, setGeneratedKey] = useState('');
@@ -87,7 +88,8 @@ const ApiPage = () => {
                 },
                 body: JSON.stringify({
                     name: newKeyName,
-                    description: 'API access token'
+                    description: 'API access token',
+                    token_type: tokenType // Send token type to backend
                 })
             });
 
@@ -795,6 +797,23 @@ const ApiPage = () => {
                 <div className={styles.modal}>
                     <div className={styles.modalContent}>
                         <h3>Generate API Token</h3>
+                        
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                            Token Type
+                        </label>
+                        <select
+                            value={tokenType}
+                            onChange={(e) => setTokenType(e.target.value)}
+                            className={styles.input}
+                            style={{ marginBottom: '15px' }}
+                        >
+                            <option value="jwt">JWT Token (for Timeline API)</option>
+                            <option value="api_key">API Key (for other APIs)</option>
+                        </select>
+                        
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                            Token Name
+                        </label>
                         <input
                             type="text"
                             value={newKeyName}

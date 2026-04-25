@@ -88,7 +88,7 @@ class ApiKeysController {
     async createApiKey(req, res) {
         try {
             const userId = req.user?.id;
-            const { name, description, rate_limit_per_hour = 1000 } = req.body;
+            const { name, description, token_type = 'api_key', rate_limit_per_hour = 1000 } = req.body;
 
             if (!userId) {
                 return res.status(401).json({
@@ -104,9 +104,16 @@ class ApiKeysController {
                 });
             }
 
-            // Generate JWT token instead of API key
-            const { generateToken } = require('../middleware/auth');
-            const jwtToken = generateToken(req.user);
+            // Generate token based on type
+            let token;
+            if (token_type === 'jwt') {
+                // Generate JWT token
+                const { generateToken } = require('../middleware/auth');
+                token = generateToken(req.user);
+            } else {
+                // Generate API key
+                token = generateApiKey();
+            }
 
             // Check if user already has a key with this name
             db.query('SELECT id FROM api_keys WHERE user_id = ? AND name = ?', [userId, name.trim()], (err, existing) => {
@@ -137,7 +144,7 @@ class ApiKeysController {
                     userId,
                     name.trim(),
                     description?.trim() || null,
-                    jwtToken,
+                    token,
                     rate_limit_per_hour,
                     true
                 ], (err, result) => {
@@ -152,12 +159,13 @@ class ApiKeysController {
 
                     res.status(201).json({
                         success: true,
-                        message: 'JWT token created successfully',
+                        message: token_type === 'jwt' ? 'JWT token created successfully' : 'API key created successfully',
                         data: {
                             id: result.insertId,
                             name: name.trim(),
-                            api_key: jwtToken, // Return JWT token
-                            key: jwtToken // Also return as 'key' for compatibility
+                            api_key: token,
+                            key: token,
+                            token_type: token_type
                         }
                     });
                 });
