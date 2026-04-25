@@ -352,11 +352,7 @@ router.post('/', authenticateToken, (req, res) => {
             console.log(`🔄 Creating timeline entries for ${transferType}: ${sourceId} → ${destinationId}`);
             console.log(`📊 Source: ${sourceType}, Destination: ${destinationType}`);
             
-            // SMART TIMELINE LOGIC:
-            // Only create timeline entries for warehouse locations
-            // S to S transfers should not appear in warehouse timeline
-            
-            // OUT entry for source (only if it's a warehouse)
+            // CRITICAL FIX: Update actual stock tables for warehouse transfers
             if (sourceType === 'warehouse') {
                 console.log(`📤 Creating OUT entry for source warehouse: ${sourceId}`);
                 db.query(timelineSql, [
@@ -367,11 +363,13 @@ router.post('/', authenticateToken, (req, res) => {
                         console.error('❌ Error creating source timeline entry:', err);
                     } else {
                         console.log(`✅ Created timeline OUT entry for warehouse ${sourceId} - Insert ID: ${result.insertId}`);
+                        
+                        // CRITICAL: Update stock_batches table for source warehouse
+                        updateWarehouseStock(sourceId, barcode, -quantity, 'OUT', `Self-transfer to ${destinationId}`);
                     }
                 });
             }
             
-            // IN entry for destination (only if it's a warehouse)
             if (destinationType === 'warehouse') {
                 console.log(`📥 Creating IN entry for destination warehouse: ${destinationId}`);
                 db.query(timelineSql, [
@@ -382,14 +380,93 @@ router.post('/', authenticateToken, (req, res) => {
                         console.error('❌ Error creating destination timeline entry:', err);
                     } else {
                         console.log(`✅ Created timeline IN entry for warehouse ${destinationId} - Insert ID: ${result.insertId}`);
+                        
+                        // CRITICAL: Update stock_batches table for destination warehouse
+                        updateWarehouseStock(destinationId, barcode, quantity, 'IN', `Self-transfer from ${sourceId}`);
                     }
                 });
             }
             
-            // Summary log
             console.log(`📋 Timeline entries summary for ${transferType}:`);
-            console.log(`   - Source (${sourceType}): ${sourceType === 'warehouse' ? 'OUT entry created' : 'No entry (store)'}`);
-            console.log(`   - Destination (${destinationType}): ${destinationType === 'warehouse' ? 'IN entry created' : 'No entry (store)'}`);
+            console.log(`   - Source (${sourceType}): ${sourceType === 'warehouse' ? 'OUT entry created + stock updated' : 'No entry (store)'}`);
+            console.log(`   - Destination (${destinationType}): ${destinationType === 'warehouse' ? 'IN entry created + stock updated' : 'No entry (store)'}`);
+        }
+
+        // CRITICAL NEW FUNCTION: Update warehouse stock in stock_batches table
+        function updateWarehouseStock(warehouseCode, barcode, quantityChange, direction, notes) {
+            console.log(`🔄 Updating warehouse stock: ${warehouseCode}, ${barcode}, ${quantityChange}`);
+            
+            if (direction === 'OUT') {
+                // Reduce stock from source warehouse
+                const reduceStockSql = `
+                    UPDATE stock_batches 
+                    SET qty_available = GREATEST(0, qty_available - ?)
+                    WHERE warehouse = ? AND barcode = ? AND status = 'active'
+                `;
+                
+                db.query(reduceStockSql, [Math.abs(quantityChange), warehouseCode, barcode], (err, result) => {
+                    if (err) {
+                        console.error(`❌ Error reducing stock from ${warehouseCode}:`, err);
+                    } else {
+                        console.log(`✅ Reduced stock from ${warehouseCode}: ${barcode} -${Math.abs(quantityChange)} (${result.affectedRows} batches updated)`);
+                    }
+                });
+            } else if (direction === 'IN') {
+                // Check if product exists in destination warehouse
+                const checkStockSql = `
+                    SELECT id, qty_available FROM stock_batches 
+                    WHERE warehouse = ? AND barcode = ? AND status = 'active'
+                    LIMIT 1
+                `;
+                
+                db.query(checkStockSql, [warehouseCode, barcode], (err, existing) => {
+                    if (err) {
+                        console.error(`❌ Error checking stock in ${warehouseCode}:`, err);
+                        return;
+                    }
+                    
+                    if (existing.length > 0) {
+                        // Product exists - update quantity
+                        const updateStockSql = `
+                            UPDATE stock_batches 
+                            SET qty_available = qty_available + ?
+                            WHERE id = ?
+                        `;
+                        
+                        db.query(updateStockSql, [quantityChange, existing[0].id], (err, result) => {
+                            if (err) {
+                                console.error(`❌ Error updating stock in ${warehouseCode}:`, err);
+                            } else {
+                                console.log(`✅ Updated stock in ${warehouseCode}: ${barcode} +${quantityChange} (new total: ${existing[0].qty_available + quantityChange})`);
+                            }
+                        });
+                    } else {
+                        // Product doesn't exist - create new batch
+                        const createBatchSql = `
+                            INSERT INTO stock_batches (
+                                barcode, product_name, warehouse, qty_available, 
+                                price, gst_percentage, status, created_at
+                            ) VALUES (?, ?, ?, ?, 0.00, 18.00, 'active', NOW())
+                        `;
+                        
+                        // Get product name from dispatch_product table
+                        const getProductSql = `SELECT product_name FROM dispatch_product WHERE barcode = ? LIMIT 1`;
+                        db.query(getProductSql, [barcode], (err, productResult) => {
+                            const productName = (productResult && productResult.length > 0) 
+                                ? productResult[0].product_name 
+                                : `Product ${barcode}`;
+                            
+                            db.query(createBatchSql, [barcode, productName, warehouseCode, quantityChange], (err, result) => {
+                                if (err) {
+                                    console.error(`❌ Error creating new batch in ${warehouseCode}:`, err);
+                                } else {
+                                    console.log(`✅ Created new batch in ${warehouseCode}: ${productName} (${barcode}) qty: ${quantityChange}`);
+                                }
+                            });
+                        });
+                    }
+                });
+            }
         }
 
         function createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items) {
