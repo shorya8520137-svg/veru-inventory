@@ -63,9 +63,9 @@ export default function ProductTracker({
     const [selectedDispatch, setSelectedDispatch] = useState(null);
     const [dispatchLoading, setDispatchLoading] = useState(false);
 
-    /* 🔄 SELF TRANSFER INLINE EXPANSION */
-    const [expandedSelfTransfer, setExpandedSelfTransfer] = useState(null);
-    const [selfTransferDetails, setSelfTransferDetails] = useState(null);
+    /* 🔄 SELF TRANSFER INLINE EXPANSION - MULTIPLE ENTRIES */
+    const [expandedSelfTransfers, setExpandedSelfTransfers] = useState(new Set());
+    const [selfTransferDetailsMap, setSelfTransferDetailsMap] = useState(new Map());
 
     /* ðŸ“œ SCROLL TRACKING */
     const [scrollPosition, setScrollPosition] = useState(0);
@@ -162,7 +162,7 @@ export default function ProductTracker({
         setSelectedDispatch(null);
     };
 
-    /* 🔄 FETCH SELF TRANSFER DETAILS FOR INLINE EXPANSION */
+    /* 🔄 FETCH SELF TRANSFER DETAILS FOR INLINE EXPANSION - MULTIPLE SUPPORT */
     const fetchSelfTransferDetails = async (reference) => {
         console.log('Fetching self-transfer details for inline expansion:', reference);
         
@@ -181,8 +181,19 @@ export default function ProductTracker({
             const data = await response.json();
             
             if (data.success && data.data && data.data.transfer) {
-                setSelfTransferDetails(data.data.transfer);
-                setExpandedSelfTransfer(reference);
+                // Store the details in the map
+                setSelfTransferDetailsMap(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(reference, data.data.transfer);
+                    return newMap;
+                });
+                
+                // Add to expanded set
+                setExpandedSelfTransfers(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(reference);
+                    return newSet;
+                });
             } else {
                 console.error('Failed to fetch self-transfer details');
                 alert('Failed to load self-transfer details. Please try again.');
@@ -190,6 +201,31 @@ export default function ProductTracker({
         } catch (error) {
             console.error('Error fetching self-transfer details:', error);
             alert('Error loading self-transfer details. Please check your connection and try again.');
+        }
+    };
+
+    /* 🔄 TOGGLE SELF TRANSFER EXPANSION */
+    const toggleSelfTransferExpansion = (reference) => {
+        if (expandedSelfTransfers.has(reference)) {
+            // Collapse - remove from expanded set
+            setExpandedSelfTransfers(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(reference);
+                return newSet;
+            });
+        } else {
+            // Expand - fetch details if not already cached
+            if (selfTransferDetailsMap.has(reference)) {
+                // Already have details, just expand
+                setExpandedSelfTransfers(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(reference);
+                    return newSet;
+                });
+            } else {
+                // Fetch details and expand
+                fetchSelfTransferDetails(reference);
+            }
         }
     };
 
@@ -742,7 +778,7 @@ export default function ProductTracker({
                                                 style={{ display:'flex', flexDirection:'column' }}
                                             >
                                                 {/* Main Timeline Row */}
-                                                <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr 90px 90px', padding:'12px 20px', borderBottom: expandedSelfTransfer === row.reference ? 'none' : '1px solid #0F172A', alignItems:'center' }}
+                                                <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr 90px 90px', padding:'12px 20px', borderBottom: expandedSelfTransfers.has(row.reference) ? 'none' : '1px solid #0F172A', alignItems:'center' }}
                                                     onMouseEnter={e => e.currentTarget.style.background='#0B1120'}
                                                     onMouseLeave={e => e.currentTarget.style.background='transparent'}
                                                 >
@@ -769,15 +805,8 @@ export default function ProductTracker({
                                                                 console.log('📤 Fetching dispatch details for:', row.reference);
                                                                 fetchDispatchDetails(row.reference);
                                                             } else if (row.type === 'SELF_TRANSFER' && row.reference) {
-                                                                console.log('🔄 Fetching self-transfer details for:', row.reference);
-                                                                if (expandedSelfTransfer === row.reference) {
-                                                                    // Collapse if already expanded
-                                                                    setExpandedSelfTransfer(null);
-                                                                    setSelfTransferDetails(null);
-                                                                } else {
-                                                                    // Expand this row
-                                                                    fetchSelfTransferDetails(row.reference);
-                                                                }
+                                                                console.log('🔄 Toggling self-transfer expansion for:', row.reference);
+                                                                toggleSelfTransferExpansion(row.reference);
                                                             } else {
                                                                 console.log('❌ No action taken - conditions not met');
                                                             }
@@ -815,7 +844,7 @@ export default function ProductTracker({
                                                 </div>
 
                                                 {/* Self-Transfer Inline Expansion */}
-                                                {expandedSelfTransfer === row.reference && selfTransferDetails && (
+                                                {expandedSelfTransfers.has(row.reference) && selfTransferDetailsMap.has(row.reference) && (
                                                     <motion.div
                                                         initial={{ opacity: 0, height: 0 }}
                                                         animate={{ opacity: 1, height: 'auto' }}
@@ -827,88 +856,149 @@ export default function ProductTracker({
                                                             padding: '16px 20px'
                                                         }}
                                                     >
-                                                        {/* Transfer Flow Visualization */}
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-                                                            {/* Source */}
-                                                            <div style={{ 
-                                                                background: '#1E293B', 
-                                                                borderRadius: 8, 
-                                                                padding: '12px 16px',
-                                                                border: '1px solid #334155'
-                                                            }}>
-                                                                <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                                                                    📤 OUT (SOURCE)
-                                                                </div>
-                                                                <div style={{ fontSize: 11, color: '#F87171', fontWeight: 600, marginBottom: 8 }}>
-                                                                    {selfTransferDetails.source_display || selfTransferDetails.source_location}
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94A3B8' }}>
-                                                                    <span>Stock Before: <strong style={{ color: '#CBD5E1' }}>-</strong></span>
-                                                                    <span>Impact: <strong style={{ color: '#F87171' }}>-{selfTransferDetails.items?.[0]?.quantity || 1}</strong></span>
-                                                                    <span>Stock After: <strong style={{ color: '#CBD5E1' }}>-</strong></span>
-                                                                </div>
-                                                            </div>
+                                                        {(() => {
+                                                            const selfTransferDetails = selfTransferDetailsMap.get(row.reference);
+                                                            return (
+                                                                <>
+                                                                    {/* Transfer Flow Visualization */}
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+                                                                        {/* Dynamic layout based on timeline entry direction */}
+                                                                        {row.direction === 'OUT' ? (
+                                                                            <>
+                                                                                {/* Source (Current Warehouse - OUT) */}
+                                                                                <div style={{ 
+                                                                                    background: '#1E293B', 
+                                                                                    borderRadius: 8, 
+                                                                                    padding: '12px 16px',
+                                                                                    border: '1px solid #334155'
+                                                                                }}>
+                                                                                    <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                                                                                        📤 OUT (SOURCE)
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: 11, color: '#F87171', fontWeight: 600, marginBottom: 8 }}>
+                                                                                        {selfTransferDetails.source_display || selfTransferDetails.source_location}
+                                                                                    </div>
+                                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94A3B8' }}>
+                                                                                        <span>Stock Before: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.source?.before || 0}</strong></span>
+                                                                                        <span>Impact: <strong style={{ color: '#F87171' }}>-{selfTransferDetails.items?.[0]?.quantity || 1}</strong></span>
+                                                                                        <span>Stock After: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.source?.after || 0}</strong></span>
+                                                                                    </div>
+                                                                                </div>
 
-                                                            {/* Arrow */}
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: '#312e81', borderRadius: '50%' }}>
-                                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4B5FD" strokeWidth="2">
-                                                                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                                                                </svg>
-                                                            </div>
+                                                                                {/* Arrow pointing right (OUT → IN) */}
+                                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: '#312e81', borderRadius: '50%' }}>
+                                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4B5FD" strokeWidth="2">
+                                                                                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                                                                                    </svg>
+                                                                                </div>
 
-                                                            {/* Destination */}
-                                                            <div style={{ 
-                                                                background: '#1E293B', 
-                                                                borderRadius: 8, 
-                                                                padding: '12px 16px',
-                                                                border: '1px solid #334155'
-                                                            }}>
-                                                                <div style={{ fontSize: 9, color: '#10B981', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                                                                    📥 IN (DESTINATION)
-                                                                </div>
-                                                                <div style={{ fontSize: 11, color: '#4ADE80', fontWeight: 600, marginBottom: 8 }}>
-                                                                    {selfTransferDetails.destination_display || selfTransferDetails.destination_location}
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94A3B8' }}>
-                                                                    <span>Stock Before: <strong style={{ color: '#CBD5E1' }}>-</strong></span>
-                                                                    <span>Impact: <strong style={{ color: '#4ADE80' }}>+{selfTransferDetails.items?.[0]?.quantity || 1}</strong></span>
-                                                                    <span>Stock After: <strong style={{ color: '#CBD5E1' }}>-</strong></span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                                                {/* Destination */}
+                                                                                <div style={{ 
+                                                                                    background: '#1E293B', 
+                                                                                    borderRadius: 8, 
+                                                                                    padding: '12px 16px',
+                                                                                    border: '1px solid #334155'
+                                                                                }}>
+                                                                                    <div style={{ fontSize: 9, color: '#10B981', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                                                                                        📥 IN (DESTINATION)
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: 11, color: '#4ADE80', fontWeight: 600, marginBottom: 8 }}>
+                                                                                        {selfTransferDetails.destination_display || selfTransferDetails.destination_location}
+                                                                                    </div>
+                                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94A3B8' }}>
+                                                                                        <span>Stock Before: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.destination?.before || 0}</strong></span>
+                                                                                        <span>Impact: <strong style={{ color: '#4ADE80' }}>+{selfTransferDetails.items?.[0]?.quantity || 1}</strong></span>
+                                                                                        <span>Stock After: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.destination?.after || 0}</strong></span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                {/* Source (for IN entries, show destination as source) */}
+                                                                                <div style={{ 
+                                                                                    background: '#1E293B', 
+                                                                                    borderRadius: 8, 
+                                                                                    padding: '12px 16px',
+                                                                                    border: '1px solid #334155'
+                                                                                }}>
+                                                                                    <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                                                                                        📤 OUT (SOURCE)
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: 11, color: '#F87171', fontWeight: 600, marginBottom: 8 }}>
+                                                                                        {selfTransferDetails.source_display || selfTransferDetails.source_location}
+                                                                                    </div>
+                                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94A3B8' }}>
+                                                                                        <span>Stock Before: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.source?.before || 0}</strong></span>
+                                                                                        <span>Impact: <strong style={{ color: '#F87171' }}>-{selfTransferDetails.items?.[0]?.quantity || 1}</strong></span>
+                                                                                        <span>Stock After: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.source?.after || 0}</strong></span>
+                                                                                    </div>
+                                                                                </div>
 
-                                                        {/* Transfer Details Table */}
-                                                        <div style={{ 
-                                                            background: '#1E293B', 
-                                                            borderRadius: 8, 
-                                                            padding: '12px 16px',
-                                                            border: '1px solid #334155'
-                                                        }}>
-                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, fontSize: 10, color: '#94A3B8' }}>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Product</div>
-                                                                    <div style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.product_name || 'Unknown'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Quantity</div>
-                                                                    <div style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.quantity || 1}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Transfer ID</div>
-                                                                    <div style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>{selfTransferDetails.transfer_reference}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Created By</div>
-                                                                    <div style={{ color: '#CBD5E1' }}>system</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Notes</div>
-                                                                    <div style={{ color: '#CBD5E1' }}>
-                                                                        {selfTransferDetails.remarks || `Self transfer from ${selfTransferDetails.source_location} to ${selfTransferDetails.destination_location}`}
+                                                                                {/* Arrow pointing left (IN ← OUT) */}
+                                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: '#312e81', borderRadius: '50%' }}>
+                                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4B5FD" strokeWidth="2">
+                                                                                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                                                                                    </svg>
+                                                                                </div>
+
+                                                                                {/* Destination (Current Warehouse - IN) */}
+                                                                                <div style={{ 
+                                                                                    background: '#1E293B', 
+                                                                                    borderRadius: 8, 
+                                                                                    padding: '12px 16px',
+                                                                                    border: '1px solid #334155'
+                                                                                }}>
+                                                                                    <div style={{ fontSize: 9, color: '#10B981', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                                                                                        📥 IN (DESTINATION)
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: 11, color: '#4ADE80', fontWeight: 600, marginBottom: 8 }}>
+                                                                                        {selfTransferDetails.destination_display || selfTransferDetails.destination_location}
+                                                                                    </div>
+                                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94A3B8' }}>
+                                                                                        <span>Stock Before: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.destination?.before || 0}</strong></span>
+                                                                                        <span>Impact: <strong style={{ color: '#4ADE80' }}>+{selfTransferDetails.items?.[0]?.quantity || 1}</strong></span>
+                                                                                        <span>Stock After: <strong style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.stock_calculations?.destination?.after || 0}</strong></span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </>
+                                                                        )}
                                                                     </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+
+                                                                    {/* Transfer Details Table */}
+                                                                    <div style={{ 
+                                                                        background: '#1E293B', 
+                                                                        borderRadius: 8, 
+                                                                        padding: '12px 16px',
+                                                                        border: '1px solid #334155'
+                                                                    }}>
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, fontSize: 10, color: '#94A3B8' }}>
+                                                                            <div>
+                                                                                <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Product</div>
+                                                                                <div style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.product_name || 'Unknown'}</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Quantity</div>
+                                                                                <div style={{ color: '#CBD5E1' }}>{selfTransferDetails.items?.[0]?.quantity || 1}</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Transfer ID</div>
+                                                                                <div style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>{selfTransferDetails.transfer_reference}</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Created By</div>
+                                                                                <div style={{ color: '#CBD5E1' }}>system</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontWeight: 700, color: '#64748B', marginBottom: 4 }}>Notes</div>
+                                                                                <div style={{ color: '#CBD5E1' }}>
+                                                                                    {selfTransferDetails.remarks || `Self transfer from ${selfTransferDetails.source_location} to ${selfTransferDetails.destination_location}`}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </motion.div>
                                                 )}
                                             </motion.div>

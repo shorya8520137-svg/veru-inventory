@@ -1,111 +1,57 @@
-/**
- * Self Transfer API Test Script
- * Tests all Self Transfer and Timeline endpoints
- */
+const axios = require('axios');
 
-const API_BASE = 'https://api.giftgala.in';
+// Test self-transfer API endpoint
+async function testSelfTransferAPI() {
+    const API_BASE = 'https://api.giftgala.in';
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjb21wYW55LmNvbSIsIm5hbWUiOiJTeXN0ZW0gQWRtaW5pc3RyYXRvciIsInJvbGVfaWQiOjEsInJvbGVfbmFtZSI6InN1cGVyX2FkbWluIiwidGVuYW50X2lkIjoxLCJpYXQiOjE3NzcwMzE2ODcsImV4cCI6MTc3NzExODA4NywiYXVkIjoiaW52ZW50b3J5LXVzZXJzIiwiaXNzIjoiaW52ZW50b3J5LXN5c3RlbSJ9.i7rzBWxTT0PQMsnaVFwkZahQCumvwfKSdLVwegQDVNs';
 
-// Mock token (replace with real token from login)
-const TOKEN = 'your_jwt_token_here';
+    console.log('🧪 Testing Self-Transfer API Endpoint...\n');
 
-const tests = [
-    {
-        name: 'Get All Transfers',
-        method: 'GET',
-        endpoint: '/api/self-transfer',
-        body: null
-    },
-    {
-        name: 'Get Timeline Events',
-        method: 'GET',
-        endpoint: '/api/timeline?entityType=warehouse&entityId=1',
-        body: null
-    },
-    {
-        name: 'Get Timeline Summary',
-        method: 'GET',
-        endpoint: '/api/timeline/summary/warehouse/1',
-        body: null
-    },
-    {
-        name: 'Create Transfer (Warehouse to Store)',
-        method: 'POST',
-        endpoint: '/api/self-transfer',
-        body: {
-            sourceType: 'warehouse',
-            sourceId: 1,
-            destinationType: 'store',
-            destinationId: 1,
-            items: [
-                {
-                    productId: 1,
-                    transferQty: 10,
-                    unit: 'pcs'
-                }
-            ],
-            requiresShipment: true,
-            courierPartner: 'fedex',
-            estimatedDelivery: '2026-04-30',
-            notes: 'Test transfer'
+    try {
+        // Test the specific reference from the screenshot: ST-10023
+        const reference = 'ST-10023';
+        console.log(`📋 Testing reference: ${reference}`);
+        
+        const response = await axios.get(`${API_BASE}/api/self-transfer/${reference}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        console.log('✅ API Response Status:', response.status);
+        console.log('📄 Response Data Structure:');
+        console.log(JSON.stringify(response.data, null, 2));
+        
+        // Check if response matches expected format
+        if (response.data.success && response.data.data && response.data.data.transfer) {
+            console.log('\n✅ Response format is correct!');
+            const transfer = response.data.data.transfer;
+            console.log('📋 Transfer Details:');
+            console.log(`   - Reference: ${transfer.transfer_reference}`);
+            console.log(`   - Type: ${transfer.transfer_type}`);
+            console.log(`   - Source: ${transfer.source_location} (${transfer.source_display || 'No display name'})`);
+            console.log(`   - Destination: ${transfer.destination_location} (${transfer.destination_display || 'No display name'})`);
+            console.log(`   - Items: ${transfer.items ? transfer.items.length : 0} items`);
+            
+            if (transfer.items && transfer.items.length > 0) {
+                console.log('📦 Items:');
+                transfer.items.forEach((item, index) => {
+                    console.log(`   ${index + 1}. ${item.product_name} (${item.barcode}) - Qty: ${item.quantity}`);
+                });
+            }
+        } else {
+            console.log('❌ Response format is incorrect!');
+            console.log('Expected: { success: true, data: { transfer: {...} } }');
         }
-    },
-    {
-        name: 'Get Warehouses',
-        method: 'GET',
-        endpoint: '/api/warehouse-management/warehouses',
-        body: null
-    },
-    {
-        name: 'Get Stores',
-        method: 'GET',
-        endpoint: '/api/warehouse-management/stores',
-        body: null
-    }
-];
-
-async function runTests() {
-    console.log('========================================');
-    console.log('Self Transfer API Test Suite');
-    console.log('========================================\n');
-
-    for (const test of tests) {
-        console.log(`Testing: ${test.name}`);
-        console.log(`${test.method} ${test.endpoint}`);
-
-        try {
-            const options = {
-                method: test.method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${TOKEN}`
-                }
-            };
-
-            if (test.body) {
-                options.body = JSON.stringify(test.body);
-            }
-
-            const response = await fetch(`${API_BASE}${test.endpoint}`, options);
-            const data = await response.json();
-
-            if (response.ok) {
-                console.log('✅ SUCCESS');
-                console.log('Response:', JSON.stringify(data, null, 2).substring(0, 200) + '...\n');
-            } else {
-                console.log('❌ FAILED');
-                console.log('Status:', response.status);
-                console.log('Error:', data.message || data.error, '\n');
-            }
-        } catch (error) {
-            console.log('❌ ERROR');
-            console.log('Message:', error.message, '\n');
+        
+    } catch (error) {
+        console.error('❌ API Test Failed:');
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', error.response.data);
+        } else {
+            console.error('Error:', error.message);
         }
     }
-
-    console.log('========================================');
-    console.log('Test Suite Complete');
-    console.log('========================================');
 }
 
-// Run tests
-runTests();
+// Run test
+testSelfTransferAPI();

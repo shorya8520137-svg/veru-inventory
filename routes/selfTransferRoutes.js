@@ -471,7 +471,7 @@ router.post('/', authenticateToken, (req, res) => {
     }
 });
 
-// GET /api/self-transfer/:id - Get transfer details
+// GET /api/self-transfer/:id - Get transfer details with stock calculations
 router.get('/:id', authenticateToken, (req, res) => {
     try {
         const { id } = req.params;
@@ -544,18 +544,105 @@ router.get('/:id', authenticateToken, (req, res) => {
                 'MUM_WH': 'Mumbai Warehouse',
                 'STORE_001': 'Main Store Delhi',
                 'STORE_002': 'Store Mumbai',
-                'STORE_003': 'Store Bangalore'
+                'STORE_003': 'Store Bangalore',
+                'GGM_NH48': 'GGM NH48 Store',
+                'NH48_STORE': 'NH48 Store'
             };
 
             transfer.source_display = locationMap[transfer.source_location] || transfer.source_location;
             transfer.destination_display = locationMap[transfer.destination_location] || transfer.destination_location;
 
-            res.json({
-                success: true,
-                data: {
-                    transfer: transfer
-                }
-            });
+            // Calculate stock before/after for each item
+            if (transfer.items.length > 0) {
+                let itemsProcessed = 0;
+                
+                transfer.items.forEach((item, index) => {
+                    // Get stock timeline for this barcode to calculate before/after
+                    const stockTimelineSql = `
+                        SELECT 
+                            event_time,
+                            location_code,
+                            qty,
+                            direction,
+                            reference
+                        FROM inventory_ledger_base 
+                        WHERE barcode = ? 
+                        AND (location_code = ? OR location_code = ?)
+                        ORDER BY event_time ASC
+                    `;
+                    
+                    db.query(stockTimelineSql, [item.barcode, transfer.source_location, transfer.destination_location], (stockErr, stockResults) => {
+                        if (!stockErr && stockResults.length > 0) {
+                            // Calculate running balances
+                            let sourceBeforeTransfer = 0;
+                            let destBeforeTransfer = 0;
+                            
+                            const transferTime = new Date(transfer.created_at);
+                            
+                            stockResults.forEach(entry => {
+                                const entryTime = new Date(entry.event_time);
+                                const qty = parseInt(entry.qty);
+                                
+                                if (entry.location_code === transfer.source_location) {
+                                    // Only count entries that happened BEFORE this transfer
+                                    if (entryTime < transferTime && entry.reference !== transfer.transfer_reference) {
+                                        if (entry.direction === 'IN') {
+                                            sourceBeforeTransfer += qty;
+                                        } else {
+                                            sourceBeforeTransfer -= qty;
+                                        }
+                                    }
+                                }
+                                
+                                if (entry.location_code === transfer.destination_location) {
+                                    // Only count entries that happened BEFORE this transfer
+                                    if (entryTime < transferTime && entry.reference !== transfer.transfer_reference) {
+                                        if (entry.direction === 'IN') {
+                                            destBeforeTransfer += qty;
+                                        } else {
+                                            destBeforeTransfer -= qty;
+                                        }
+                                    }
+                                }
+                            });
+                            
+                            // Add stock calculations to item
+                            transfer.items[index].stock_calculations = {
+                                source: {
+                                    before: sourceBeforeTransfer,
+                                    after: sourceBeforeTransfer - item.quantity,
+                                    location: transfer.source_location
+                                },
+                                destination: {
+                                    before: destBeforeTransfer,
+                                    after: destBeforeTransfer + item.quantity,
+                                    location: transfer.destination_location
+                                }
+                            };
+                        }
+                        
+                        itemsProcessed++;
+                        
+                        // When all items are processed, send response
+                        if (itemsProcessed === transfer.items.length) {
+                            res.json({
+                                success: true,
+                                data: {
+                                    transfer: transfer
+                                }
+                            });
+                        }
+                    });
+                });
+            } else {
+                // No items, send response as is
+                res.json({
+                    success: true,
+                    data: {
+                        transfer: transfer
+                    }
+                });
+            }
         });
     } catch (error) {
         console.error('Transfer fetch error:', error);
