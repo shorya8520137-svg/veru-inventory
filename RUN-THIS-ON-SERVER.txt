@@ -1,0 +1,31 @@
+========================================
+RUN THESE COMMANDS ON THE SERVER
+========================================
+
+1. SSH into the server:
+   ssh -i C:\Users\singh\.ssh\pem.pem ubuntu@13.212.82.15
+
+2. Check categories in database:
+   sudo mysql inventory_db -e "SELECT id, name, display_name, is_active FROM product_categories ORDER BY name;"
+
+3. Check recent products and their categories:
+   sudo mysql inventory_db -e "SELECT p.p_id, p.product_name, p.barcode, p.category_id, c.name AS category_name, c.display_name FROM dispatch_product p LEFT JOIN product_categories c ON p.category_id = c.id WHERE p.is_active = 1 ORDER BY p.created_at DESC LIMIT 5;"
+
+4. Count products by category:
+   sudo mysql inventory_db -e "SELECT COALESCE(c.display_name, 'UNCATEGORIZED') AS category, COUNT(*) AS count FROM dispatch_product p LEFT JOIN product_categories c ON p.category_id = c.id WHERE p.is_active = 1 GROUP BY c.display_name;"
+
+========================================
+EXPECTED RESULTS:
+========================================
+
+If NO categories exist:
+- You need to create categories from the Products page first
+- Go to Products page → Click "Add Category" or similar button
+- Create categories like: Electronics, Clothing, Food, etc.
+
+If categories exist but products show UNCATEGORIZED:
+- The product's category_id is NULL
+- You need to assign categories to products
+- Either edit products manually or re-upload with correct category names
+
+========================================

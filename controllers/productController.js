@@ -1520,54 +1520,86 @@ function insertProductsWithProgress(products, req, res) {
             return;
         }
 
-        const sql = `
-            INSERT INTO dispatch_product 
-            (product_name, product_variant, barcode, description, category_id, price, cost_price, weight, dimensions)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+        // Look up category_id from category_name if provided
+        const lookupCategoryAndInsert = () => {
+            if (product.category_name && product.category_name.trim()) {
+                // Look up category by name (case-insensitive)
+                const categorySql = 'SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) OR LOWER(display_name) = LOWER(?) LIMIT 1';
+                db.query(categorySql, [product.category_name.trim(), product.category_name.trim()], (catErr, catResults) => {
+                    let categoryId = null;
+                    
+                    if (!catErr && catResults && catResults.length > 0) {
+                        categoryId = catResults[0].id;
+                    } else if (catErr) {
+                        console.warn(`Category lookup warning for row ${rowNumber}:`, catErr.message);
+                    }
+                    
+                    // Insert product with looked-up category_id
+                    insertProduct(categoryId);
+                });
+            } else if (product.category_id) {
+                // Fallback: use category_id if provided directly
+                insertProduct(product.category_id);
+            } else {
+                // No category specified
+                insertProduct(null);
+            }
+        };
 
-        db.query(sql, [
-            product.product_name,
-            product.product_variant || null,
-            product.barcode,
-            product.description || null,
-            product.category_id || null,
-            product.price || null,
-            product.cost_price || null,
-            product.weight || null,
-            product.dimensions || null
-        ], (err) => {
-            completed++;
-            
-            if (err) {
-                console.error(`Error inserting product ${rowNumber}:`, err);
-                if (err.code === 'ER_DUP_ENTRY') {
-                    errors.push(`Row ${rowNumber}: Barcode '${product.barcode}' already exists`);
+        const insertProduct = (categoryId) => {
+            const sql = `
+                INSERT INTO dispatch_product 
+                (product_name, product_variant, barcode, description, category_id, price, cost_price, weight, dimensions)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            db.query(sql, [
+                product.product_name,
+                product.product_variant || null,
+                product.barcode,
+                product.description || null,
+                categoryId,
+                product.price || null,
+                product.cost_price || null,
+                product.weight || null,
+                product.dimensions || null
+            ], (err) => {
+                completed++;
+                
+                if (err) {
+                    console.error(`Error inserting product ${rowNumber}:`, err);
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        errors.push(`Row ${rowNumber}: Barcode '${product.barcode}' already exists`);
+                    } else if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+                        errors.push(`Row ${rowNumber}: Invalid category`);
+                    } else {
+                        errors.push(`Row ${rowNumber}: Database error - ${err.message}`);
+                    }
+
+                    // Send error update
+                    res.write(`data: ${JSON.stringify({
+                        type: 'error',
+                        row: rowNumber,
+                        message: `Failed to insert row ${rowNumber}: ${err.code === 'ER_DUP_ENTRY' ? 'Duplicate barcode' : err.code === 'ER_NO_REFERENCED_ROW_2' ? 'Invalid category' : 'Database error'}`
+                    })}\n\n`);
                 } else {
-                    errors.push(`Row ${rowNumber}: Database error`);
+                    successful++;
+
+                    // Send success update
+                    res.write(`data: ${JSON.stringify({
+                        type: 'success',
+                        row: rowNumber,
+                        message: `Successfully inserted ${product.product_name}`
+                    })}\n\n`);
                 }
 
-                // Send error update
-                res.write(`data: ${JSON.stringify({
-                    type: 'error',
-                    row: rowNumber,
-                    message: `Failed to insert row ${rowNumber}: ${err.code === 'ER_DUP_ENTRY' ? 'Duplicate barcode' : 'Database error'}`
-                })}\n\n`);
-            } else {
-                successful++;
+                // Add small delay and continue to next product
+                setTimeout(() => processProduct(index + 1), 50);
+            });
+        };
 
-                // Send success update
-                res.write(`data: ${JSON.stringify({
-                    type: 'success',
-                    row: rowNumber,
-                    message: `Successfully inserted ${product.product_name}`
-                })}\n\n`);
-            }
-
-            // Add small delay and continue to next product
-            setTimeout(() => processProduct(index + 1), 50);
-        });
-    };
+        // Start the category lookup and insert process
+        lookupCategoryAndInsert();
 
     // Start processing
     processProduct(0);

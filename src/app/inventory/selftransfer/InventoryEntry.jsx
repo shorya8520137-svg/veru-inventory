@@ -291,33 +291,9 @@ export default function InventoryEntry({ onClose }) {
     };
 
     return (
-        <AnimatePresence>
-            <motion.div 
-                className={styles.overlay}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                onClick={(e) => {
-                    if (e.target === e.currentTarget && !loading) onClose();
-                }}
-            >
-                <motion.div 
-                    className={styles.panel}
-                    initial={{ scale: 0.92, y: 10, opacity: 0 }}
-                    animate={{ scale: 1, y: 0, opacity: 1 }}
-                    exit={{ scale: 0.92, y: 10, opacity: 0 }}
-                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {!loading && (
-                        <button className={styles.close} onClick={onClose}>
-                            <X size={20} />
-                        </button>
-                    )}
-
-                    <div className={styles.header}>
-                        <Upload size={24} />
+        <div style={{ padding: '20px', backgroundColor: '#ffffff' }}>
+            <div className={styles.header}>
+                <Upload size={24} />
                         Bulk Inventory Upload
                     </div>
                     <div className={styles.subHeader}>
@@ -576,8 +552,6 @@ export default function InventoryEntry({ onClose }) {
                             </div>
                         </>
                     )}
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+        </div>
     );
 }

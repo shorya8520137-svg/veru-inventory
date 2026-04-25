@@ -1,71 +1,88 @@
-const fetch = require('node-fetch');
+const mysql = require('mysql2/promise');
+require('dotenv').config({ path: '.env.production' });
 
-const API_BASE = 'https://54.169.31.95:8443';
-
-// Use built-in fetch for Node 18+
 async function testCategoriesAPI() {
+    console.log('🔍 Testing Categories API and Database...\n');
+
+    // Test 1: Check database connection and categories table
+    console.log('📊 Test 1: Checking database for categories...');
     try {
-        console.log('🔍 Testing Categories API...');
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+
+        // Check if product_categories table exists
+        const [tables] = await connection.query(
+            "SHOW TABLES LIKE 'product_categories'"
+        );
         
-        // Test public categories endpoint (no auth required)
-        console.log('1. Testing public categories endpoint...');
-        const categoriesResponse = await fetch(`${API_BASE}/api/website/categories`);
+        if (tables.length === 0) {
+            console.log('❌ product_categories table does NOT exist!');
+            await connection.end();
+            return;
+        }
         
-        console.log('Categories response status:', categoriesResponse.status);
+        console.log('✅ product_categories table exists');
+
+        // Get all categories
+        const [categories] = await connection.query(
+            'SELECT id, name, display_name, description, is_active FROM product_categories'
+        );
+
+        console.log(`\n📦 Total categories in database: ${categories.length}`);
         
-        if (categoriesResponse.ok) {
-            const categoriesData = await categoriesResponse.json();
-            console.log('✅ Categories API working!');
-            console.log('Categories found:', categoriesData.data?.length || 0);
-            
-            if (categoriesData.data && categoriesData.data.length > 0) {
-                console.log('Sample category:', categoriesData.data[0]);
-            } else {
-                console.log('ℹ️ No categories found - database might be empty');
-            }
+        if (categories.length === 0) {
+            console.log('⚠️  No categories found in database!');
+            console.log('\n💡 Solution: Create categories from the Products page first');
         } else {
-            console.error('❌ Categories API failed:', categoriesResponse.status);
-            const errorData = await categoriesResponse.text();
-            console.error('Error:', errorData);
+            console.log('\n✅ Categories found:');
+            categories.forEach(cat => {
+                console.log(`   - ${cat.name} (${cat.display_name}) [Active: ${cat.is_active}]`);
+            });
+
+            // Check active categories
+            const activeCategories = categories.filter(c => c.is_active === 1);
+            console.log(`\n✅ Active categories: ${activeCategories.length}`);
+            
+            if (activeCategories.length === 0) {
+                console.log('⚠️  All categories are inactive!');
+            }
         }
 
-        // Test public products endpoint
-        console.log('\n2. Testing public products endpoint...');
-        const productsResponse = await fetch(`${API_BASE}/api/website/products`);
-        
-        console.log('Products response status:', productsResponse.status);
-        
-        if (productsResponse.ok) {
-            const productsData = await productsResponse.json();
-            console.log('✅ Products API working!');
-            console.log('Products found:', productsData.data?.length || 0);
-            
-            if (productsData.data && productsData.data.length > 0) {
-                console.log('Sample product:', productsData.data[0]);
-            } else {
-                console.log('ℹ️ No products found - database might be empty');
-            }
-        } else {
-            console.error('❌ Products API failed:', productsResponse.status);
-            const errorData = await productsResponse.text();
-            console.error('Error:', errorData);
-        }
-
-        // Test products with category filter
-        console.log('\n3. Testing products with category filter...');
-        const filteredResponse = await fetch(`${API_BASE}/api/website/products?category=tumbler`);
-        
-        if (filteredResponse.ok) {
-            const filteredData = await filteredResponse.json();
-            console.log('✅ Category filter working!');
-            console.log('Filtered products found:', filteredData.data?.length || 0);
-        } else {
-            console.error('❌ Category filter failed:', filteredResponse.status);
-        }
+        await connection.end();
 
     } catch (error) {
-        console.error('❌ Test failed:', error.message);
+        console.error('❌ Database error:', error.message);
     }
+
+    // Test 2: Test the API endpoint
+    console.log('\n\n🌐 Test 2: Testing API endpoint...');
+    console.log('API URL: ' + process.env.NEXT_PUBLIC_API_BASE + '/api/products/categories/all');
+    
+    try {
+        const fetch = (await import('node-fetch')).default;
+        
+        // You need to provide a valid token for this test
+        console.log('\n⚠️  Note: This test requires a valid JWT token');
+        console.log('To test the API:');
+        console.log('1. Login to the frontend');
+        console.log('2. Open browser console');
+        console.log('3. Run: localStorage.getItem("token")');
+        console.log('4. Copy the token and test with curl:\n');
+        console.log(`curl -H "Authorization: Bearer YOUR_TOKEN" ${process.env.NEXT_PUBLIC_API_BASE}/api/products/categories/all`);
+        
+    } catch (error) {
+        console.error('❌ API test error:', error.message);
+    }
+
+    console.log('\n\n📋 Summary:');
+    console.log('1. Check if categories exist in database');
+    console.log('2. If no categories, create them from Products page');
+    console.log('3. Verify categories are active (is_active = 1)');
+    console.log('4. Test API endpoint with valid JWT token');
 }
 
 testCategoriesAPI();

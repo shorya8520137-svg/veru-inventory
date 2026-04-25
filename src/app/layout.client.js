@@ -18,6 +18,7 @@ import DispatchForm from "@/app/order/dispatch/DispatchForm";
 import DamageRecoveryModal from "@/app/inventory/selftransfer/DamageRecoveryModal";
 import ReturnModal from "@/app/inventory/selftransfer/ReturnModal";
 import InventoryEntry from "@/app/inventory/selftransfer/InventoryEntry";
+import ProductUpload from "@/app/products/ProductUpload";
 
 export default function ClientLayout({ children }) {
     const { user, loading } = useAuth();
@@ -29,12 +30,15 @@ export default function ClientLayout({ children }) {
     const [operationsOpen, setOperationsOpen] = useState(false);
     const [operationTab, setOperationTab] = useState("dispatch");
     const [showBulkUpload, setShowBulkUpload] = useState(false);
+    const [showProductUpload, setShowProductUpload] = useState(false);
 
     // Expose bulk upload function globally for navbar access - MUST be at top level
     useEffect(() => {
         window.openBulkUpload = () => setShowBulkUpload(true);
+        window.openProductUpload = () => setShowProductUpload(true);
         return () => {
             delete window.openBulkUpload;
+            delete window.openProductUpload;
         };
     }, []);
 
@@ -86,7 +90,7 @@ export default function ClientLayout({ children }) {
     const isInventoryGPTPage = pathname === "/inventorygpt";
 
     return (
-        <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', backgroundColor: '#ffffff' }}>
             {/* TOP NAVIGATION BAR - Full Width Above Everything */}
             {!isInventoryGPTPage && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
@@ -95,10 +99,10 @@ export default function ClientLayout({ children }) {
             )}
 
             {/* MAIN LAYOUT - Below Top Navbar */}
-            <div className="flex flex-1" style={{ paddingTop: isInventoryGPTPage ? 0 : '64px' }}>
+            <div style={{ display: 'flex', flex: 1, paddingTop: isInventoryGPTPage ? 0 : '64px' }}>
                 <SidebarProvider>
                     {/* SIDEBAR - Starts below top navbar */}
-                    <Sidebar className="shrink-0 border-r border-slate-200 bg-white backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+                    <Sidebar className="shrink-0 border-r border-slate-200 bg-white" style={{ backgroundColor: '#ffffff' }}>
                         <InventoryMenu 
                             onOpenOperation={(tab) => {
                                 setOperationTab(tab);
@@ -109,7 +113,7 @@ export default function ClientLayout({ children }) {
 
                     {/* MAIN CONTENT */}
                     <div className="flex-1 min-w-0 h-full flex flex-col">
-                        <main className="flex-1 min-w-0 overflow-hidden relative bg-gradient-to-br from-slate-50 to-white" style={{ background: 'linear-gradient(to bottom right, rgba(248, 250, 252, 0.5), white)' }}>
+                        <main className="flex-1 min-w-0 overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
                             <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-hide">
                                 <div className="p-0">
                                     {children}
@@ -121,34 +125,48 @@ export default function ClientLayout({ children }) {
                     {/* COMMAND UI */}
                     <SemiDial onCommand={handleCommand} />
 
-                    {/* MODALS */}
+                    {/* MODALS - NO BACKGROUND OVERLAY */}
                     {openFIFO && (
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setOpenFIFO(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-4xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Transfer Stock</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                    width: '800px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '2px solid #e2e8f0'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#0f172a' }}>Transfer Stock</h2>
                                     <button 
                                         onClick={() => setOpenFIFO(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#f1f5f9'}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -156,41 +174,55 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)' }}>
                                     <TransferForm onClose={() => setOpenFIFO(false)} />
                                 </div>
                             </div>
                         </div>
                     )}
                     
-                    {/* Individual Operation Modals */}
+                    {/* Individual Operation Modals - NO BACKGROUND OVERLAY */}
                     {operationsOpen && operationTab === "dispatch" && (
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setOperationsOpen(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-4xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Dispatch Management</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                    width: '800px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '2px solid #e2e8f0'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#0f172a' }}>Dispatch Management</h2>
                                     <button 
                                         onClick={() => setOperationsOpen(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#f1f5f9'}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -198,7 +230,7 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)' }}>
                                     <DispatchForm />
                                 </div>
                             </div>
@@ -209,29 +241,43 @@ export default function ClientLayout({ children }) {
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setOperationsOpen(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-2xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Damage / Recovery</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                    width: '600px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '2px solid #e2e8f0'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#0f172a' }}>Damage / Recovery</h2>
                                     <button 
                                         onClick={() => setOperationsOpen(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#f1f5f9'}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -239,7 +285,7 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)' }}>
                                     <DamageRecoveryModal onClose={() => setOperationsOpen(false)} />
                                 </div>
                             </div>
@@ -250,29 +296,43 @@ export default function ClientLayout({ children }) {
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setOperationsOpen(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-2xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Return Management</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                    width: '600px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '2px solid #e2e8f0'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#0f172a' }}>Return Management</h2>
                                     <button 
                                         onClick={() => setOperationsOpen(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#f1f5f9'}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -280,7 +340,7 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)' }}>
                                     <ReturnModal onClose={() => setOperationsOpen(false)} />
                                 </div>
                             </div>
@@ -291,29 +351,43 @@ export default function ClientLayout({ children }) {
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setOperationsOpen(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-2xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Recovery Operations</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                    width: '600px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '2px solid #e2e8f0'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#0f172a' }}>Recovery Operations</h2>
                                     <button 
                                         onClick={() => setOperationsOpen(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#f1f5f9'}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -321,11 +395,11 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar p-8">
-                                    <div className="text-center text-slate-500">
-                                        <div className="text-6xl mb-6">🔧</div>
-                                        <h3 className="text-xl font-semibold mb-3 text-slate-700">Recovery Operations</h3>
-                                        <p className="text-slate-600">Recovery functionality coming soon...</p>
+                                <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)', padding: '32px' }}>
+                                    <div style={{ textAlign: 'center', color: '#64748b' }}>
+                                        <div style={{ fontSize: '48px', marginBottom: '24px' }}>🔧</div>
+                                        <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Recovery Operations</h3>
+                                        <p style={{ color: '#64748b' }}>Recovery functionality coming soon...</p>
                                     </div>
                                 </div>
                             </div>
@@ -336,29 +410,43 @@ export default function ClientLayout({ children }) {
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setOperationsOpen(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-4xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Bulk Upload</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                    width: '600px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '2px solid #e2e8f0'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#0f172a' }}>Bulk Upload</h2>
                                     <button 
                                         onClick={() => setOperationsOpen(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#f1f5f9'}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -366,41 +454,100 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)' }}>
                                     <InventoryEntry onClose={() => setOperationsOpen(false)} />
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Navbar Bulk Upload Modal */}
+                    {/* Navbar Bulk Upload Modal - CLEAN 3D EFFECT */}
                     {showBulkUpload && (
                         <div 
                             style={{ 
                                 position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: '#000000',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 zIndex: 1001,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '16px'
-                            }}
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    setShowBulkUpload(false);
-                                }
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
-                            <div className="card-modern max-w-4xl w-full max-h-[90vh] overflow-hidden relative">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
-                                    <h2 className="text-xl font-semibold text-slate-900">Bulk Upload Inventory</h2>
+                            <div 
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '16px',
+                                    boxShadow: `
+                                        0 25px 50px rgba(0,0,0,0.15),
+                                        0 15px 35px rgba(0,0,0,0.1),
+                                        0 5px 15px rgba(0,0,0,0.08)
+                                    `,
+                                    width: '600px',
+                                    maxHeight: '80vh',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    backdropFilter: 'none',
+                                    WebkitBackdropFilter: 'none',
+                                    border: '1px solid rgba(226, 232, 240, 0.8)',
+                                    transition: 'all 0.3s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-5px)';
+                                    e.currentTarget.style.boxShadow = `
+                                        0 35px 70px rgba(0,0,0,0.2),
+                                        0 20px 45px rgba(0,0,0,0.15),
+                                        0 8px 25px rgba(0,0,0,0.1)
+                                    `;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0px)';
+                                    e.currentTarget.style.boxShadow = `
+                                        0 25px 50px rgba(0,0,0,0.15),
+                                        0 15px 35px rgba(0,0,0,0.1),
+                                        0 5px 15px rgba(0,0,0,0.08)
+                                    `;
+                                }}
+                            >
+                                <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between', 
+                                    padding: '24px', 
+                                    borderBottom: '1px solid rgba(226, 232, 240, 0.8)', 
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '16px 16px 0 0'
+                                }}>
+                                    <h2 style={{ 
+                                        margin: 0, 
+                                        fontSize: '20px', 
+                                        fontWeight: '600', 
+                                        color: '#0f172a'
+                                    }}>
+                                        Bulk Upload Inventory
+                                    </h2>
                                     <button 
                                         onClick={() => setShowBulkUpload(false)}
-                                        className="button-secondary p-2 rounded-lg transition-all hover:bg-slate-100"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.target.style.backgroundColor = '#e2e8f0';
+                                            e.target.style.transform = 'translateY(-1px)';
+                                            e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.target.style.backgroundColor = '#f1f5f9';
+                                            e.target.style.transform = 'translateY(0px)';
+                                            e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                        }}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -408,11 +555,20 @@ export default function ClientLayout({ children }) {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto max-h-[calc(90vh-100px)] custom-scrollbar">
+                                <div style={{ 
+                                    overflowY: 'auto', 
+                                    maxHeight: 'calc(80vh - 100px)',
+                                    backgroundColor: '#ffffff'
+                                }}>
                                     <InventoryEntry onClose={() => setShowBulkUpload(false)} />
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {/* Product Upload Modal */}
+                    {showProductUpload && (
+                        <ProductUpload onClose={() => setShowProductUpload(false)} />
                     )}
 
                 </SidebarProvider>
