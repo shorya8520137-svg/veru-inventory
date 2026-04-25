@@ -99,19 +99,16 @@ export default function TransferForm({ onClose }) {
         if (value.length > 2) {
             const token = localStorage.getItem('token');
             
-            fetch(`${PRODUCTS_API}?search=${encodeURIComponent(value)}&limit=10`, {
+            fetch(`${API}/search-products?query=${encodeURIComponent(value)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             .then(res => res.json())
             .then(data => {
-                // Transform the data to match expected format
-                if (data.success && data.data) {
-                    updated[index].suggestions = data.data.map(product => ({
-                        barcode: product.barcode,
-                        product_name: product.product_name,
-                        product_variant: product.product_variant || '',
-                        price: product.selling_price || 0
-                    }));
+                // Handle the response - it should be an array directly
+                if (Array.isArray(data)) {
+                    updated[index].suggestions = data;
+                } else if (data && Array.isArray(data.data)) {
+                    updated[index].suggestions = data.data;
                 } else {
                     updated[index].suggestions = [];
                 }
