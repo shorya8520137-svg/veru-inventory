@@ -295,7 +295,40 @@ export default function TopNavBar({ onTransferStock }) {
             </div>
 
             {/* Right Section - Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '0 0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '0 0 auto' }}>
+                {/* Bulk Upload Button */}
+                <button 
+                    onClick={() => {
+                        // Trigger bulk upload modal via callback
+                        if (window.openBulkUpload) {
+                            window.openBulkUpload();
+                        }
+                    }}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        background: '#059669',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = '#047857'}
+                    onMouseLeave={(e) => e.target.style.background = '#059669'}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Bulk Upload
+                </button>
+
                 {/* Transfer Stock Button */}
                 <button 
                     onClick={() => {
