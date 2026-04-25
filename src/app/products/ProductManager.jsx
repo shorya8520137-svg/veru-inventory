@@ -53,6 +53,13 @@ const ProductManager = () => {
     const [categoryForm, setCategoryForm] = useState({ name: '', display_name: '', description: '', parent_id: '' });
     const [showCategoryForm, setShowCategoryForm] = useState(false);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+    const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(-1);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [showProductDetail, setShowProductDetail] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
+    const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
+    const [deletedProductName, setDeletedProductName] = useState('');
 
     useEffect(() => { fetchProducts(); fetchCategories(); fetchWarehouses(); }, [currentPage, selectedCategory]);
 
@@ -87,13 +94,31 @@ const ProductManager = () => {
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                setSelectedSuggestionIndex(prev => 
-                    prev < suggestions.length - 1 ? prev + 1 : prev
-                );
+                const nextIndex = selectedSuggestionIndex < suggestions.length - 1 ? selectedSuggestionIndex + 1 : selectedSuggestionIndex;
+                setSelectedSuggestionIndex(nextIndex);
+                // Auto-scroll to selected item
+                setTimeout(() => {
+                    const dropdown = document.querySelector('.search-suggestions-dropdown');
+                    const selectedItem = dropdown?.children[nextIndex];
+                    if (selectedItem) {
+                        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }, 0);
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+                const prevIndex = selectedSuggestionIndex > 0 ? selectedSuggestionIndex - 1 : -1;
+                setSelectedSuggestionIndex(prevIndex);
+                // Auto-scroll to selected item
+                if (prevIndex >= 0) {
+                    setTimeout(() => {
+                        const dropdown = document.querySelector('.search-suggestions-dropdown');
+                        const selectedItem = dropdown?.children[prevIndex];
+                        if (selectedItem) {
+                            selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                        }
+                    }, 0);
+                }
                 break;
             case 'Enter':
                 e.preventDefault();
@@ -104,6 +129,62 @@ const ProductManager = () => {
             case 'Escape':
                 setShowSuggestions(false);
                 setSelectedSuggestionIndex(-1);
+                break;
+        }
+    };
+
+    const handleCategoryKeyDown = (e) => {
+        if (!showCategoryDropdown) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowCategoryDropdown(true);
+                setSelectedCategoryIndex(-1);
+            }
+            return;
+        }
+
+        const allCategories = [{name: '', display_name: 'All Categories'}, ...categories];
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                const nextIdx = selectedCategoryIndex < allCategories.length - 1 ? selectedCategoryIndex + 1 : selectedCategoryIndex;
+                setSelectedCategoryIndex(nextIdx);
+                // Auto-scroll to selected item
+                setTimeout(() => {
+                    const dropdown = document.querySelector('.category-dropdown');
+                    const selectedItem = dropdown?.children[nextIdx];
+                    if (selectedItem) {
+                        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }, 0);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                const prevIdx = selectedCategoryIndex > 0 ? selectedCategoryIndex - 1 : 0;
+                setSelectedCategoryIndex(prevIdx);
+                // Auto-scroll to selected item
+                setTimeout(() => {
+                    const dropdown = document.querySelector('.category-dropdown');
+                    const selectedItem = dropdown?.children[prevIdx];
+                    if (selectedItem) {
+                        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }, 0);
+                break;
+            case 'Enter':
+            case ' ':
+                e.preventDefault();
+                if (selectedCategoryIndex >= 0 && selectedCategoryIndex < allCategories.length) {
+                    setSelectedCategory(allCategories[selectedCategoryIndex].name);
+                    setShowCategoryDropdown(false);
+                    setSelectedCategoryIndex(-1);
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                setShowCategoryDropdown(false);
+                setSelectedCategoryIndex(-1);
                 break;
         }
     };
@@ -119,7 +200,7 @@ const ProductManager = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const params = new URLSearchParams({ page: currentPage, limit: 10, search: searchTerm, category: selectedCategory });
+            const params = new URLSearchParams({ page: currentPage, limit: 6, search: searchTerm, category: selectedCategory });
             const res = await fetch(`${API_BASE}/api/products?${params}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
@@ -191,7 +272,6 @@ const ProductManager = () => {
     };
 
     const handleDelete = async (productId) => {
-        if (!confirm('Delete this product? This cannot be undone.')) return;
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE}/api/products/${productId}`, {
@@ -199,7 +279,12 @@ const ProductManager = () => {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
             const data = await res.json();
-            if (data.success) { await fetchProducts(); showNotification(data.message || 'Product deleted!'); }
+            if (data.success) { 
+                await fetchProducts(); 
+                setDeletedProductName(productToDelete?.product_name || 'Product');
+                setShowDeleteSuccess(true);
+                setTimeout(() => setShowDeleteSuccess(false), 3000);
+            }
             else showNotification(data.message || 'Failed to delete', 'error');
         } catch (e) { showNotification('Network error.', 'error'); }
     };
@@ -356,12 +441,12 @@ const ProductManager = () => {
 
             {/* SECTION HEADER */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,flexWrap:"wrap",flexShrink:0}}>
-                <h2 style={{fontSize:20,fontWeight:700,color:"#111827",margin:0,marginRight:4}}>Product Inventory</h2>
                 <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
                     <Filter size={13} style={{position:"absolute",left:12,color:"#6B7280",pointerEvents:"none",zIndex:1}}/>
                     <div 
-                        onClick={()=>setShowCategoryDropdown(!showCategoryDropdown)}
-                        onBlur={()=>setTimeout(()=>setShowCategoryDropdown(false),200)}
+                        onClick={()=>{setShowCategoryDropdown(!showCategoryDropdown);setSelectedCategoryIndex(-1);}}
+                        onKeyDown={handleCategoryKeyDown}
+                        onBlur={()=>setTimeout(()=>{setShowCategoryDropdown(false);setSelectedCategoryIndex(-1);},200)}
                         tabIndex={0}
                         style={{
                             appearance:"none",
@@ -385,11 +470,12 @@ const ProductManager = () => {
                     <svg style={{position:"absolute",right:10,pointerEvents:"none",color:"#9CA3AF"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                     
                     {showCategoryDropdown && (
-                        <div style={{
+                        <div 
+                            className="category-dropdown suggestions-dropdown"
+                            style={{
                             position:"absolute",
-                            top:"110%",
+                            top:"calc(100% + 4px)",
                             left:0,
-                            right:0,
                             background:"#fff",
                             borderRadius:16,
                             boxShadow:"0 12px 32px rgba(0,0,0,0.15)",
@@ -398,78 +484,106 @@ const ProductManager = () => {
                             maxHeight:"360px",
                             overflowY:"auto",
                             border:"1px solid #E5E7EB",
-                            minWidth:"220px"
+                            minWidth:"100%"
                         }}
-                        className="suggestions-dropdown"
                         >
                             <div 
-                                onClick={()=>{setSelectedCategory('');setShowCategoryDropdown(false);}}
+                                onClick={()=>{setSelectedCategory('');setShowCategoryDropdown(false);setSelectedCategoryIndex(-1);}}
+                                onMouseEnter={()=>setSelectedCategoryIndex(0)}
                                 style={{
                                     padding:"14px 18px",
                                     cursor:"pointer",
                                     borderBottom:"1px solid #F3F4F6",
-                                    background:selectedCategory===''?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
+                                    background:(selectedCategory==='' || selectedCategoryIndex===0)?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
                                     transition:"all 0.2s",
-                                    fontWeight:selectedCategory===''?600:500,
-                                    color:selectedCategory===''?"#111827":"#374151"
+                                    fontWeight:(selectedCategory==='' || selectedCategoryIndex===0)?600:500,
+                                    color:(selectedCategory==='' || selectedCategoryIndex===0)?"#111827":"#374151"
                                 }}
-                                onMouseEnter={(e)=>e.currentTarget.style.background="linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)"}
-                                onMouseLeave={(e)=>{if(selectedCategory!=='')e.currentTarget.style.background="#fff"}}
                             >
                                 <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
                                     <div style={{
                                         width:"36px",
                                         height:"36px",
                                         borderRadius:"8px",
-                                        background:selectedCategory===''?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
+                                        background:(selectedCategory==='' || selectedCategoryIndex===0)?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
                                         display:"flex",
                                         alignItems:"center",
                                         justifyContent:"center",
                                         flexShrink:0,
                                         transition:"all 0.2s"
                                     }}>
-                                        <LayoutGrid size={16} color={selectedCategory===''?"#fff":"#6B7280"}/>
+                                        <LayoutGrid size={16} color={(selectedCategory==='' || selectedCategoryIndex===0)?"#fff":"#6B7280"}/>
                                     </div>
                                     <div style={{flex:1}}>
                                         <div style={{fontSize:"13px"}}>All Categories</div>
                                         <div style={{fontSize:"10px",color:"#9CA3AF",marginTop:"2px"}}>Show all products</div>
                                     </div>
+                                    {selectedCategoryIndex===0&&(
+                                        <div style={{
+                                            fontSize:"10px",
+                                            color:"#3B82F6",
+                                            fontWeight:600,
+                                            background:"#EFF6FF",
+                                            padding:"4px 8px",
+                                            borderRadius:"6px",
+                                            display:"flex",
+                                            alignItems:"center",
+                                            gap:"4px"
+                                        }}>
+                                            <span>↵</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            {categories.map((cat)=>(
+                            {categories.map((cat,idx)=>(
                                 <div 
                                     key={cat.id}
-                                    onClick={()=>{setSelectedCategory(cat.name);setShowCategoryDropdown(false);}}
+                                    onClick={()=>{setSelectedCategory(cat.name);setShowCategoryDropdown(false);setSelectedCategoryIndex(-1);}}
+                                    onMouseEnter={()=>setSelectedCategoryIndex(idx+1)}
                                     style={{
                                         padding:"14px 18px",
                                         cursor:"pointer",
-                                        borderBottom:"1px solid #F3F4F6",
-                                        background:selectedCategory===cat.name?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
+                                        borderBottom:idx<categories.length-1?"1px solid #F3F4F6":"none",
+                                        background:(selectedCategory===cat.name || selectedCategoryIndex===idx+1)?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
                                         transition:"all 0.2s",
-                                        fontWeight:selectedCategory===cat.name?600:500,
-                                        color:selectedCategory===cat.name?"#111827":"#374151"
+                                        fontWeight:(selectedCategory===cat.name || selectedCategoryIndex===idx+1)?600:500,
+                                        color:(selectedCategory===cat.name || selectedCategoryIndex===idx+1)?"#111827":"#374151"
                                     }}
-                                    onMouseEnter={(e)=>e.currentTarget.style.background="linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)"}
-                                    onMouseLeave={(e)=>{if(selectedCategory!==cat.name)e.currentTarget.style.background="#fff"}}
                                 >
                                     <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
                                         <div style={{
                                             width:"36px",
                                             height:"36px",
                                             borderRadius:"8px",
-                                            background:selectedCategory===cat.name?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
+                                            background:(selectedCategory===cat.name || selectedCategoryIndex===idx+1)?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
                                             display:"flex",
                                             alignItems:"center",
                                             justifyContent:"center",
                                             flexShrink:0,
                                             transition:"all 0.2s"
                                         }}>
-                                            <Filter size={16} color={selectedCategory===cat.name?"#fff":"#6B7280"}/>
+                                            <Filter size={16} color={(selectedCategory===cat.name || selectedCategoryIndex===idx+1)?"#fff":"#6B7280"}/>
                                         </div>
-                                        <div style={{flex:1}}>
-                                            <div style={{fontSize:"13px"}}>{cat.display_name}</div>
-                                            {cat.description && <div style={{fontSize:"10px",color:"#9CA3AF",marginTop:"2px"}}>{cat.description}</div>}
+                                        <div style={{flex:1,minWidth:0}}>
+                                            <div style={{fontSize:"13px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cat.display_name}</div>
+                                            {cat.description && <div style={{fontSize:"10px",color:"#9CA3AF",marginTop:"2px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cat.description}</div>}
                                         </div>
+                                        {selectedCategoryIndex===idx+1&&(
+                                            <div style={{
+                                                fontSize:"10px",
+                                                color:"#3B82F6",
+                                                fontWeight:600,
+                                                background:"#EFF6FF",
+                                                padding:"4px 8px",
+                                                borderRadius:"6px",
+                                                display:"flex",
+                                                alignItems:"center",
+                                                gap:"4px",
+                                                flexShrink:0
+                                            }}>
+                                                <span>↵</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -490,7 +604,7 @@ const ProductManager = () => {
                     <Search size={15} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"#9CA3AF"}}/>
                     <input type="text" placeholder="Search products..." value={searchTerm} onChange={handleSearchChange} onKeyDown={handleKeyDown} onFocus={()=>suggestions.length>0&&setShowSuggestions(true)} onBlur={()=>setTimeout(()=>setShowSuggestions(false),200)} style={{paddingLeft:38,paddingRight:16,paddingTop:8,paddingBottom:8,borderRadius:20,border:"1.5px solid #E5E7EB",background:"#fff",fontSize:13,color:"#374151",outline:"none",width:220,fontFamily:"inherit"}}/>
                     {showSuggestions&&suggestions.length>0&&(
-                        <div className="suggestions-dropdown" style={{position:"absolute",top:"110%",left:0,right:0,background:"#fff",borderRadius:16,boxShadow:"0 12px 32px rgba(0,0,0,0.15)",zIndex:100,overflow:"hidden",maxHeight:"360px",overflowY:"auto",border:"1px solid #E5E7EB"}}>
+                        <div className="search-suggestions-dropdown suggestions-dropdown" style={{position:"absolute",top:"calc(100% + 4px)",left:0,background:"#fff",borderRadius:16,boxShadow:"0 12px 32px rgba(0,0,0,0.15)",zIndex:100,overflow:"hidden",maxHeight:"360px",overflowY:"auto",border:"1px solid #E5E7EB",minWidth:"100%"}}>
                             {suggestions.map((p,i)=>(
                                 <div 
                                     key={p.p_id||i} 
@@ -578,7 +692,7 @@ const ProductManager = () => {
             </div>
 
             {/* PRODUCT LIST - scrollable */}
-            <div className="scrollbar-hide" style={{overflowY:"auto",maxHeight:"calc(100vh - 320px)",minHeight:100,display:"flex",flexDirection:"column",gap:8}}>
+            <div className="scrollbar-hide" style={{overflowY:"auto",height:"calc(6 * 80px)",minHeight:100,display:"flex",flexDirection:"column",gap:8,flexShrink:0}}>
                 {loading?(
                     <div style={{background:"#fff",borderRadius:16,padding:"48px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
                         <div style={{color:"#9CA3AF",fontSize:14}}>Loading products...</div>
@@ -586,7 +700,7 @@ const ProductManager = () => {
                 ):products.length===0?(
                     <div style={{background:"#fff",borderRadius:16,padding:"48px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,0.05)",color:"#9CA3AF",fontSize:14}}>No products found.</div>
                 ):products.map(product=>(
-                    <div key={product.p_id} style={{background:"#fff",borderRadius:16,padding:"16px 20px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)",display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 1fr 80px",gap:16,alignItems:"center",transition:"box-shadow 0.2s,transform 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 8px 24px rgba(0,0,0,0.1)";e.currentTarget.style.transform="translateY(-1px)"}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.05)";e.currentTarget.style.transform="translateY(0)"}}>
+                    <div key={product.p_id} onClick={()=>{setSelectedProduct(product);setShowProductDetail(true);}} style={{background:"#fff",borderRadius:16,padding:"16px 20px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)",display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 1fr 80px",gap:16,alignItems:"center",transition:"box-shadow 0.2s,transform 0.2s",cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 8px 24px rgba(0,0,0,0.1)";e.currentTarget.style.transform="translateY(-1px)"}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.05)";e.currentTarget.style.transform="translateY(0)"}}>
                         <div style={{display:"flex",alignItems:"center",gap:12}}>
                             <div style={{width:44,height:44,borderRadius:10,background:"#1E293B",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Package size={18} color="#94A3B8"/></div>
                             <div>
@@ -602,8 +716,8 @@ const ProductManager = () => {
                             {product.cost_price&&<div style={{fontSize:12,color:"#9CA3AF",marginTop:2}}>Cost: ₹{parseFloat(product.cost_price).toFixed(2)}</div>}
                         </div>
                         <div style={{display:"flex",gap:8}}>
-                            {hasPermission(PERMISSIONS.PRODUCTS_EDIT)&&(<button onClick={()=>handleEdit(product)} title="Edit" style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:"#9CA3AF",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color="#3B82F6"} onMouseLeave={e=>e.currentTarget.style.color="#9CA3AF"}><Edit size={15}/></button>)}
-                            {hasPermission(PERMISSIONS.PRODUCTS_DELETE)&&(<button onClick={()=>handleDelete(product.p_id)} title="Delete" style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:"#9CA3AF",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color="#EF4444"} onMouseLeave={e=>e.currentTarget.style.color="#9CA3AF"}><Trash2 size={15}/></button>)}
+                            {hasPermission(PERMISSIONS.PRODUCTS_EDIT)&&(<button onClick={(e)=>{e.stopPropagation();handleEdit(product);}} title="Edit" style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:"#9CA3AF",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color="#3B82F6"} onMouseLeave={e=>e.currentTarget.style.color="#9CA3AF"}><Edit size={15}/></button>)}
+                            {hasPermission(PERMISSIONS.PRODUCTS_DELETE)&&(<button onClick={(e)=>{e.stopPropagation();setProductToDelete(product);setShowDeleteConfirm(true);}} title="Delete" style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:"#9CA3AF",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color="#EF4444"} onMouseLeave={e=>e.currentTarget.style.color="#9CA3AF"}><Trash2 size={15}/></button>)}
                         </div>
                     </div>
                 ))}
@@ -651,6 +765,232 @@ const ProductManager = () => {
 
             {/* TRANSFER FORM */}
             {showTransferForm&&<TransferForm onClose={()=>setShowTransferForm(false)} onSuccess={()=>{setShowTransferForm(false);fetchProducts();showNotification("Transfer completed!");}} warehouses={warehouses}/>}
+
+            {/* PRODUCT DETAIL MODAL */}
+            {showProductDetail&&selectedProduct&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowProductDetail(false)}>
+                    <div style={{background:"#fff",borderRadius:24,width:"100%",maxWidth:800,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 25px 50px rgba(0,0,0,0.25)"}} onClick={(e)=>e.stopPropagation()} className="suggestions-dropdown">
+                        {/* Header */}
+                        <div style={{padding:"32px",borderBottom:"1px solid #E5E7EB",position:"sticky",top:0,background:"#fff",zIndex:1,borderRadius:"24px 24px 0 0"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                                <div style={{flex:1}}>
+                                    <h2 style={{margin:0,fontSize:24,fontWeight:700,color:"#111827",marginBottom:8}}>{selectedProduct.product_name}</h2>
+                                    {selectedProduct.product_variant&&<div style={{fontSize:14,color:"#6B7280",marginBottom:12}}>{selectedProduct.product_variant}</div>}
+                                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                                        <span style={{background:"#F3F4F6",borderRadius:20,padding:"6px 14px",fontSize:12,fontWeight:600,color:"#374151",fontFamily:"monospace"}}>{selectedProduct.barcode}</span>
+                                        {selectedProduct.category_display_name&&<span style={{background:"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)",borderRadius:20,padding:"6px 14px",fontSize:12,fontWeight:600,color:"#fff"}}>{selectedProduct.category_display_name}</span>}
+                                    </div>
+                                </div>
+                                <button onClick={()=>setShowProductDetail(false)} style={{background:"#F3F4F6",border:"none",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.2s"}} onMouseEnter={(e)=>e.target.style.background="#E5E7EB"} onMouseLeave={(e)=>e.target.style.background="#F3F4F6"}><X size={20} color="#6B7280"/></button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div style={{padding:"32px"}}>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
+                                {/* Left Column - Image */}
+                                <div>
+                                    <div style={{background:"#F9FAFB",borderRadius:16,aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",border:"2px dashed #E5E7EB"}}>
+                                        <div style={{textAlign:"center",color:"#9CA3AF"}}>
+                                            <Package size={64} style={{marginBottom:12}}/>
+                                            <div style={{fontSize:14}}>No image available</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column - Details */}
+                                <div>
+                                    <h3 style={{fontSize:16,fontWeight:700,color:"#111827",marginBottom:16,marginTop:0}}>Product Details</h3>
+                                    
+                                    {/* Pricing */}
+                                    <div style={{marginBottom:24}}>
+                                        <div style={{display:"flex",gap:16,marginBottom:12}}>
+                                            {selectedProduct.price&&(
+                                                <div style={{flex:1,background:"#F0F9FF",padding:16,borderRadius:12,border:"1px solid #BFDBFE"}}>
+                                                    <div style={{fontSize:11,fontWeight:600,color:"#1E40AF",marginBottom:4,letterSpacing:"0.05em"}}>SELLING PRICE</div>
+                                                    <div style={{fontSize:24,fontWeight:700,color:"#1E40AF"}}>₹{parseFloat(selectedProduct.price).toFixed(2)}</div>
+                                                </div>
+                                            )}
+                                            {selectedProduct.cost_price&&(
+                                                <div style={{flex:1,background:"#FEF3C7",padding:16,borderRadius:12,border:"1px solid #FDE68A"}}>
+                                                    <div style={{fontSize:11,fontWeight:600,color:"#92400E",marginBottom:4,letterSpacing:"0.05em"}}>COST PRICE</div>
+                                                    <div style={{fontSize:24,fontWeight:700,color:"#92400E"}}>₹{parseFloat(selectedProduct.cost_price).toFixed(2)}</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {selectedProduct.price&&selectedProduct.cost_price&&(
+                                            <div style={{fontSize:12,color:"#6B7280",textAlign:"center"}}>
+                                                Margin: ₹{(parseFloat(selectedProduct.price)-parseFloat(selectedProduct.cost_price)).toFixed(2)} ({(((parseFloat(selectedProduct.price)-parseFloat(selectedProduct.cost_price))/parseFloat(selectedProduct.price))*100).toFixed(1)}%)
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Stock */}
+                                    <div style={{marginBottom:24}}>
+                                        <div style={{fontSize:12,fontWeight:600,color:"#6B7280",marginBottom:8}}>STOCK STATUS</div>
+                                        {(selectedProduct.total_stock||0)===0?(
+                                            <div style={{background:"#FEE2E2",color:"#991B1B",borderRadius:12,padding:"12px 16px",fontSize:14,fontWeight:600,display:"inline-flex",alignItems:"center",gap:8}}>
+                                                <AlertCircle size={16}/>
+                                                OUT OF STOCK
+                                            </div>
+                                        ):(
+                                            <div style={{background:"#DCFCE7",color:"#166534",borderRadius:12,padding:"12px 16px",fontSize:14,fontWeight:600,display:"inline-flex",alignItems:"center",gap:8}}>
+                                                <CheckCircle size={16}/>
+                                                {selectedProduct.total_stock} IN STOCK
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Description */}
+                                    {selectedProduct.description&&(
+                                        <div style={{marginBottom:24}}>
+                                            <div style={{fontSize:12,fontWeight:600,color:"#6B7280",marginBottom:8}}>DESCRIPTION</div>
+                                            <div style={{fontSize:14,color:"#374151",lineHeight:1.6,background:"#F9FAFB",padding:16,borderRadius:12}}>{selectedProduct.description}</div>
+                                        </div>
+                                    )}
+
+                                    {/* Additional Info */}
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                                        {selectedProduct.weight&&(
+                                            <div style={{background:"#F9FAFB",padding:12,borderRadius:10}}>
+                                                <div style={{fontSize:11,fontWeight:600,color:"#6B7280",marginBottom:4}}>WEIGHT</div>
+                                                <div style={{fontSize:14,fontWeight:600,color:"#111827"}}>{selectedProduct.weight}</div>
+                                            </div>
+                                        )}
+                                        {selectedProduct.dimensions&&(
+                                            <div style={{background:"#F9FAFB",padding:12,borderRadius:10}}>
+                                                <div style={{fontSize:11,fontWeight:600,color:"#6B7280",marginBottom:4}}>DIMENSIONS</div>
+                                                <div style={{fontSize:14,fontWeight:600,color:"#111827"}}>{selectedProduct.dimensions}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div style={{padding:"24px 32px",borderTop:"1px solid #E5E7EB",display:"flex",gap:12,justifyContent:"flex-end",background:"#F9FAFB",borderRadius:"0 0 24px 24px"}}>
+                            {hasPermission(PERMISSIONS.PRODUCTS_EDIT)&&(
+                                <button onClick={()=>{handleEdit(selectedProduct);setShowProductDetail(false);}} style={{padding:"10px 20px",borderRadius:12,border:"1.5px solid #E5E7EB",background:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
+                                    <Edit size={16}/>
+                                    Edit Product
+                                </button>
+                            )}
+                            {hasPermission(PERMISSIONS.PRODUCTS_DELETE)&&(
+                                <button onClick={()=>{setProductToDelete(selectedProduct);setShowDeleteConfirm(true);}} style={{padding:"10px 20px",borderRadius:12,border:"none",background:"#EF4444",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
+                                    <Trash2 size={16}/>
+                                    Delete
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE CONFIRMATION MODAL */}
+            {showDeleteConfirm&&productToDelete&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:1001,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>{setShowDeleteConfirm(false);setProductToDelete(null);}}>
+                    <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:440,boxShadow:"0 25px 50px rgba(0,0,0,0.3)",overflow:"hidden"}} onClick={(e)=>e.stopPropagation()}>
+                        {/* Header */}
+                        <div style={{padding:"32px 32px 24px 32px",textAlign:"center"}}>
+                            <div style={{width:64,height:64,borderRadius:"50%",background:"#FEE2E2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+                                <AlertCircle size={32} color="#EF4444"/>
+                            </div>
+                            <h3 style={{margin:0,fontSize:20,fontWeight:700,color:"#111827",marginBottom:12}}>Delete Product?</h3>
+                            <p style={{margin:0,fontSize:14,color:"#6B7280",lineHeight:1.6}}>
+                                Are you sure you want to delete <strong style={{color:"#111827"}}>{productToDelete.product_name}</strong>? This action cannot be undone.
+                            </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{padding:"0 32px 32px 32px",display:"flex",gap:12}}>
+                            <button 
+                                onClick={()=>{setShowDeleteConfirm(false);setProductToDelete(null);}} 
+                                style={{
+                                    flex:1,
+                                    padding:"12px 24px",
+                                    borderRadius:12,
+                                    border:"1.5px solid #E5E7EB",
+                                    background:"#fff",
+                                    fontSize:14,
+                                    fontWeight:600,
+                                    cursor:"pointer",
+                                    fontFamily:"inherit",
+                                    color:"#374151",
+                                    transition:"all 0.2s"
+                                }}
+                                onMouseEnter={(e)=>{e.target.style.background="#F9FAFB";e.target.style.borderColor="#D1D5DB";}}
+                                onMouseLeave={(e)=>{e.target.style.background="#fff";e.target.style.borderColor="#E5E7EB";}}
+                            >
+                                No, Cancel
+                            </button>
+                            <button 
+                                onClick={()=>{
+                                    handleDelete(productToDelete.p_id);
+                                    setShowDeleteConfirm(false);
+                                    setProductToDelete(null);
+                                    setShowProductDetail(false);
+                                }} 
+                                style={{
+                                    flex:1,
+                                    padding:"12px 24px",
+                                    borderRadius:12,
+                                    border:"none",
+                                    background:"#111827",
+                                    fontSize:14,
+                                    fontWeight:600,
+                                    cursor:"pointer",
+                                    fontFamily:"inherit",
+                                    color:"#fff",
+                                    transition:"all 0.2s"
+                                }}
+                                onMouseEnter={(e)=>e.target.style.background="#000"}
+                                onMouseLeave={(e)=>e.target.style.background="#111827"}
+                            >
+                                Yes, Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE SUCCESS MODAL */}
+            {showDeleteSuccess&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:1002,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+                    <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:400,boxShadow:"0 25px 50px rgba(0,0,0,0.3)",overflow:"hidden",animation:"slideIn 0.3s ease-out"}}>
+                        <div style={{padding:"48px 32px",textAlign:"center"}}>
+                            <div style={{width:80,height:80,borderRadius:"50%",background:"#DCFCE7",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 24px",animation:"scaleIn 0.4s ease-out"}}>
+                                <CheckCircle size={40} color="#16A34A" strokeWidth={2.5}/>
+                            </div>
+                            <h3 style={{margin:0,fontSize:22,fontWeight:700,color:"#111827",marginBottom:12}}>Product Deleted Successfully</h3>
+                            <p style={{margin:0,fontSize:14,color:"#6B7280",lineHeight:1.6}}>
+                                <strong style={{color:"#111827"}}>{deletedProductName}</strong> has been removed from your inventory.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style jsx>{`
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                @keyframes scaleIn {
+                    from {
+                        transform: scale(0);
+                    }
+                    to {
+                        transform: scale(1);
+                    }
+                }
+            `}</style>
 
         </div>
     );

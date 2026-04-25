@@ -44,15 +44,54 @@ export default function StoreTimeline() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/timeline?entityType=store&entityId=${selectedStore}&type=${filterType}`, {
+            
+            // Get the store code for the selected store
+            const selectedStoreData = stores.find(s => s.id === parseInt(selectedStore));
+            const storeCode = selectedStoreData?.store_code || selectedStoreData?.id;
+            
+            // Use timeline summary API with warehouse filter
+            const response = await fetch(`${API_BASE}/api/timeline?warehouse=${storeCode}&limit=100`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
+            console.log('Timeline API response:', data);
+            
             if (data.success) {
-                setTimeline(data.timeline);
+                // Transform the timeline data to match our component format
+                const transformedTimeline = (data.data || []).map(item => ({
+                    eventType: item.type || 'UNKNOWN',
+                    timestamp: item.last_movement || new Date().toISOString(),
+                    quantity: item.net_movement || 0,
+                    stockBefore: 0, // Not available in summary
+                    stockAfter: item.total_in - item.total_out,
+                    source: item.warehouse || storeCode,
+                    destination: item.warehouse || storeCode,
+                    notes: `${item.total_movements} movements total`,
+                    status: 'COMPLETED',
+                    unit: 'pcs'
+                }));
+                
+                setTimeline(transformedTimeline);
+            } else {
+                console.error('Timeline API error:', data.message);
+                setTimeline([]);
             }
         } catch (error) {
             console.error('Error fetching timeline:', error);
+            
+            // Check if it's an authentication error
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                console.log('Authentication error - redirecting to login');
+                // Don't redirect automatically, just show error
+                setTimeline([]);
+            } else {
+                setTimeline([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -177,7 +216,25 @@ export default function StoreTimeline() {
                 {loading ? (
                     <div style={{ textAlign: 'center', paddingTop: '40px', color: '#9CA3AF' }}>Loading timeline...</div>
                 ) : timeline.length === 0 ? (
-                    <div style={{ textAlign: 'center', paddingTop: '40px', color: '#9CA3AF' }}>No events found</div>
+                    <div style={{ 
+                        textAlign: 'center', 
+                        paddingTop: '40px', 
+                        color: '#9CA3AF',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '12px'
+                    }}>
+                        <Package size={48} color="#D1D5DB" />
+                        <div>
+                            <div style={{ fontSize: '16px', fontWeight: '600', color: '#6B7280', marginBottom: '4px' }}>
+                                No timeline events found
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#9CA3AF' }}>
+                                {selectedStoreData ? `No inventory movements for ${selectedStoreData.store_name}` : 'Select a store to view timeline'}
+                            </div>
+                        </div>
+                    </div>
                 ) : (
                     <div style={{ position: 'relative' }}>
                         {/* Timeline Line */}

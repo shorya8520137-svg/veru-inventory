@@ -1,26 +1,31 @@
-# Download database from server
-$SSH_KEY = "C:\Users\Public\e2c.pem.pem"
-$SERVER = "ubuntu@13.212.51.226"
+# PowerShell script to download database from server
 
-Write-Host "=== Downloading Database ===" -ForegroundColor Cyan
+$sshHost = "ubuntu@13.212.82.15"
+$sshKey = "C:\Users\singh\.ssh\pem.pem"
+$outputFile = "inventory_db_backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql"
+
+Write-Host "📥 Downloading database from server..." -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "Step 1: Creating database dump on server..." -ForegroundColor Yellow
-ssh -i $SSH_KEY $SERVER "sudo mysqldump inventory_db > /tmp/inventory_db_backup.sql"
+# Create mysqldump command
+$dumpCommand = "sudo mysqldump -u root inventory_db > /tmp/inventory_backup.sql && cat /tmp/inventory_backup.sql"
 
-Write-Host ""
-Write-Host "Step 2: Downloading to local machine..." -ForegroundColor Yellow
-scp -i $SSH_KEY "${SERVER}:/tmp/inventory_db_backup.sql" "./inventory_db_backup.sql"
+Write-Host "Executing mysqldump on server..." -ForegroundColor Yellow
 
-Write-Host ""
-Write-Host "Step 3: Cleaning up server..." -ForegroundColor Yellow
-ssh -i $SSH_KEY $SERVER "rm /tmp/inventory_db_backup.sql"
+# Execute via SSH and save to local file
+ssh -i $sshKey $sshHost $dumpCommand | Out-File -FilePath $outputFile -Encoding UTF8
 
-Write-Host ""
-Write-Host "=== Download Complete ===" -ForegroundColor Green
-Write-Host "Database saved to: inventory_db_backup.sql" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "To analyze locally, install MySQL and run:" -ForegroundColor Yellow
-Write-Host "mysql -u root -p -e 'CREATE DATABASE inventory_db_local;'" -ForegroundColor White
-Write-Host "mysql -u root -p inventory_db_local < inventory_db_backup.sql" -ForegroundColor White
-Write-Host ""
+if (Test-Path $outputFile) {
+    $fileSize = (Get-Item $outputFile).Length / 1MB
+    Write-Host ""
+    Write-Host "✅ Database downloaded successfully!" -ForegroundColor Green
+    Write-Host "📁 File: $outputFile" -ForegroundColor White
+    Write-Host "📊 Size: $([math]::Round($fileSize, 2)) MB" -ForegroundColor White
+    Write-Host ""
+    Write-Host "🧹 Cleaning up server temp file..." -ForegroundColor Yellow
+    ssh -i $sshKey $sshHost "sudo rm /tmp/inventory_backup.sql"
+    Write-Host "✅ Done!" -ForegroundColor Green
+} else {
+    Write-Host ""
+    Write-Host "❌ Failed to download database!" -ForegroundColor Red
+}
