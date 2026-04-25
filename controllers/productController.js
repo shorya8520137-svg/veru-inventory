@@ -1600,6 +1600,7 @@ function insertProductsWithProgress(products, req, res) {
 
         // Start the category lookup and insert process
         lookupCategoryAndInsert();
+    };
 
     // Start processing
     processProduct(0);
