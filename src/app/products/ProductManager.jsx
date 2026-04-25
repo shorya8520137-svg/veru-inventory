@@ -52,6 +52,7 @@ const ProductManager = () => {
 
     const [categoryForm, setCategoryForm] = useState({ name: '', display_name: '', description: '', parent_id: '' });
     const [showCategoryForm, setShowCategoryForm] = useState(false);
+    const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
     useEffect(() => { fetchProducts(); fetchCategories(); fetchWarehouses(); }, [currentPage, selectedCategory]);
 
@@ -282,20 +283,45 @@ const ProductManager = () => {
             
             {/* Custom CSS for dropdown options */}
             <style jsx>{`
+                select {
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                }
+                
                 select option {
                     background: #ffffff !important;
                     color: #374151 !important;
-                    padding: 8px 12px !important;
+                    padding: 12px 16px !important;
                     font-weight: 400 !important;
+                    font-size: 13px !important;
+                    border-bottom: 1px solid #F3F4F6 !important;
                 }
-                select option:checked,
+                
+                select option:first-child {
+                    font-weight: 600 !important;
+                    color: #111827 !important;
+                    background: #F9FAFB !important;
+                }
+                
                 select option:hover {
                     background: #F3F4F6 !important;
                     color: #111827 !important;
                     font-weight: 500 !important;
                 }
-                select:focus option:checked {
-                    background: linear-gradient(0deg, #E5E7EB 0%, #E5E7EB 100%) !important;
+                
+                select option:checked {
+                    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+                    color: #ffffff !important;
+                    font-weight: 600 !important;
+                }
+                
+                /* Hide scrollbar for suggestions dropdown */
+                .suggestions-dropdown::-webkit-scrollbar {
+                    display: none;
+                }
+                .suggestions-dropdown {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
                 }
             `}</style>
 
@@ -333,11 +359,122 @@ const ProductManager = () => {
                 <h2 style={{fontSize:20,fontWeight:700,color:"#111827",margin:0,marginRight:4}}>Product Inventory</h2>
                 <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
                     <Filter size={13} style={{position:"absolute",left:12,color:"#6B7280",pointerEvents:"none",zIndex:1}}/>
-                    <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)} style={{appearance:"none",background:"#fff",border:"1.5px solid #E5E7EB",borderRadius:24,padding:"7px 32px 7px 30px",fontSize:13,fontWeight:500,color:"#374151",cursor:"pointer",fontFamily:"inherit",outline:"none",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-                        <option value="">Category: All</option>
-                        {categories.map(c=><option key={c.id} value={c.name}>{c.display_name}</option>)}
-                    </select>
+                    <div 
+                        onClick={()=>setShowCategoryDropdown(!showCategoryDropdown)}
+                        onBlur={()=>setTimeout(()=>setShowCategoryDropdown(false),200)}
+                        tabIndex={0}
+                        style={{
+                            appearance:"none",
+                            background:"#fff",
+                            border:"1.5px solid #E5E7EB",
+                            borderRadius:24,
+                            padding:"7px 32px 7px 30px",
+                            fontSize:13,
+                            fontWeight:500,
+                            color:"#374151",
+                            cursor:"pointer",
+                            fontFamily:"inherit",
+                            outline:"none",
+                            boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
+                            minWidth:"160px",
+                            userSelect:"none"
+                        }}
+                    >
+                        {selectedCategory ? categories.find(c=>c.name===selectedCategory)?.display_name : "Category: All"}
+                    </div>
                     <svg style={{position:"absolute",right:10,pointerEvents:"none",color:"#9CA3AF"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    
+                    {showCategoryDropdown && (
+                        <div style={{
+                            position:"absolute",
+                            top:"110%",
+                            left:0,
+                            right:0,
+                            background:"#fff",
+                            borderRadius:16,
+                            boxShadow:"0 12px 32px rgba(0,0,0,0.15)",
+                            zIndex:100,
+                            overflow:"hidden",
+                            maxHeight:"360px",
+                            overflowY:"auto",
+                            border:"1px solid #E5E7EB",
+                            minWidth:"220px"
+                        }}
+                        className="suggestions-dropdown"
+                        >
+                            <div 
+                                onClick={()=>{setSelectedCategory('');setShowCategoryDropdown(false);}}
+                                style={{
+                                    padding:"14px 18px",
+                                    cursor:"pointer",
+                                    borderBottom:"1px solid #F3F4F6",
+                                    background:selectedCategory===''?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
+                                    transition:"all 0.2s",
+                                    fontWeight:selectedCategory===''?600:500,
+                                    color:selectedCategory===''?"#111827":"#374151"
+                                }}
+                                onMouseEnter={(e)=>e.currentTarget.style.background="linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)"}
+                                onMouseLeave={(e)=>{if(selectedCategory!=='')e.currentTarget.style.background="#fff"}}
+                            >
+                                <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                                    <div style={{
+                                        width:"36px",
+                                        height:"36px",
+                                        borderRadius:"8px",
+                                        background:selectedCategory===''?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
+                                        display:"flex",
+                                        alignItems:"center",
+                                        justifyContent:"center",
+                                        flexShrink:0,
+                                        transition:"all 0.2s"
+                                    }}>
+                                        <LayoutGrid size={16} color={selectedCategory===''?"#fff":"#6B7280"}/>
+                                    </div>
+                                    <div style={{flex:1}}>
+                                        <div style={{fontSize:"13px"}}>All Categories</div>
+                                        <div style={{fontSize:"10px",color:"#9CA3AF",marginTop:"2px"}}>Show all products</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {categories.map((cat)=>(
+                                <div 
+                                    key={cat.id}
+                                    onClick={()=>{setSelectedCategory(cat.name);setShowCategoryDropdown(false);}}
+                                    style={{
+                                        padding:"14px 18px",
+                                        cursor:"pointer",
+                                        borderBottom:"1px solid #F3F4F6",
+                                        background:selectedCategory===cat.name?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
+                                        transition:"all 0.2s",
+                                        fontWeight:selectedCategory===cat.name?600:500,
+                                        color:selectedCategory===cat.name?"#111827":"#374151"
+                                    }}
+                                    onMouseEnter={(e)=>e.currentTarget.style.background="linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)"}
+                                    onMouseLeave={(e)=>{if(selectedCategory!==cat.name)e.currentTarget.style.background="#fff"}}
+                                >
+                                    <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                                        <div style={{
+                                            width:"36px",
+                                            height:"36px",
+                                            borderRadius:"8px",
+                                            background:selectedCategory===cat.name?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
+                                            display:"flex",
+                                            alignItems:"center",
+                                            justifyContent:"center",
+                                            flexShrink:0,
+                                            transition:"all 0.2s"
+                                        }}>
+                                            <Filter size={16} color={selectedCategory===cat.name?"#fff":"#6B7280"}/>
+                                        </div>
+                                        <div style={{flex:1}}>
+                                            <div style={{fontSize:"13px"}}>{cat.display_name}</div>
+                                            {cat.description && <div style={{fontSize:"10px",color:"#9CA3AF",marginTop:"2px"}}>{cat.description}</div>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
                     <svg style={{position:"absolute",left:12,pointerEvents:"none",color:"#6B7280"}} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
@@ -352,7 +489,81 @@ const ProductManager = () => {
                 <div style={{position:"relative"}}>
                     <Search size={15} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"#9CA3AF"}}/>
                     <input type="text" placeholder="Search products..." value={searchTerm} onChange={handleSearchChange} onKeyDown={handleKeyDown} onFocus={()=>suggestions.length>0&&setShowSuggestions(true)} onBlur={()=>setTimeout(()=>setShowSuggestions(false),200)} style={{paddingLeft:38,paddingRight:16,paddingTop:8,paddingBottom:8,borderRadius:20,border:"1.5px solid #E5E7EB",background:"#fff",fontSize:13,color:"#374151",outline:"none",width:220,fontFamily:"inherit"}}/>
-                    {showSuggestions&&suggestions.length>0&&(<div style={{position:"absolute",top:"110%",left:0,right:0,background:"#fff",borderRadius:12,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,overflow:"hidden",maxHeight:"300px",overflowY:"auto"}}>{suggestions.map((p,i)=>(<div key={p.p_id||i} onClick={()=>selectSuggestion(p)} onMouseEnter={()=>setSelectedSuggestionIndex(i)} style={{padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#374151",borderBottom:i<suggestions.length-1?"1px solid #F3F4F6":"none",background:selectedSuggestionIndex===i?"#F3F4F6":"#fff",transition:"background 0.15s"}}><div style={{fontWeight:500}}>{p.product_name}</div><div style={{fontSize:11,color:"#9CA3AF"}}>Barcode: {p.barcode}</div></div>))}</div>)}
+                    {showSuggestions&&suggestions.length>0&&(
+                        <div className="suggestions-dropdown" style={{position:"absolute",top:"110%",left:0,right:0,background:"#fff",borderRadius:16,boxShadow:"0 12px 32px rgba(0,0,0,0.15)",zIndex:100,overflow:"hidden",maxHeight:"360px",overflowY:"auto",border:"1px solid #E5E7EB"}}>
+                            {suggestions.map((p,i)=>(
+                                <div 
+                                    key={p.p_id||i} 
+                                    onClick={()=>selectSuggestion(p)} 
+                                    onMouseEnter={()=>setSelectedSuggestionIndex(i)} 
+                                    style={{
+                                        padding:"14px 18px",
+                                        cursor:"pointer",
+                                        borderBottom:i<suggestions.length-1?"1px solid #F3F4F6":"none",
+                                        background:selectedSuggestionIndex===i?"linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%)":"#fff",
+                                        transition:"all 0.2s",
+                                        position:"relative"
+                                    }}
+                                >
+                                    <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                                        <div style={{
+                                            width:"36px",
+                                            height:"36px",
+                                            borderRadius:"8px",
+                                            background:selectedSuggestionIndex===i?"linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)":"#F3F4F6",
+                                            display:"flex",
+                                            alignItems:"center",
+                                            justifyContent:"center",
+                                            flexShrink:0,
+                                            transition:"all 0.2s"
+                                        }}>
+                                            <Package size={16} color={selectedSuggestionIndex===i?"#fff":"#6B7280"}/>
+                                        </div>
+                                        <div style={{flex:1,minWidth:0}}>
+                                            <div style={{
+                                                fontWeight:selectedSuggestionIndex===i?600:500,
+                                                color:selectedSuggestionIndex===i?"#111827":"#374151",
+                                                marginBottom:"4px",
+                                                fontSize:"13px",
+                                                whiteSpace:"nowrap",
+                                                overflow:"hidden",
+                                                textOverflow:"ellipsis"
+                                            }}>
+                                                {p.product_name}
+                                            </div>
+                                            <div style={{
+                                                fontSize:"11px",
+                                                color:"#9CA3AF",
+                                                fontFamily:"monospace",
+                                                display:"flex",
+                                                alignItems:"center",
+                                                gap:"4px"
+                                            }}>
+                                                <FileSpreadsheet size={10}/>
+                                                {p.barcode}
+                                            </div>
+                                        </div>
+                                        {selectedSuggestionIndex===i&&(
+                                            <div style={{
+                                                fontSize:"10px",
+                                                color:"#3B82F6",
+                                                fontWeight:600,
+                                                background:"#EFF6FF",
+                                                padding:"4px 8px",
+                                                borderRadius:"6px",
+                                                display:"flex",
+                                                alignItems:"center",
+                                                gap:"4px"
+                                            }}>
+                                                <span>↵</span>
+                                                <span>Enter</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 {hasPermission(PERMISSIONS.PRODUCTS_BULK_IMPORT)&&(<button onClick={()=>setShowBulkImport(true)} style={{background:"none",border:"none",fontSize:13,color:"#6B7280",cursor:"pointer",padding:"6px 12px",borderRadius:8,fontFamily:"inherit"}}>Bulk Import</button>)}
                 <button onClick={()=>setShowCategoryForm(true)} style={{background:"none",border:"none",fontSize:13,color:"#6B7280",cursor:"pointer",padding:"6px 12px",borderRadius:8,fontFamily:"inherit"}}>+ Add Category</button>
