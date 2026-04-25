@@ -96,10 +96,21 @@ export default function TransferForm({ onClose }) {
 
         if (value.length > 2) {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${API}/search-products?query=${value}`, {
+            const res = await fetch(`${PRODUCTS_API}?search=${encodeURIComponent(value)}&limit=10`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            updated[index].suggestions = await res.json();
+            const data = await res.json();
+            // Transform the data to match expected format
+            if (data.success && data.data) {
+                updated[index].suggestions = data.data.map(product => ({
+                    barcode: product.barcode,
+                    product_name: product.product_name,
+                    product_variant: product.product_variant || '',
+                    price: product.selling_price || 0
+                }));
+            } else {
+                updated[index].suggestions = [];
+            }
         } else {
             updated[index].suggestions = [];
         }
