@@ -74,47 +74,58 @@ export default function TransferForm({ onClose }) {
     }, []);
 
     /* ------------------ STOCK CHECKER ------------------ */
-    const checkStock = async (barcode) => {
+    const checkStock = (barcode) => {
         if (!barcode || stockData[barcode]) return;
 
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/product-tracking/${barcode}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
+        const token = localStorage.getItem('token');
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/product-tracking/${barcode}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
             setStockData(prev => ({ ...prev, [barcode]: data.finalStock || 0 }));
-        } catch {
+        })
+        .catch(err => {
+            console.error('Stock check error:', err);
             setStockData(prev => ({ ...prev, [barcode]: null }));
-        }
+        });
     };
 
     /* ------------------ PRODUCT SEARCH ------------------ */
-    const searchProduct = async (index, value) => {
+    const searchProduct = (index, value) => {
         const updated = [...products];
         updated[index].name = value;
 
         if (value.length > 2) {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${PRODUCTS_API}?search=${encodeURIComponent(value)}&limit=10`, {
+            
+            fetch(`${PRODUCTS_API}?search=${encodeURIComponent(value)}&limit=10`, {
                 headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            // Transform the data to match expected format
-            if (data.success && data.data) {
-                updated[index].suggestions = data.data.map(product => ({
-                    barcode: product.barcode,
-                    product_name: product.product_name,
-                    product_variant: product.product_variant || '',
-                    price: product.selling_price || 0
-                }));
-            } else {
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Transform the data to match expected format
+                if (data.success && data.data) {
+                    updated[index].suggestions = data.data.map(product => ({
+                        barcode: product.barcode,
+                        product_name: product.product_name,
+                        product_variant: product.product_variant || '',
+                        price: product.selling_price || 0
+                    }));
+                } else {
+                    updated[index].suggestions = [];
+                }
+                setProducts([...updated]);
+            })
+            .catch(err => {
+                console.error('Product search error:', err);
                 updated[index].suggestions = [];
-            }
+                setProducts([...updated]);
+            });
         } else {
             updated[index].suggestions = [];
+            setProducts(updated);
         }
-        setProducts(updated);
 
         // Extract barcode for stock check
         const barcodeMatch = value.match(/\| (\w+)$/);
@@ -139,7 +150,7 @@ export default function TransferForm({ onClose }) {
         setProducts(products.filter((_, idx) => idx !== i));
 
     /* ------------------ SUBMIT TRANSFER ------------------ */
-    const submitTransfer = async () => {
+    const submitTransfer = () => {
         if (loading) return;
 
         // Determine source and destination types
@@ -192,25 +203,27 @@ export default function TransferForm({ onClose }) {
             transferDate: new Date().toISOString()
         };
 
-        try {
-            setLoading(true);
-            setError("");
+        setLoading(true);
+        setError("");
 
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer`, {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload),
-            });
-
+        const token = localStorage.getItem('token');
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload),
+        })
+        .then(res => {
             if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || "Failed to create transfer");
+                return res.json().then(errorData => {
+                    throw new Error(errorData.error || "Failed to create transfer");
+                });
             }
-
+            return res.json();
+        })
+        .then(data => {
             setShowSuccess(true);
             setTimeout(() => {
                 setForm(initialForm);
@@ -219,13 +232,14 @@ export default function TransferForm({ onClose }) {
                 setShowSuccess(false);
                 onClose();
             }, 3000);
-
-        } catch (err) {
+        })
+        .catch(err => {
             setError(err.message || "Transfer submission failed");
             setTimeout(() => setError(""), 5000);
-        } finally {
+        })
+        .finally(() => {
             setLoading(false);
-        }
+        });
     };
 
     /* ------------------ SUCCESS SCREEN ------------------ */
