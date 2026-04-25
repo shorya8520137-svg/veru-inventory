@@ -1523,19 +1523,42 @@ function insertProductsWithProgress(products, req, res) {
         // Look up category_id from category_name if provided
         const lookupCategoryAndInsert = () => {
             if (product.category_name && product.category_name.trim()) {
+                const categoryName = product.category_name.trim();
+                
                 // Look up category by name (case-insensitive)
                 const categorySql = 'SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) OR LOWER(display_name) = LOWER(?) LIMIT 1';
-                db.query(categorySql, [product.category_name.trim(), product.category_name.trim()], (catErr, catResults) => {
-                    let categoryId = null;
-                    
-                    if (!catErr && catResults && catResults.length > 0) {
-                        categoryId = catResults[0].id;
-                    } else if (catErr) {
+                db.query(categorySql, [categoryName, categoryName], (catErr, catResults) => {
+                    if (catErr) {
                         console.warn(`Category lookup warning for row ${rowNumber}:`, catErr.message);
+                        insertProduct(null);
+                        return;
                     }
                     
-                    // Insert product with looked-up category_id
-                    insertProduct(categoryId);
+                    if (catResults && catResults.length > 0) {
+                        // Category exists, use it
+                        insertProduct(catResults[0].id);
+                    } else {
+                        // Category doesn't exist, create it automatically
+                        const createCategorySql = `
+                            INSERT INTO product_categories (name, display_name, is_active)
+                            VALUES (?, ?, 1)
+                        `;
+                        
+                        // Create slug-friendly name (lowercase, replace spaces with hyphens)
+                        const slugName = categoryName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                        
+                        db.query(createCategorySql, [slugName, categoryName], (createErr, createResult) => {
+                            if (createErr) {
+                                console.warn(`Failed to auto-create category '${categoryName}' for row ${rowNumber}:`, createErr.message);
+                                // Insert product without category
+                                insertProduct(null);
+                            } else {
+                                console.log(`✅ Auto-created category: ${categoryName} (ID: ${createResult.insertId})`);
+                                // Insert product with newly created category
+                                insertProduct(createResult.insertId);
+                            }
+                        });
+                    }
                 });
             } else if (product.category_id) {
                 // Fallback: use category_id if provided directly

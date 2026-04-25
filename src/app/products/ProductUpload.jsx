@@ -157,10 +157,10 @@ export default function ProductUpload({ onClose }) {
             // Sheet 3: Instructions
             const instructions = [
                 { 'Step': '1', 'Instruction': 'Fill in the Product Template sheet with your product data' },
-                { 'Step': '2', 'Instruction': 'Use category_name from the Available Categories sheet' },
+                { 'Step': '2', 'Instruction': 'Use category_name column - categories will be AUTO-CREATED if they don\'t exist' },
                 { 'Step': '3', 'Instruction': 'Category names are case-insensitive (electronics = Electronics)' },
                 { 'Step': '4', 'Instruction': 'All fields are optional except product_name and barcode' },
-                { 'Step': '5', 'Instruction': 'If category_name is empty or not found, product will be uncategorized' }
+                { 'Step': '5', 'Instruction': 'New categories will be created automatically during import' }
             ];
             const ws3 = XLSX.utils.json_to_sheet(instructions);
             XLSX.utils.book_append_sheet(wb, ws3, 'Instructions');
@@ -416,7 +416,7 @@ export default function ProductUpload({ onClose }) {
                                             color: '#9ca3af',
                                             marginTop: '8px'
                                         }}>
-                                            💡 Tip: Category names are case-insensitive (electronics = Electronics)
+                                            💡 Tip: Categories will be AUTO-CREATED if they don't exist. Just use any category name in your CSV!
                                         </div>
                                     </div>
                                 )}
@@ -427,7 +427,7 @@ export default function ProductUpload({ onClose }) {
                                         paddingTop: '12px',
                                         borderTop: '1px solid #e2e8f0',
                                         fontSize: '11px',
-                                        color: '#f59e0b',
+                                        color: '#3b82f6',
                                         display: 'flex',
                                         alignItems: 'flex-start',
                                         gap: '6px'
@@ -435,10 +435,10 @@ export default function ProductUpload({ onClose }) {
                                         <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
                                         <div>
                                             <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                                                No categories found
+                                                No categories yet - No problem!
                                             </div>
                                             <div style={{ fontSize: '10px', color: '#9ca3af' }}>
-                                                Products will be uploaded without categories. Create categories from the Products page first.
+                                                Categories will be automatically created from your CSV during import. Just add category names in the category_name column!
                                             </div>
                                         </div>
                                     </div>
