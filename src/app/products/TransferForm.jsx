@@ -329,7 +329,7 @@ export default function TransferForm({ onClose }) {
                             fontSize: '12px',
                             fontWeight: '500'
                         }}>
-                            STF-2025
+                            STF-{new Date().getFullYear()}-{String(Date.now()).slice(-4)}
                         </span>
                     </div>
                     <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
@@ -369,7 +369,7 @@ export default function TransferForm({ onClose }) {
                 {/* FORM CONTENT */}
                 <div style={{ 
                     overflowY: 'auto', 
-                    maxHeight: 'calc(90vh - 120px)',
+                    maxHeight: 'calc(90vh - 200px)',
                     padding: '0'
                 }}>
                     <form onSubmit={(e) => { e.preventDefault(); submitTransfer(); }}>
@@ -471,7 +471,7 @@ export default function TransferForm({ onClose }) {
                                                 cursor: 'pointer'
                                             }}
                                         >
-                                            <option value="">FedEx Logistics</option>
+                                            <option value="">Select Logistics Partner</option>
                                             {logistics.map(l => <option key={l} value={l}>{l}</option>)}
                                         </select>
                                         <Truck size={16} style={{
@@ -520,7 +520,7 @@ export default function TransferForm({ onClose }) {
                                                 }}
                                                 required
                                             >
-                                                <option value="">Search Warehouse Alpha...</option>
+                                                <option value="">Select Source Warehouse</option>
                                                 {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
                                             </select>
                                         ) : (
@@ -601,7 +601,7 @@ export default function TransferForm({ onClose }) {
                                                 }}
                                                 required
                                             >
-                                                <option value="">Search Distribution Center...</option>
+                                                <option value="">Select Destination Warehouse</option>
                                                 {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
                                             </select>
                                         ) : (
@@ -657,7 +657,7 @@ export default function TransferForm({ onClose }) {
                                             borderRadius: '8px',
                                             fontSize: '14px'
                                         }}
-                                        placeholder="STF-00129"
+                                        placeholder="Enter Order Reference"
                                         value={form.orderRef}
                                         onChange={e => update("orderRef", e.target.value)}
                                         required
@@ -682,7 +682,7 @@ export default function TransferForm({ onClose }) {
                                             borderRadius: '8px',
                                             fontSize: '14px'
                                         }}
-                                        placeholder="8230-3421-4432"
+                                        placeholder="Enter AWB Number"
                                         value={form.awb}
                                         onChange={e => update("awb", e.target.value)}
                                     />
@@ -711,7 +711,7 @@ export default function TransferForm({ onClose }) {
                                                 backgroundColor: '#ffffff'
                                             }}
                                         >
-                                            <option value="">Internal Ledger</option>
+                                            <option value="">Select Payment Mode</option>
                                             <option>Internal</option>
                                             <option>Transfer</option>
                                             <option>Adjustment</option>
@@ -742,7 +742,7 @@ export default function TransferForm({ onClose }) {
                                                 backgroundColor: '#ffffff'
                                             }}
                                         >
-                                            <option value="">Alex Thompson</option>
+                                            <option value="">Select Executive</option>
                                             {executives.map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                         <User size={16} style={{
@@ -800,7 +800,7 @@ export default function TransferForm({ onClose }) {
                                             borderRadius: '8px',
                                             fontSize: '14px'
                                         }}
-                                        placeholder="12.5"
+                                        placeholder="Enter weight"
                                         value={form.weight}
                                         onChange={e => update("weight", e.target.value)}
                                     />
@@ -827,7 +827,7 @@ export default function TransferForm({ onClose }) {
                                             borderRadius: '8px',
                                             fontSize: '14px'
                                         }}
-                                        placeholder="40"
+                                        placeholder="Enter length"
                                         value={form.length}
                                         onChange={e => update("length", e.target.value)}
                                     />
@@ -854,7 +854,7 @@ export default function TransferForm({ onClose }) {
                                             borderRadius: '8px',
                                             fontSize: '14px'
                                         }}
-                                        placeholder="30"
+                                        placeholder="Enter width"
                                         value={form.width}
                                         onChange={e => update("width", e.target.value)}
                                     />
@@ -881,7 +881,7 @@ export default function TransferForm({ onClose }) {
                                             borderRadius: '8px',
                                             fontSize: '14px'
                                         }}
-                                        placeholder="25"
+                                        placeholder="Enter height"
                                         value={form.height}
                                         onChange={e => update("height", e.target.value)}
                                     />
@@ -1277,7 +1277,9 @@ export default function TransferForm({ onClose }) {
                     backgroundColor: '#f8fafc',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    minHeight: '80px'
                 }}>
                     <button
                         type="button"
