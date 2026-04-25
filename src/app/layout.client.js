@@ -30,6 +30,14 @@ export default function ClientLayout({ children }) {
     const [operationTab, setOperationTab] = useState("dispatch");
     const [showBulkUpload, setShowBulkUpload] = useState(false);
 
+    // Expose bulk upload function globally for navbar access - MUST be at top level
+    useEffect(() => {
+        window.openBulkUpload = () => setShowBulkUpload(true);
+        return () => {
+            delete window.openBulkUpload;
+        };
+    }, []);
+
     // Don't show sidebar on login pages - render directly without complex logic
     const isLoginPage = pathname === "/login" || pathname === "/simple-login" || pathname === "/login-isolated";
 
@@ -74,14 +82,6 @@ export default function ClientLayout({ children }) {
         }
     }
 
-    // Expose bulk upload function globally for navbar access
-    useEffect(() => {
-        window.openBulkUpload = () => setShowBulkUpload(true);
-        return () => {
-            delete window.openBulkUpload;
-        };
-    }, []);
-
     // Check if current page is InventoryGPT or customer support chat
     const isInventoryGPTPage = pathname === "/inventorygpt";
 
@@ -124,8 +124,19 @@ export default function ClientLayout({ children }) {
                     {/* MODALS */}
                     {openFIFO && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setOpenFIFO(false);
@@ -155,8 +166,19 @@ export default function ClientLayout({ children }) {
                     {/* Individual Operation Modals */}
                     {operationsOpen && operationTab === "dispatch" && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setOperationsOpen(false);
@@ -185,8 +207,19 @@ export default function ClientLayout({ children }) {
 
                     {operationsOpen && operationTab === "damage" && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setOperationsOpen(false);
@@ -215,8 +248,19 @@ export default function ClientLayout({ children }) {
 
                     {operationsOpen && operationTab === "return" && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setOperationsOpen(false);
@@ -245,8 +289,19 @@ export default function ClientLayout({ children }) {
 
                     {operationsOpen && operationTab === "recover" && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setOperationsOpen(false);
@@ -279,8 +334,19 @@ export default function ClientLayout({ children }) {
 
                     {operationsOpen && operationTab === "bulk" && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setOperationsOpen(false);
@@ -310,8 +376,19 @@ export default function ClientLayout({ children }) {
                     {/* Navbar Bulk Upload Modal */}
                     {showBulkUpload && (
                         <div 
-                            className="fixed inset-0 flex items-center justify-center p-4"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1001 }}
+                            style={{ 
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: '#000000',
+                                zIndex: 1001,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '16px'
+                            }}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     setShowBulkUpload(false);

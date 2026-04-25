@@ -167,7 +167,7 @@ const ApiPage = () => {
     }
 
     return (
-        <div className={styles.container}>
+        <div className={styles.container} style={{ overflowY: 'auto', maxHeight: '100vh' }}>
             <div className={styles.header}>
                 <h1>API Access</h1>
                 <p>Generate tokens to access your data via API</p>
@@ -559,6 +559,37 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
+                    <h3>📊 Timeline API</h3>
+                    <p className={styles.sectionDesc}>Track product inventory movements and history across warehouses</p>
+                    
+                    <div className={styles.endpoint}>
+                        <strong>Get Product Timeline:</strong>
+                        <code>GET https://api.giftgala.in/api/timeline/[productCode]</code>
+                        <button onClick={() => copyToClipboard('https://api.giftgala.in/api/timeline/{productCode}')}>
+                            <Copy size={14} />
+                        </button>
+                        <div className={styles.endpointDetails}>
+                            <p>Requires: Authorization header (Bearer token)</p>
+                            <p>Query params: warehouse, dateFrom, dateTo, limit</p>
+                            <p>Returns: Complete movement history for a specific product</p>
+                        </div>
+                    </div>
+                    
+                    <div className={styles.endpoint}>
+                        <strong>Get Timeline Summary:</strong>
+                        <code>GET https://api.giftgala.in/api/timeline</code>
+                        <button onClick={() => copyToClipboard('https://api.giftgala.in/api/timeline')}>
+                            <Copy size={14} />
+                        </button>
+                        <div className={styles.endpointDetails}>
+                            <p>Requires: Authorization header (Bearer token)</p>
+                            <p>Query params: warehouse, groupBy (product/warehouse), dateFrom, dateTo</p>
+                            <p>Returns: Aggregated timeline data grouped by product or warehouse</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={styles.apiSection}>
                     <h3>🔐 Authentication</h3>
                     <p className={styles.sectionDesc}>All API requests require authentication using Bearer tokens</p>
                     
@@ -685,6 +716,33 @@ const ApiPage = () => {
                             <strong>Admin - Approve review:</strong>
                             <code>curl -H "Authorization: Bearer ADMIN_TOKEN" -H "Content-Type: application/json" -X PUT -d '{`{"status":"approved"}`}' https://54.169.31.95:8443/api/admin/reviews/456/status</code>
                             <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer ADMIN_TOKEN" -H "Content-Type: application/json" -X PUT -d \'{"status":"approved"}\' https://54.169.31.95:8443/api/admin/reviews/456/status')}>
+                                <Copy size={14} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className={styles.exampleGroup}>
+                        <h4>Timeline API</h4>
+                        <div className={styles.usage}>
+                            <strong>Get product timeline:</strong>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"')}>
+                                <Copy size={14} />
+                            </button>
+                        </div>
+                        
+                        <div className={styles.usage}>
+                            <strong>Get timeline summary by product:</strong>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?groupBy=product&dateFrom=2025-01-01"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?groupBy=product&dateFrom=2025-01-01"')}>
+                                <Copy size={14} />
+                            </button>
+                        </div>
+                        
+                        <div className={styles.usage}>
+                            <strong>Get warehouse timeline:</strong>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"')}>
                                 <Copy size={14} />
                             </button>
                         </div>
