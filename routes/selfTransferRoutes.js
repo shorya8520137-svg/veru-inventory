@@ -294,8 +294,8 @@ router.post('/', authenticateToken, (req, res) => {
                        sb.price, sb.gst_percentage
                 FROM dispatch_product dp
                 LEFT JOIN product_categories pc ON dp.category_id = pc.id
-                LEFT JOIN stock_batches sb ON dp.barcode = sb.barcode
-                WHERE dp.barcode = ?
+                LEFT JOIN stock_batches sb ON BINARY dp.barcode = BINARY sb.barcode
+                WHERE BINARY dp.barcode = ?
                 LIMIT 1
             `;
             
@@ -311,6 +311,8 @@ router.post('/', authenticateToken, (req, res) => {
                     actualCategory = product.category_name || 'General';
                     actualPrice = parseFloat(product.price) || 0.00;
                     actualGST = parseFloat(product.gst_percentage) || 18.00;
+                } else if (err) {
+                    console.error('Error fetching product details:', err);
                 }
                 
                 // CREATE complete store inventory record WITH store_code
