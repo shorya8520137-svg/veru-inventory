@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Package, AlertTriangle, TrendingDown, RefreshCw, Clock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Search, Package, AlertTriangle, TrendingDown, RefreshCw, Clock, BarChart3, Activity, TrendingUp } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in"; // Use environment variable for API base
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
 const PAGE_SIZE = 20;
 
 export default function StoreInventoryTab() {
-    const router = useRouter();
     const [inventory, setInventory] = useState([]);
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,6 +16,13 @@ export default function StoreInventoryTab() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
+    
+    // Modal states for individual product actions
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [showProductTimeline, setShowProductTimeline] = useState(false);
+    const [showProductGraph, setShowProductGraph] = useState(false);
+    const [productTimeline, setProductTimeline] = useState([]);
+    const [productTimelineLoading, setProductTimelineLoading] = useState(false);
 
     const [stats, setStats] = useState({
         totalProducts: 0,
@@ -88,11 +93,56 @@ export default function StoreInventoryTab() {
         loadStores();
         loadInventory();
     }, [page, searchQuery, stockFilter, storeFilter]);
-
+    
     const getStockStatus = (stock) => {
         if (stock === 0) return { label: 'OUT OF STOCK', color: '#DC2626', bg: '#FEE2E2' };
         if (stock <= 10) return { label: 'LOW STOCK', color: '#D97706', bg: '#FEF3C7' };
         return { label: 'IN STOCK', color: '#059669', bg: '#D1FAE5' };
+    };
+    
+    // Load product-specific timeline
+    const loadProductTimeline = async (product) => {
+        setProductTimelineLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const storeCode = product.store_code || storeFilter;
+            
+            if (!storeCode || storeCode === 'all') {
+                setProductTimeline([]);
+                return;
+            }
+            
+            const response = await fetch(
+                `${API_BASE}/api/store-timeline/${storeCode}?productBarcode=${product.barcode}&limit=50`, 
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            
+            const data = await response.json();
+            if (data.success && data.data && data.data.timeline) {
+                setProductTimeline(data.data.timeline);
+            } else {
+                setProductTimeline([]);
+            }
+        } catch (err) {
+            console.error('Error loading product timeline:', err);
+            setProductTimeline([]);
+        } finally {
+            setProductTimelineLoading(false);
+        }
+    };
+    
+    // Handle action button clicks
+    const handleTimelineClick = (product) => {
+        setSelectedProduct(product);
+        setShowProductTimeline(true);
+        loadProductTimeline(product);
+    };
+    
+    const handleGraphClick = (product) => {
+        setSelectedProduct(product);
+        setShowProductGraph(true);
     };
 
     return (
@@ -182,18 +232,11 @@ export default function StoreInventoryTab() {
                         <RefreshCw size={16} />
                         Refresh
                     </button>
-
-                    <button 
-                        onClick={() => router.push('/inventory/store-timeline')}
-                        style={{ padding:'10px 16px', borderRadius:10, border:'1px solid #E5E7EB', background:'#059669', color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
-                        <Clock size={16} />
-                        View Timeline
-                    </button>
                 </div>
             </div>
 
-            {/* Table */}
-            <div style={{ flex:1, overflow:'auto', background:'#fff', scrollbarWidth:'none', msOverflowStyle:'none' }}>
+            {/* Inventory Table */}
+            <>
                 <style jsx>{`
                     div::-webkit-scrollbar {
                         display: none;
@@ -208,16 +251,17 @@ export default function StoreInventoryTab() {
                             <th style={{ padding:'12px 16px', textAlign:'right', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>PRICE</th>
                             <th style={{ padding:'12px 16px', textAlign:'right', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>VALUE</th>
                             <th style={{ padding:'12px 24px', textAlign:'center', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>STATUS</th>
+                            <th style={{ padding:'12px 24px', textAlign:'center', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="6" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>Loading...</td>
+                                <td colSpan="7" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>Loading...</td>
                             </tr>
                         ) : inventory.length === 0 ? (
                             <tr>
-                                <td colSpan="6" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>
+                                <td colSpan="7" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>
                                     <Package size={48} style={{ margin:'0 auto 12px', opacity:0.3 }} />
                                     <div>No products found</div>
                                 </td>
@@ -262,13 +306,68 @@ export default function StoreInventoryTab() {
                                                 {status.label}
                                             </span>
                                         </td>
+                                        <td style={{ padding:'14px 24px', textAlign:'center' }}>
+                                            <div style={{ display:'flex', gap:8, justifyContent:'center', alignItems:'center' }}>
+                                                <button
+                                                    onClick={() => handleTimelineClick(item)}
+                                                    title="View Timeline"
+                                                    style={{
+                                                        width:32,
+                                                        height:32,
+                                                        borderRadius:8,
+                                                        border:'1px solid #E5E7EB',
+                                                        background:'#fff',
+                                                        cursor:'pointer',
+                                                        display:'flex',
+                                                        alignItems:'center',
+                                                        justifyContent:'center',
+                                                        transition:'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        e.currentTarget.style.background='#EFF6FF';
+                                                        e.currentTarget.style.borderColor='#3B82F6';
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        e.currentTarget.style.background='#fff';
+                                                        e.currentTarget.style.borderColor='#E5E7EB';
+                                                    }}>
+                                                    <Clock size={16} color='#3B82F6' />
+                                                </button>
+                                                
+                                                <button
+                                                    onClick={() => handleGraphClick(item)}
+                                                    title="View Graph"
+                                                    style={{
+                                                        width:32,
+                                                        height:32,
+                                                        borderRadius:8,
+                                                        border:'1px solid #E5E7EB',
+                                                        background:'#fff',
+                                                        cursor:'pointer',
+                                                        display:'flex',
+                                                        alignItems:'center',
+                                                        justifyContent:'center',
+                                                        transition:'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        e.currentTarget.style.background='#F0FDF4';
+                                                        e.currentTarget.style.borderColor='#22C55E';
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        e.currentTarget.style.background='#fff';
+                                                        e.currentTarget.style.borderColor='#E5E7EB';
+                                                    }}>
+                                                    <TrendingUp size={16} color='#22C55E' />
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 );
                             })
                         )}
                     </tbody>
                 </table>
-            </div>
+            </>
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -289,6 +388,200 @@ export default function StoreInventoryTab() {
                             style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #E5E7EB', background:page===totalPages?'#F9FAFB':'#fff', cursor:page===totalPages?'not-allowed':'pointer', fontSize:13, fontWeight:600, color:page===totalPages?'#9CA3AF':'#374151', opacity:page===totalPages?0.5:1 }}>
                             Next
                         </button>
+                    </div>
+                </div>
+            )}
+            
+            {/* Product Timeline Modal */}
+            {showProductTimeline && selectedProduct && (
+                <div 
+                    style={{ 
+                        position:'fixed', 
+                        inset:0, 
+                        background:'rgba(0,0,0,0.5)', 
+                        zIndex:9999, 
+                        display:'flex', 
+                        alignItems:'center', 
+                        justifyContent:'center',
+                        backdropFilter:'blur(4px)'
+                    }}
+                    onClick={() => setShowProductTimeline(false)}>
+                    <div 
+                        style={{ 
+                            background:'#fff', 
+                            borderRadius:16, 
+                            width:'90%', 
+                            maxWidth:800, 
+                            maxHeight:'85vh', 
+                            overflow:'hidden',
+                            boxShadow:'0 20px 60px rgba(0,0,0,0.3)',
+                            display:'flex',
+                            flexDirection:'column'
+                        }}
+                        onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div style={{ padding:'20px 24px', borderBottom:'1px solid #E5E7EB', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                            <div>
+                                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                                    <Clock size={20} color='#3B82F6' />
+                                    <h3 style={{ fontSize:18, fontWeight:700, color:'#111827', margin:0 }}>Product Timeline</h3>
+                                </div>
+                                <div style={{ fontSize:14, color:'#6B7280' }}>
+                                    {selectedProduct.product_name} 
+                                    <span style={{ marginLeft:8, fontFamily:'monospace', background:'#F3F4F6', padding:'2px 8px', borderRadius:4, fontSize:12 }}>
+                                        {selectedProduct.barcode}
+                                    </span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowProductTimeline(false)}
+                                style={{ 
+                                    width:32, 
+                                    height:32, 
+                                    borderRadius:8, 
+                                    border:'1px solid #E5E7EB', 
+                                    background:'#fff', 
+                                    cursor:'pointer',
+                                    fontSize:20,
+                                    color:'#6B7280',
+                                    display:'flex',
+                                    alignItems:'center',
+                                    justifyContent:'center'
+                                }}>
+                                ×
+                            </button>
+                        </div>
+                        
+                        {/* Timeline Content */}
+                        <div style={{ flex:1, overflow:'auto', padding:24 }}>
+                            {productTimelineLoading ? (
+                                <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>
+                                    Loading timeline...
+                                </div>
+                            ) : productTimeline.length === 0 ? (
+                                <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>
+                                    <Activity size={48} style={{ margin:'0 auto 12px', opacity:0.3 }} />
+                                    <div style={{ fontSize:16, fontWeight:600, color:'#6B7280' }}>No Timeline Data</div>
+                                    <div style={{ fontSize:14, marginTop:4 }}>No movements recorded for this product</div>
+                                </div>
+                            ) : (
+                                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                                    {productTimeline.map((entry, idx) => (
+                                        <div 
+                                            key={entry.id || idx}
+                                            style={{ 
+                                                background:'#F9FAFB', 
+                                                borderRadius:12, 
+                                                padding:16,
+                                                border:'1px solid #E5E7EB'
+                                            }}>
+                                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start' }}>
+                                                <div style={{ flex:1 }}>
+                                                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                                                        <span style={{
+                                                            display:'inline-block',
+                                                            padding:'4px 10px',
+                                                            borderRadius:6,
+                                                            background: entry.direction === 'IN' ? '#DCFCE7' : '#FEE2E2',
+                                                            color: entry.direction === 'IN' ? '#166534' : '#DC2626',
+                                                            fontSize:11,
+                                                            fontWeight:700
+                                                        }}>
+                                                            {entry.movement_type} {entry.direction}
+                                                        </span>
+                                                        <span style={{ fontSize:12, color:'#9CA3AF' }}>
+                                                            {new Date(entry.created_at).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    {entry.reference && (
+                                                        <div style={{ fontSize:12, color:'#6B7280', marginBottom:4 }}>
+                                                            Ref: {entry.reference}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ textAlign:'right' }}>
+                                                    <div style={{ 
+                                                        fontSize:20, 
+                                                        fontWeight:700, 
+                                                        color: entry.direction === 'IN' ? '#22C55E' : '#EF4444'
+                                                    }}>
+                                                        {entry.direction === 'IN' ? '+' : '-'}{entry.quantity}
+                                                    </div>
+                                                    <div style={{ fontSize:11, color:'#9CA3AF', marginTop:2 }}>
+                                                        Balance: {entry.balance_after}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Product Graph Modal */}
+            {showProductGraph && selectedProduct && (
+                <div 
+                    style={{ 
+                        position:'fixed', 
+                        inset:0, 
+                        background:'rgba(0,0,0,0.5)', 
+                        zIndex:9999, 
+                        display:'flex', 
+                        alignItems:'center', 
+                        justifyContent:'center',
+                        backdropFilter:'blur(4px)'
+                    }}
+                    onClick={() => setShowProductGraph(false)}>
+                    <div 
+                        style={{ 
+                            background:'#fff', 
+                            borderRadius:16, 
+                            width:'90%', 
+                            maxWidth:800, 
+                            padding:32,
+                            boxShadow:'0 20px 60px rgba(0,0,0,0.3)'
+                        }}
+                        onClick={e => e.stopPropagation()}>
+                        
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+                            <div>
+                                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                                    <TrendingUp size={20} color='#22C55E' />
+                                    <h3 style={{ fontSize:18, fontWeight:700, color:'#111827', margin:0 }}>Stock Trend Graph</h3>
+                                </div>
+                                <div style={{ fontSize:14, color:'#6B7280' }}>
+                                    {selectedProduct.product_name}
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowProductGraph(false)}
+                                style={{ 
+                                    width:32, 
+                                    height:32, 
+                                    borderRadius:8, 
+                                    border:'1px solid #E5E7EB', 
+                                    background:'#fff', 
+                                    cursor:'pointer',
+                                    fontSize:20,
+                                    color:'#6B7280'
+                                }}>
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div style={{ textAlign:'center', padding:60, color:'#9CA3AF' }}>
+                            <BarChart3 size={64} style={{ margin:'0 auto 16px', opacity:0.3 }} />
+                            <div style={{ fontSize:16, fontWeight:600, color:'#6B7280', marginBottom:8 }}>
+                                Graph Visualization
+                            </div>
+                            <div style={{ fontSize:14 }}>
+                                Stock trend chart for {selectedProduct.product_name} coming soon
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
