@@ -444,9 +444,11 @@ router.post('/', authenticateToken, (req, res) => {
                         // Product doesn't exist - create new batch
                         const createBatchSql = `
                             INSERT INTO stock_batches (
-                                barcode, product_name, warehouse, qty_available, 
+                                barcode, product_name, warehouse, 
+                                qty_initial, qty_available,
+                                source_type, source_ref_id,
                                 price, gst_percentage, status, created_at
-                            ) VALUES (?, ?, ?, ?, 0.00, 18.00, 'active', NOW())
+                            ) VALUES (?, ?, ?, ?, ?, 'SELF_TRANSFER', NULL, 0.00, 18.00, 'active', NOW())
                         `;
                         
                         // Get product name from dispatch_product table
@@ -456,7 +458,7 @@ router.post('/', authenticateToken, (req, res) => {
                                 ? productResult[0].product_name 
                                 : `Product ${barcode}`;
                             
-                            db.query(createBatchSql, [barcode, productName, warehouseCode, quantityChange], (err, result) => {
+                            db.query(createBatchSql, [barcode, productName, warehouseCode, quantityChange, quantityChange], (err, result) => {
                                 if (err) {
                                     console.error(`❌ Error creating new batch in ${warehouseCode}:`, err);
                                 } else {
