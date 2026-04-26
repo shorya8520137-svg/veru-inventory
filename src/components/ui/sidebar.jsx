@@ -24,7 +24,8 @@ import {
     Brain,
     Star,
     Sparkles,
-    Building2
+    Building2,
+    Clock
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { motion, AnimatePresence } from "framer-motion";
@@ -515,6 +516,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                                 >
                                     <Box size={collapsed ? 16 : 16} />
                                     {!collapsed && <span>Store Inventory</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* STORE TIMELINE */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link
+                                    href="/inventory/store-timeline"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/inventory/store-timeline", collapsed }))}
+                                >
+                                    <Clock size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Store Timeline</span>}
                                 </Link>
                             </motion.div>
                         </SidebarMenuItem>

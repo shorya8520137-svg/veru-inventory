@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Package, AlertTriangle, TrendingDown, RefreshCw } from "lucide-react";
+import { Search, Package, AlertTriangle, TrendingDown, RefreshCw, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in"; // Use environment variable for API base
 const PAGE_SIZE = 20;
 
 export default function StoreInventoryTab() {
+    const router = useRouter();
     const [inventory, setInventory] = useState([]);
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -179,6 +181,13 @@ export default function StoreInventoryTab() {
                         style={{ padding:'10px 16px', borderRadius:10, border:'1px solid #E5E7EB', background:'#1E40AF', color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
                         <RefreshCw size={16} />
                         Refresh
+                    </button>
+
+                    <button 
+                        onClick={() => router.push('/inventory/store-timeline')}
+                        style={{ padding:'10px 16px', borderRadius:10, border:'1px solid #E5E7EB', background:'#059669', color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                        <Clock size={16} />
+                        View Timeline
                     </button>
                 </div>
             </div>
