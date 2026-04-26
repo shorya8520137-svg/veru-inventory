@@ -290,11 +290,9 @@ router.post('/', authenticateToken, (req, res) => {
 
         function createNewStoreInventoryProduct(storeCode, barcode, productName, quantity) {
             const getProductSql = `
-                SELECT dp.product_name, dp.category_id, pc.name as category_name,
-                       sb.price, sb.gst_percentage
+                SELECT dp.product_name, dp.category_id, pc.name as category_name
                 FROM dispatch_product dp
                 LEFT JOIN product_categories pc ON dp.category_id = pc.id
-                LEFT JOIN stock_batches sb ON BINARY dp.barcode = BINARY sb.barcode
                 WHERE BINARY dp.barcode = ?
                 LIMIT 1
             `;
@@ -309,11 +307,11 @@ router.post('/', authenticateToken, (req, res) => {
                     const product = productResult[0];
                     actualProductName = product.product_name || productName;
                     actualCategory = product.category_name || 'General';
-                    actualPrice = parseFloat(product.price) || 0.00;
-                    actualGST = parseFloat(product.gst_percentage) || 18.00;
                 } else if (err) {
                     console.error('Error fetching product details:', err);
                 }
+                
+                console.log(`📝 Creating product: ${actualProductName} (${barcode}) in ${storeCode}`);
                 
                 // CREATE complete store inventory record WITH store_code
                 const createProductSql = `
