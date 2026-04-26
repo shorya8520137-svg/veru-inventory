@@ -620,7 +620,7 @@ router.post('/', authenticateToken, (req, res) => {
                                 store_code, product_barcode, product_name, 
                                 movement_type, direction, quantity, 
                                 balance_after, reference, created_at
-                            ) VALUES (?, ?, ?, 'WAREHOUSE_TRANSFER', 'IN', ?, ?, ?, NOW())
+                            ) VALUES (?, ?, ?, 'DISPATCH', 'IN', ?, ?, ?, NOW())
                         `;
                         
                         db.query(destTimelineSql, [
@@ -654,7 +654,7 @@ router.post('/', authenticateToken, (req, res) => {
                                 store_code, product_barcode, product_name, 
                                 movement_type, direction, quantity, 
                                 balance_after, reference, created_at
-                            ) VALUES (?, ?, ?, 'WAREHOUSE_TRANSFER', 'OUT', ?, ?, ?, NOW())
+                            ) VALUES (?, ?, ?, 'RETURN', 'OUT', ?, ?, ?, NOW())
                         `;
                         
                         db.query(sourceTimelineSql, [
