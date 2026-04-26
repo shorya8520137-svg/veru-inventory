@@ -247,11 +247,11 @@ router.post('/', authenticateToken, (req, res) => {
         function processStoreDocumentation(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, item, productName, barcode) {
             // 1. STORE INVENTORY MANAGEMENT
             if (destinationType === 'store') {
-                updateDestinationStoreInventory(barcode, productName, item.transferQty);
+                updateDestinationStoreInventory(destinationId, barcode, productName, item.transferQty);
             }
             
             if (sourceType === 'store') {
-                updateSourceStoreInventory(barcode, item.transferQty);
+                updateSourceStoreInventory(sourceId, barcode, item.transferQty);
             }
 
             // 2. STORE TIMELINE ENTRIES
@@ -261,9 +261,9 @@ router.post('/', authenticateToken, (req, res) => {
             createStoreBillingDocumentation(transferRef, transferType, sourceId, destinationId, items);
         }
 
-        function updateDestinationStoreInventory(barcode, productName, quantity) {
-            const checkProductSql = `SELECT id, stock, price FROM store_inventory WHERE barcode = ?`;
-            db.query(checkProductSql, [barcode], (err, existingProduct) => {
+        function updateDestinationStoreInventory(storeCode, barcode, productName, quantity) {
+            const checkProductSql = `SELECT id, stock, price FROM store_inventory WHERE barcode = ? AND store_code = ?`;
+            db.query(checkProductSql, [barcode, storeCode], (err, existingProduct) => {
                 if (err) {
                     console.error('Error checking product existence:', err);
                     return;
@@ -275,20 +275,20 @@ router.post('/', authenticateToken, (req, res) => {
                         UPDATE store_inventory 
                         SET stock = stock + ?, 
                             last_updated = NOW()
-                        WHERE barcode = ?
+                        WHERE barcode = ? AND store_code = ?
                     `;
-                    db.query(updateDestSql, [quantity, barcode], (err) => {
+                    db.query(updateDestSql, [quantity, barcode, storeCode], (err) => {
                         if (err) console.error('Error updating destination store inventory:', err);
-                        else console.log(`✅ Updated stock for existing product ${barcode}: +${quantity}`);
+                        else console.log(`✅ Updated stock for ${storeCode} product ${barcode}: +${quantity}`);
                     });
                 } else {
                     // Product doesn't exist - CREATE NEW RECORD with complete details
-                    createNewStoreInventoryProduct(barcode, productName, quantity);
+                    createNewStoreInventoryProduct(storeCode, barcode, productName, quantity);
                 }
             });
         }
 
-        function createNewStoreInventoryProduct(barcode, productName, quantity) {
+        function createNewStoreInventoryProduct(storeCode, barcode, productName, quantity) {
             const getProductSql = `
                 SELECT dp.product_name, dp.category_id, pc.name as category_name,
                        sb.price, sb.gst_percentage
@@ -313,34 +313,34 @@ router.post('/', authenticateToken, (req, res) => {
                     actualGST = parseFloat(product.gst_percentage) || 18.00;
                 }
                 
-                // CREATE complete store inventory record
+                // CREATE complete store inventory record WITH store_code
                 const createProductSql = `
                     INSERT INTO store_inventory (
-                        product_name, barcode, category, stock, price, 
+                        store_code, product_name, barcode, category, stock, price, 
                         gst_percentage, created_at, last_updated
-                    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 `;
                 
                 db.query(createProductSql, [
-                    actualProductName, barcode, actualCategory, 
+                    storeCode, actualProductName, barcode, actualCategory, 
                     quantity, actualPrice, actualGST
                 ], (err) => {
                     if (err) console.error('Error creating product in store inventory:', err);
-                    else console.log(`✅ Created new product in store inventory: ${actualProductName} (${barcode}) - Stock: ${quantity}`);
+                    else console.log(`✅ Created new product in ${storeCode}: ${actualProductName} (${barcode}) - Stock: ${quantity}`);
                 });
             });
         }
 
-        function updateSourceStoreInventory(barcode, quantity) {
+        function updateSourceStoreInventory(storeCode, barcode, quantity) {
             const updateSourceSql = `
                 UPDATE store_inventory 
                 SET stock = GREATEST(0, stock - ?), 
                     last_updated = NOW()
-                WHERE barcode = ?
+                WHERE barcode = ? AND store_code = ?
             `;
-            db.query(updateSourceSql, [quantity, barcode], (err) => {
+            db.query(updateSourceSql, [quantity, barcode, storeCode], (err) => {
                 if (err) console.error('Error updating source store inventory:', err);
-                else console.log(`✅ Reduced stock from source store: -${quantity}`);
+                else console.log(`✅ Reduced stock from ${storeCode}: -${quantity}`);
             });
         }
 
