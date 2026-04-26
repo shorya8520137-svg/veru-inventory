@@ -8,7 +8,7 @@
 const StockBatchRepository = require('../repositories/StockBatchRepository');
 const StockReductionService = require('./StockReductionService');
 const TimelineService = require('./TimelineService');
-const db = require('../src/lib/db');
+const db = require('../db/connection');
 
 class BillingIntegrationService {
     /**
