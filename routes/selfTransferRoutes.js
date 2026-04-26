@@ -538,6 +538,63 @@ router.post('/', authenticateToken, (req, res) => {
                 if (err) console.error('Error creating internal operation documentation:', err);
                 else console.log(`✅ Created internal operation documentation: ${transferRef}`);
             });
+            
+            // STORE-TO-STORE TIMELINE FIX: Create timeline entries for store transfers
+            if (transferType === 'S to S') {
+                console.log(`📋 Creating store timeline entries for S to S transfer`);
+                
+                items.forEach(item => {
+                    const productParts = item.productId.split('|');
+                    const productName = productParts[0]?.trim() || item.productId;
+                    const barcode = productParts[2]?.trim() || item.productId;
+                    
+                    // Get current stock for balance_after
+                    const getSourceStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
+                    const getDestStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
+                    
+                    // Create source OUT entry
+                    db.query(getSourceStockSql, [barcode, sourceId], (err, sourceResult) => {
+                        const sourceBalance = sourceResult && sourceResult.length > 0 ? sourceResult[0].stock : 0;
+                        
+                        const sourceTimelineSql = `
+                            INSERT INTO store_timeline (
+                                store_code, product_barcode, product_name, 
+                                movement_type, direction, quantity, 
+                                balance_after, reference, created_at
+                            ) VALUES (?, ?, ?, 'SELF_TRANSFER', 'OUT', ?, ?, ?, NOW())
+                        `;
+                        
+                        db.query(sourceTimelineSql, [
+                            sourceId, barcode, productName, 
+                            item.transferQty, sourceBalance, transferRef
+                        ], (err) => {
+                            if (err) console.error('Error creating source store timeline:', err);
+                            else console.log(`✅ Created store timeline OUT entry for ${sourceId}`);
+                        });
+                    });
+                    
+                    // Create destination IN entry
+                    db.query(getDestStockSql, [barcode, destinationId], (err, destResult) => {
+                        const destBalance = destResult && destResult.length > 0 ? destResult[0].stock : 0;
+                        
+                        const destTimelineSql = `
+                            INSERT INTO store_timeline (
+                                store_code, product_barcode, product_name, 
+                                movement_type, direction, quantity, 
+                                balance_after, reference, created_at
+                            ) VALUES (?, ?, ?, 'SELF_TRANSFER', 'IN', ?, ?, ?, NOW())
+                        `;
+                        
+                        db.query(destTimelineSql, [
+                            destinationId, barcode, productName, 
+                            item.transferQty, destBalance, transferRef
+                        ], (err) => {
+                            if (err) console.error('Error creating destination store timeline:', err);
+                            else console.log(`✅ Created store timeline IN entry for ${destinationId}`);
+                        });
+                    });
+                });
+            }
         }
 
     } catch (error) {
