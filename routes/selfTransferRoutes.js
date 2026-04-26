@@ -325,8 +325,27 @@ router.post('/', authenticateToken, (req, res) => {
                     storeCode, actualProductName, barcode, actualCategory, 
                     quantity, actualPrice, actualGST
                 ], (err) => {
-                    if (err) console.error('Error creating product in store inventory:', err);
-                    else console.log(`✅ Created new product in ${storeCode}: ${actualProductName} (${barcode}) - Stock: ${quantity}`);
+                    if (err) {
+                        // Handle duplicate key error - product already exists
+                        if (err.code === 'ER_DUP_ENTRY') {
+                            console.log(`⚠️ Product ${barcode} already exists, updating stock instead...`);
+                            // Update existing product
+                            const updateSql = `
+                                UPDATE store_inventory 
+                                SET stock = stock + ?, 
+                                    last_updated = NOW()
+                                WHERE barcode = ? AND store_code = ?
+                            `;
+                            db.query(updateSql, [quantity, barcode, storeCode], (updateErr) => {
+                                if (updateErr) console.error('Error updating existing product:', updateErr);
+                                else console.log(`✅ Updated existing product in ${storeCode}: ${barcode} +${quantity}`);
+                            });
+                        } else {
+                            console.error('Error creating product in store inventory:', err);
+                        }
+                    } else {
+                        console.log(`✅ Created new product in ${storeCode}: ${actualProductName} (${barcode}) - Stock: ${quantity}`);
+                    }
                 });
             });
         }
