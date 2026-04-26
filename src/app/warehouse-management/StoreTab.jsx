@@ -274,11 +274,22 @@ export default function StoreTab() {
                         <form onSubmit={handleSubmit} style={{display:"flex",flexDirection:"column",gap:"16px"}}>
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                                 <div>
-                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Code *</label>
-                                    <input type="text" name="store_code" value={formData.store_code} onChange={handleInputChange} placeholder="ST001" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required disabled={!!editingId} />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Store Code *</label>
+                                    <input 
+                                        type="text" 
+                                        name="store_code" 
+                                        value={formData.store_code} 
+                                        onChange={handleInputChange} 
+                                        placeholder="GGM_NH48" 
+                                        style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} 
+                                        required 
+                                    />
+                                    <div style={{fontSize:"11px",color:"#9CA3AF",marginTop:"4px"}}>
+                                        Used for inventory tracking (e.g., GGM_NH48, GGM_ROSHANPURA)
+                                    </div>
                                 </div>
                                 <div>
-                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Name *</label>
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Store Name *</label>
                                     <input type="text" name="store_name" value={formData.store_name} onChange={handleInputChange} placeholder="Store Name" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required />
                                 </div>
                             </div>

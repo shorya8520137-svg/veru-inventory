@@ -272,11 +272,22 @@ export default function WarehouseTab() {
                         <form onSubmit={handleSubmit} style={{display:"flex",flexDirection:"column",gap:"16px"}}>
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                                 <div>
-                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Code *</label>
-                                    <input type="text" name="warehouse_code" value={formData.warehouse_code} onChange={handleInputChange} placeholder="WH001" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required disabled={!!editingId} />
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Warehouse Code *</label>
+                                    <input 
+                                        type="text" 
+                                        name="warehouse_code" 
+                                        value={formData.warehouse_code} 
+                                        onChange={handleInputChange} 
+                                        placeholder="GGM_WH" 
+                                        style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} 
+                                        required 
+                                    />
+                                    <div style={{fontSize:"11px",color:"#9CA3AF",marginTop:"4px"}}>
+                                        Used for inventory tracking (e.g., GGM_WH, BLR_WH)
+                                    </div>
                                 </div>
                                 <div>
-                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Name *</label>
+                                    <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:"#6B7280",marginBottom:"4px"}}>Warehouse Name *</label>
                                     <input type="text" name="warehouse_name" value={formData.warehouse_name} onChange={handleInputChange} placeholder="Main Warehouse" style={{width:"100%",padding:"8px",border:"1px solid #E5E7EB",borderRadius:"6px",fontSize:"13px",fontFamily:"inherit",outline:"none"}} required />
                                 </div>
                             </div>
