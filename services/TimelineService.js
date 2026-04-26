@@ -5,7 +5,7 @@
  * Provides timeline query functionality with filtering
  */
 
-const db = require('../src/lib/db');
+const db = require('../db/connection');
 
 class TimelineService {
     /**
