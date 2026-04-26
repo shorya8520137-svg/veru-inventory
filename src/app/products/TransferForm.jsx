@@ -399,16 +399,17 @@ export default function TransferForm({ onClose }) {
                         <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
                                 <div style={{
-                                    backgroundColor: '#0f172a',
+                                    backgroundColor: '#3b82f6',
                                     color: '#ffffff',
-                                    width: '24px',
-                                    height: '24px',
+                                    width: '28px',
+                                    height: '28px',
                                     borderRadius: '50%',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '12px',
-                                    fontWeight: '600'
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    flexShrink: 0
                                 }}>1</div>
                                 <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>
                                     TRANSFER DETAILS
@@ -784,16 +785,17 @@ export default function TransferForm({ onClose }) {
                         <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
                                 <div style={{
-                                    backgroundColor: '#0f172a',
+                                    backgroundColor: '#3b82f6',
                                     color: '#ffffff',
-                                    width: '24px',
-                                    height: '24px',
+                                    width: '28px',
+                                    height: '28px',
                                     borderRadius: '50%',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '12px',
-                                    fontWeight: '600'
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    flexShrink: 0
                                 }}>2</div>
                                 <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>
                                     PARCEL DIMENSIONS
@@ -946,16 +948,17 @@ export default function TransferForm({ onClose }) {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <div style={{
-                                        backgroundColor: '#0f172a',
+                                        backgroundColor: '#3b82f6',
                                         color: '#ffffff',
-                                        width: '24px',
-                                        height: '24px',
+                                        width: '28px',
+                                        height: '28px',
                                         borderRadius: '50%',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '12px',
-                                        fontWeight: '600'
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        flexShrink: 0
                                     }}>3</div>
                                     <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>
                                         PRODUCT LIST

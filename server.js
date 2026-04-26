@@ -260,6 +260,9 @@ app.use('/api/self-transfer', require('./routes/selfTransferRoutes'));
 // timeline routes
 app.use('/api/timeline', require('./routes/timelineRoutes'));
 
+// store timeline routes
+app.use('/api/store-timeline', require('./routes/storeTimelineRoutes'));
+
 // auth routes (no /api prefix for backward compatibility)
 app.use('/auth', require('./routes/authRoutes'));
 
