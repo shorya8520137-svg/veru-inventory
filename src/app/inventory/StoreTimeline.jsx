@@ -49,8 +49,8 @@ export default function StoreTimeline() {
             const selectedStoreData = stores.find(s => s.id === parseInt(selectedStore));
             const storeCode = selectedStoreData?.store_code || selectedStoreData?.id;
             
-            // Use timeline summary API with warehouse filter
-            const response = await fetch(`${API_BASE}/api/timeline?warehouse=${storeCode}&limit=100`, {
+            // Use NEW store timeline API
+            const response = await fetch(`${API_BASE}/api/store-timeline/${storeCode}?limit=100`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -59,22 +59,47 @@ export default function StoreTimeline() {
             }
             
             const data = await response.json();
-            console.log('Timeline API response:', data);
+            console.log('Store Timeline API response:', data);
             
-            if (data.success) {
+            if (data.success && data.data && data.data.timeline) {
                 // Transform the timeline data to match our component format
-                const transformedTimeline = (data.data || []).map(item => ({
-                    eventType: item.type || 'UNKNOWN',
-                    timestamp: item.last_movement || new Date().toISOString(),
-                    quantity: item.net_movement || 0,
-                    stockBefore: 0, // Not available in summary
-                    stockAfter: item.total_in - item.total_out,
-                    source: item.warehouse || storeCode,
-                    destination: item.warehouse || storeCode,
-                    notes: `${item.total_movements} movements total`,
-                    status: 'COMPLETED',
-                    unit: 'pcs'
-                }));
+                const transformedTimeline = data.data.timeline.map(item => {
+                    // Map movement_type to eventType
+                    const eventTypeMap = {
+                        'SELF_TRANSFER': item.direction === 'IN' ? 'TRANSFER_IN' : 'TRANSFER_OUT',
+                        'OPENING': 'INITIAL_STOCK',
+                        'DISPATCH': 'TRANSFER_OUT',
+                        'RETURN': 'TRANSFER_IN',
+                        'DAMAGE': 'DAMAGED',
+                        'RECOVER': 'TRANSFER_IN',
+                        'MANUAL': item.direction === 'IN' ? 'TRANSFER_IN' : 'TRANSFER_OUT'
+                    };
+                    
+                    const eventType = eventTypeMap[item.movement_type] || 'UNKNOWN';
+                    
+                    // Calculate stock before
+                    const stockBefore = item.direction === 'IN' 
+                        ? item.balance_after - item.quantity 
+                        : item.balance_after + item.quantity;
+                    
+                    return {
+                        eventType: eventType,
+                        timestamp: item.created_at,
+                        quantity: item.direction === 'IN' ? item.quantity : -item.quantity,
+                        stockBefore: stockBefore,
+                        stockAfter: item.balance_after,
+                        source: item.direction === 'OUT' ? storeCode : 'External',
+                        destination: item.direction === 'IN' ? storeCode : 'External',
+                        notes: item.reference ? `Reference: ${item.reference}` : '',
+                        status: 'COMPLETED',
+                        unit: 'units',
+                        productName: item.product_name,
+                        productBarcode: item.product_barcode,
+                        movementType: item.movement_type,
+                        direction: item.direction,
+                        userId: item.user_id
+                    };
+                });
                 
                 setTimeline(transformedTimeline);
             } else {
@@ -275,29 +300,43 @@ export default function StoreTimeline() {
                                                 <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#111827' }}>
                                                     {getEventLabel(event.eventType)}
                                                 </h3>
+                                                {event.productName && (
+                                                    <p style={{ margin: '4px 0', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                                                        {event.productName}
+                                                    </p>
+                                                )}
+                                                {event.productBarcode && (
+                                                    <p style={{ margin: '2px 0', fontSize: '11px', color: '#9CA3AF' }}>
+                                                        SKU: {event.productBarcode}
+                                                    </p>
+                                                )}
                                                 <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6B7280' }}>
-                                                    {event.source && `From: ${event.source}`}
-                                                    {event.destination && ` → To: ${event.destination}`}
+                                                    {event.movementType} - {event.direction}
                                                 </p>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
-                                                    {event.quantity > 0 ? '+' : ''}{event.quantity} {event.unit || 'pcs'}
+                                                <div style={{ fontSize: '13px', fontWeight: '600', color: event.quantity > 0 ? '#22C55E' : '#EF4444' }}>
+                                                    {event.quantity > 0 ? '+' : ''}{event.quantity} {event.unit || 'units'}
                                                 </div>
                                                 <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
                                                     {new Date(event.timestamp).toLocaleDateString()} {new Date(event.timestamp).toLocaleTimeString()}
                                                 </div>
+                                                {event.userId && (
+                                                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>
+                                                        By: {event.userId}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
                                         {/* Stock Before/After */}
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '12px', borderTop: '1px solid #F3F4F6' }}>
                                             <div>
-                                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>Before</div>
+                                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>Stock Before</div>
                                                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#6B7280' }}>{event.stockBefore} units</div>
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>After</div>
+                                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>Stock After</div>
                                                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{event.stockAfter} units</div>
                                             </div>
                                         </div>
@@ -322,7 +361,7 @@ export default function StoreTimeline() {
                                             }}>
                                                 {event.status || 'COMPLETED'}
                                             </span>
-                                            {event.isInitialTransfer && (
+                                            {event.movementType === 'OPENING' && (
                                                 <span style={{
                                                     display: 'inline-block',
                                                     padding: '4px 8px',
@@ -332,7 +371,20 @@ export default function StoreTimeline() {
                                                     background: '#DBEAFE',
                                                     color: '#1E40AF'
                                                 }}>
-                                                    Initial Stock Received
+                                                    Initial Stock
+                                                </span>
+                                            )}
+                                            {event.movementType === 'SELF_TRANSFER' && (
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '11px',
+                                                    fontWeight: '600',
+                                                    background: '#F3E8FF',
+                                                    color: '#6B21A8'
+                                                }}>
+                                                    Store Transfer
                                                 </span>
                                             )}
                                         </div>
