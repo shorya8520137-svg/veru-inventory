@@ -49,40 +49,54 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
             .catch(err => console.error('Error fetching processed persons:', err));
     }, []);
 
-    /* ---------------- LOCATION SEARCH ---------------- */
+    /* ---------------- FETCH WAREHOUSES/STORES ---------------- */
     useEffect(() => {
-        if (locationQuery.length < 2) {
-            setLocations([]);
-            return;
-        }
-
         const token = localStorage.getItem('token');
-        fetch(`${API}/warehouses`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(r => r.json())
-            .then(data => {
-                const allWarehouses = Array.isArray(data) ? data : [];
-                // Filter warehouses based on query and location type
-                if (locationQuery.length < 2) {
-                    setLocations([]);
-                } else {
-                    const filtered = allWarehouses
-                        .map(code => ({ 
-                            warehouse_code: code, 
-                            Warehouse_name: code,
-                            store_code: code,
-                            store_name: code 
-                        }))
-                        .filter(w => 
-                            w.warehouse_code.toLowerCase().includes(locationQuery.toLowerCase()) ||
-                            w.Warehouse_name.toLowerCase().includes(locationQuery.toLowerCase())
-                        );
-                    setLocations(filtered);
-                }
+        
+        if (locationType === "WAREHOUSE") {
+            // Fetch warehouses
+            fetch(`${API}/warehouses`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             })
-            .catch(() => setLocations([]));
-    }, [locationQuery, locationType]);
+                .then(r => r.json())
+                .then(data => {
+                    const allWarehouses = Array.isArray(data) ? data : [];
+                    const formattedWarehouses = allWarehouses.map(code => ({ 
+                        id: code,
+                        warehouse_code: code, 
+                        Warehouse_name: code,
+                        display_name: code
+                    }));
+                    setLocations(formattedWarehouses);
+                })
+                .catch(() => setLocations([]));
+        } else {
+            // Fetch stores
+            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/warehouse-management/stores`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && Array.isArray(data.stores)) {
+                        const formattedStores = data.stores.map(store => ({
+                            id: store.store_code,
+                            store_code: store.store_code,
+                            store_name: store.store_name,
+                            city: store.city,
+                            display_name: `${store.store_name} - ${store.city} (${store.store_code})`
+                        }));
+                        setLocations(formattedStores);
+                    } else {
+                        setLocations([]);
+                    }
+                })
+                .catch(() => setLocations([]));
+        }
+        
+        // Reset selection when location type changes
+        setSelectedLocationId("");
+        setSelectedLocation(null);
+    }, [locationType]);
 
     /* ---------------- PRODUCT SEARCH ---------------- */
     function searchProduct(value, rowIndex) {
@@ -112,7 +126,7 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
 
     /* ---------------- SUBMIT ---------------- */
     async function submit() {
-        if (!selectedLocation) {
+        if (!selectedLocationId) {
             setMsg("Please select location");
             return;
         }
@@ -121,6 +135,12 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
 
         if (!validRows.length) {
             setMsg("Please select at least one product");
+            return;
+        }
+
+        const selectedLoc = locations.find(loc => loc.id === selectedLocationId);
+        if (!selectedLoc) {
+            setMsg("Invalid location selection");
             return;
         }
 
@@ -143,10 +163,7 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
                         body: JSON.stringify({
                             product_type: r.selectedProduct.product_name,
                             barcode: r.selectedProduct.barcode,
-                            inventory_location:
-                                locationType === "WAREHOUSE"
-                                    ? selectedLocation.warehouse_code
-                                    : selectedLocation.store_code,
+                            inventory_location: selectedLoc.id,
                             quantity: Number(r.qty),
                             action_type: action === "recovery" ? "recover" : action,
                             processed_by: processedBy || undefined
@@ -190,60 +207,46 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
 
                 <div className={styles.header}>Damage / Recovery</div>
 
-                {/* LOCATION TYPE */}
+                {/* LOCATION TYPE - CHECKBOXES */}
                 <div className={styles.field}>
                     <label className={styles.label}>Location Type</label>
-                    <select
-                        className={styles.select}
-                        value={locationType}
-                        onChange={e => {
-                            setLocationType(e.target.value);
-                            setLocationQuery("");
-                            setSelectedLocation(null);
-                        }}
-                    >
-                        <option value="WAREHOUSE">Warehouse</option>
-                        <option value="STORE">Store</option>
-                    </select>
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                checked={locationType === "WAREHOUSE"}
+                                onChange={() => setLocationType("WAREHOUSE")}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '14px', fontWeight: '500' }}>Warehouse</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                checked={locationType === "STORE"}
+                                onChange={() => setLocationType("STORE")}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '14px', fontWeight: '500' }}>Store</span>
+                        </label>
+                    </div>
                 </div>
 
-                {/* LOCATION SEARCH */}
+                {/* LOCATION DROPDOWN */}
                 <div className={styles.field}>
-                    <label className={styles.label}>{locationType}</label>
-                    <div className={styles.suggestWrap}>
-                        <input
-                            ref={locationRef}
-                            className={styles.input}
-                            placeholder={`Search ${locationType.toLowerCase()}`}
-                            value={locationQuery}
-                            onChange={e => setLocationQuery(e.target.value)}
-                        />
-
-                        {locations.length > 0 && (
-                            <div className={styles.suggestBox}>
-                                {locations.map((l, i) => (
-                                    <div
-                                        key={i}
-                                        className={styles.suggestItem}
-                                        onMouseDown={() => {
-                                            setSelectedLocation(l);
-                                            setLocationQuery(
-                                                l.Warehouse_name || l.store_name
-                                            );
-                                            setLocations([]);
-                                        }}
-                                    >
-                                        <span className={styles.primary}>
-                                            {l.Warehouse_name || l.store_name}
-                                        </span>
-                                        <span className={styles.secondary}>
-                                            {l.warehouse_code || l.store_code}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <label className={styles.label}>{locationType === "WAREHOUSE" ? "Warehouse" : "Store"}</label>
+                    <select
+                        className={styles.select}
+                        value={selectedLocationId}
+                        onChange={e => setSelectedLocationId(e.target.value)}
+                    >
+                        <option value="">Select {locationType.toLowerCase()}</option>
+                        {locations.map(loc => (
+                            <option key={loc.id} value={loc.id}>
+                                {loc.display_name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* PRODUCT ROWS */}
