@@ -76,20 +76,9 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                 if (!mounted) return;
 
                 if (data.success && data.data && data.data.timeline) {
-                    let timelineData = data.data.timeline;
-                    
-                    console.log('Raw timeline data (first entry):', timelineData[0]);
-                    
-                    // Normalize field names: warehouse API uses 'type', store API uses 'movement_type'
-                    if (isWarehouse) {
-                        console.log('Normalizing warehouse data...');
-                        timelineData = timelineData.map(entry => ({
-                            ...entry,
-                            movement_type: entry.type, // Add movement_type field for consistency
-                            created_at: entry.timestamp // Warehouse API uses 'timestamp', store uses 'created_at'
-                        }));
-                        console.log('Normalized data (first entry):', timelineData[0]);
-                    }
+                    const timelineData = data.data.timeline;
+                    console.log('Timeline data loaded:', timelineData.length, 'entries');
+                    console.log('First entry:', timelineData[0]);
                     
                     setTimeline(timelineData);
                     calculateSummary(timelineData);
@@ -153,22 +142,22 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
 
             if (entry.direction === 'IN') {
                 overview.totalIn += entry.quantity;
-                if (entry.movement_type === 'SELF_TRANSFER' || entry.movement_type === 'TRANSFER') {
+                if (entry.type === 'SELF_TRANSFER' || entry.type === 'TRANSFER') {
                     overview.selfTransferIn += entry.quantity;
-                } else if (entry.movement_type === 'RETURN') {
+                } else if (entry.type === 'RETURN') {
                     overview.returns += entry.quantity;
-                } else if (entry.movement_type === 'RECOVERY') {
+                } else if (entry.type === 'RECOVERY' || entry.type === 'RECOVER') {
                     overview.recovery += entry.quantity;
-                } else if (entry.movement_type === 'BULK_UPLOAD') {
+                } else if (entry.type === 'BULK_UPLOAD') {
                     overview.bulkUpload += entry.quantity;
                 }
             } else if (entry.direction === 'OUT') {
                 overview.totalOut += entry.quantity;
-                if (entry.movement_type === 'SELF_TRANSFER' || entry.movement_type === 'TRANSFER') {
+                if (entry.type === 'SELF_TRANSFER' || entry.type === 'TRANSFER') {
                     overview.selfTransferOut += entry.quantity;
-                } else if (entry.movement_type === 'DISPATCH') {
+                } else if (entry.type === 'DISPATCH') {
                     overview.dispatch += entry.quantity;
-                } else if (entry.movement_type === 'DAMAGED') {
+                } else if (entry.type === 'DAMAGED' || entry.type === 'DAMAGE') {
                     overview.damage += entry.quantity;
                 }
             }
@@ -438,12 +427,12 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#9CA3AF', fontSize:12 }}>No records found</div>
                             ) : (
                                 timeline.map((row, i) => {
-                                    const [date, timePart] = row.created_at.split('T');
+                                    const [date, timePart] = (row.timestamp || row.created_at).split('T');
                                     const time = (timePart || '').slice(0, 8);
-                                    const badge = getBadge(row.movement_type);
+                                    const badge = getBadge(row.type);
                                     const impact = row.direction === 'IN' ? `+${row.quantity}` : row.direction === 'OUT' ? `-${row.quantity}` : `${row.quantity}`;
                                     const impactColor = row.direction === 'IN' ? '#059669' : row.direction === 'OUT' ? '#DC2626' : '#374151';
-                                    const rowKey = `${row.created_at}-${row.reference || i}-${row.movement_type}`;
+                                    const rowKey = `${(row.timestamp || row.created_at)}-${row.reference || i}-${row.type}`;
 
                                     return (
                                         <div key={rowKey} style={{ display:'flex', flexDirection:'column' }}>
@@ -466,14 +455,12 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                     <span 
                                                         onClick={() => {
                                                             console.log('Badge clicked:', {
-                                                                movement_type: row.movement_type,
                                                                 type: row.type,
                                                                 reference: row.reference,
-                                                                hasReference: !!row.reference,
-                                                                isClickable: ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type)
+                                                                hasReference: !!row.reference
                                                             });
                                                             
-                                                            if (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type) && row.reference) {
+                                                            if (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.type) && row.reference) {
                                                                 console.log('Expanding entry:', row.reference);
                                                                 setExpandedEntry(expandedEntry === row.reference ? null : row.reference);
                                                             } else {
@@ -488,12 +475,12 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                             fontSize:9, 
                                                             fontWeight:700, 
                                                             letterSpacing:'0.06em',
-                                                            cursor: (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type) && row.reference) ? 'pointer' : 'default',
+                                                            cursor: (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.type) && row.reference) ? 'pointer' : 'default',
                                                             userSelect:'none'
                                                         }}>
                                                         {badge.label}
                                                     </span>
-                                                    <span style={{ fontSize:12, color:'#111827', fontWeight:500 }}>{LABELS[row.movement_type] || row.movement_type}</span>
+                                                    <span style={{ fontSize:12, color:'#111827', fontWeight:500 }}>{LABELS[row.type] || row.type}</span>
                                                 </div>
 
                                                 {/* Reference + warehouse */}
@@ -513,7 +500,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             </div>
                                             
                                             {/* Expansion for SELF_TRANSFER */}
-                                            {expandedEntry === row.reference && row.movement_type === 'SELF_TRANSFER' && (
+                                            {expandedEntry === row.reference && row.type === 'SELF_TRANSFER' && (
                                                 <div style={{ 
                                                     background: '#F9FAFB', 
                                                     borderBottom: '1px solid #F3F4F6',
@@ -652,7 +639,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             )}
 
                                             {/* Expansion for RETURN */}
-                                            {expandedEntry === row.reference && row.movement_type === 'RETURN' && (
+                                            {expandedEntry === row.reference && row.type === 'RETURN' && (
                                                 <div style={{ 
                                                     background: '#F0FDF4', 
                                                     borderBottom: '1px solid #D1FAE5',
@@ -753,7 +740,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             )}
 
                                             {/* Expansion for DAMAGE */}
-                                            {expandedEntry === row.reference && (row.movement_type === 'DAMAGE' || row.movement_type === 'DAMAGED') && (
+                                            {expandedEntry === row.reference && (row.type === 'DAMAGE' || row.type === 'DAMAGED') && (
                                                 <div style={{ 
                                                     background: '#FEF2F2', 
                                                     borderBottom: '1px solid #FECACA',
@@ -879,7 +866,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             )}
 
                                             {/* Expansion for RECOVER */}
-                                            {expandedEntry === row.reference && (row.movement_type === 'RECOVER' || row.movement_type === 'RECOVERY') && (
+                                            {expandedEntry === row.reference && (row.type === 'RECOVER' || row.type === 'RECOVERY') && (
                                                 <div style={{ 
                                                     background: '#F0FDF4', 
                                                     borderBottom: '1px solid #D1FAE5',
