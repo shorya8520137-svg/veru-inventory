@@ -58,8 +58,17 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                 setError("");
 
                 const token = localStorage.getItem('token');
+                
+                // Detect if storeCode is a warehouse (ends with _WH) or a store
+                const isWarehouse = storeCode.endsWith('_WH');
+                const apiEndpoint = isWarehouse 
+                    ? `${API_BASE}/api/timeline/${productBarcode}?warehouse=${storeCode}&limit=100`
+                    : `${API_BASE}/api/store-timeline/${storeCode}?productBarcode=${productBarcode}&limit=100`;
+                
+                console.log('Fetching timeline from:', apiEndpoint);
+                
                 const response = await fetch(
-                    `${API_BASE}/api/store-timeline/${storeCode}?productBarcode=${productBarcode}&limit=100`,
+                    apiEndpoint,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
 
@@ -162,6 +171,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
         DISPATCH:      { label:'DISPATCH',  bg:'#7f1d1d', color:'#FCA5A5' },
         SALE:          { label:'DISPATCH',  bg:'#7f1d1d', color:'#FCA5A5' },
         DAMAGE:        { label:'DAMAGE',    bg:'#7f1d1d', color:'#FCA5A5' },
+        DAMAGED:       { label:'DAMAGE',    bg:'#7f1d1d', color:'#FCA5A5' },
         RETURN:        { label:'RETURN',    bg:'#14532d', color:'#86EFAC' },
         RECOVER:       { label:'RECOVER',   bg:'#14532d', color:'#86EFAC' },
         RECOVERY:      { label:'RECOVER',   bg:'#14532d', color:'#86EFAC' },
@@ -441,7 +451,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                                                     <span 
                                                         onClick={() => {
-                                                            if (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'RECOVER'].includes(row.movement_type) && row.reference) {
+                                                            if (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type) && row.reference) {
                                                                 setExpandedEntry(expandedEntry === row.reference ? null : row.reference);
                                                             }
                                                         }}
@@ -453,7 +463,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                             fontSize:9, 
                                                             fontWeight:700, 
                                                             letterSpacing:'0.06em',
-                                                            cursor: (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'RECOVER'].includes(row.movement_type) && row.reference) ? 'pointer' : 'default',
+                                                            cursor: (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type) && row.reference) ? 'pointer' : 'default',
                                                             userSelect:'none'
                                                         }}>
                                                         {badge.label}
@@ -718,18 +728,19 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             )}
 
                                             {/* Expansion for DAMAGE */}
-                                            {expandedEntry === row.reference && row.movement_type === 'DAMAGE' && (
+                                            {expandedEntry === row.reference && (row.movement_type === 'DAMAGE' || row.movement_type === 'DAMAGED') && (
                                                 <div style={{ 
                                                     background: '#FEF2F2', 
                                                     borderBottom: '1px solid #FECACA',
                                                     padding: '16px 20px'
                                                 }}>
+                                                    {/* Stock Impact Section */}
                                                     <div style={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: '1fr 1fr',
-                                                        gap: 12
+                                                        gridTemplateColumns: '1fr',
+                                                        gap: 12,
+                                                        marginBottom: 12
                                                     }}>
-                                                        {/* Damage Details */}
                                                         <div style={{
                                                             background: '#FFFFFF',
                                                             border: '2px solid #DC2626',
@@ -742,59 +753,120 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 fontWeight: 700, 
                                                                 letterSpacing: '0.1em', 
                                                                 textTransform: 'uppercase', 
-                                                                marginBottom: 4 
+                                                                marginBottom: 8 
                                                             }}>
-                                                                ⚠️ DAMAGE REPORTED
+                                                                ⚠️ DAMAGE REPORTED - STOCK DEDUCTED
                                                             </div>
-                                                            <div style={{ fontSize: 10, color: '#6B7280', marginTop: 8 }}>
-                                                                <div style={{ marginBottom: 4 }}><strong>Product:</strong> {row.product_name}</div>
-                                                                <div style={{ marginBottom: 4 }}><strong>Barcode:</strong> {row.barcode}</div>
-                                                                <div style={{ marginBottom: 4 }}><strong>Quantity:</strong> {row.quantity}</div>
-                                                                <div><strong>Location:</strong> {row.warehouse}</div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Processed By */}
-                                                        <div style={{
-                                                            background: '#FFFFFF',
-                                                            border: '2px solid #F59E0B',
-                                                            borderRadius: 8,
-                                                            padding: '12px 16px'
-                                                        }}>
                                                             <div style={{ 
-                                                                fontSize: 9, 
-                                                                color: '#F59E0B', 
-                                                                fontWeight: 700, 
-                                                                letterSpacing: '0.1em', 
-                                                                textTransform: 'uppercase', 
-                                                                marginBottom: 4 
+                                                                fontSize: 11, 
+                                                                color: '#DC2626', 
+                                                                fontWeight: 600, 
+                                                                marginBottom: 8 
                                                             }}>
-                                                                👤 PROCESSED BY
+                                                                {row.warehouse || storeCode}
                                                             </div>
-                                                            <div style={{ fontSize: 11, marginTop: 8, marginBottom: 8, fontWeight: 600 }}>
-                                                                {row.damage_details?.processed_by || 'N/A'}
-                                                            </div>
-                                                            <div style={{ fontSize: 10, color: '#6B7280' }}>
-                                                                <div><strong>Reference:</strong> <span style={{ fontFamily: 'monospace', fontSize: 9 }}>{row.reference}</span></div>
+                                                            <div style={{ 
+                                                                display: 'flex', 
+                                                                justifyContent: 'space-between', 
+                                                                fontSize: 10, 
+                                                                color: '#6B7280' 
+                                                            }}>
+                                                                <span>Stock Before: <strong style={{ color: '#111827' }}>{row.balance_after + row.quantity}</strong></span>
+                                                                <span>Impact: <strong style={{ color: '#DC2626' }}>-{row.quantity}</strong></span>
+                                                                <span>Stock After: <strong style={{ color: '#111827' }}>{row.balance_after}</strong></span>
                                                             </div>
                                                         </div>
+                                                    </div>
+
+                                                    {/* Product Details */}
+                                                    <div style={{
+                                                        background: '#FFFFFF',
+                                                        border: '1px solid #E5E7EB',
+                                                        borderRadius: 8,
+                                                        padding: '12px 16px'
+                                                    }}>
+                                                        <div style={{ 
+                                                            fontSize: 9, 
+                                                            color: '#6B7280', 
+                                                            marginBottom: 8,
+                                                            fontWeight: 600,
+                                                            letterSpacing: '0.1em',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            DAMAGE DETAILS
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Product</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.product_name || productBarcode}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Barcode</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.barcode}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Quantity Damaged</div>
+                                                                <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 700 }}>
+                                                                    {row.quantity} units
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Location</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.warehouse || storeCode}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Damage ID</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.reference || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Processed By</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.damage_details?.processed_by || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Action Type</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.damage_details?.action_type || 'damage'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {row.notes && (
+                                                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Notes</div>
+                                                                <div style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic' }}>
+                                                                    {row.notes}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
 
                                             {/* Expansion for RECOVER */}
-                                            {expandedEntry === row.reference && row.movement_type === 'RECOVER' && (
+                                            {expandedEntry === row.reference && (row.movement_type === 'RECOVER' || row.movement_type === 'RECOVERY') && (
                                                 <div style={{ 
                                                     background: '#F0FDF4', 
                                                     borderBottom: '1px solid #D1FAE5',
                                                     padding: '16px 20px'
                                                 }}>
+                                                    {/* Stock Impact Section */}
                                                     <div style={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: '1fr 1fr',
-                                                        gap: 12
+                                                        gridTemplateColumns: '1fr',
+                                                        gap: 12,
+                                                        marginBottom: 12
                                                     }}>
-                                                        {/* Recovery Details */}
                                                         <div style={{
                                                             background: '#FFFFFF',
                                                             border: '2px solid #059669',
@@ -807,42 +879,102 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 fontWeight: 700, 
                                                                 letterSpacing: '0.1em', 
                                                                 textTransform: 'uppercase', 
-                                                                marginBottom: 4 
+                                                                marginBottom: 8 
                                                             }}>
-                                                                ✅ STOCK RECOVERED
+                                                                ✅ STOCK RECOVERED - ADDED BACK
                                                             </div>
-                                                            <div style={{ fontSize: 10, color: '#6B7280', marginTop: 8 }}>
-                                                                <div style={{ marginBottom: 4 }}><strong>Product:</strong> {row.product_name}</div>
-                                                                <div style={{ marginBottom: 4 }}><strong>Barcode:</strong> {row.barcode}</div>
-                                                                <div style={{ marginBottom: 4 }}><strong>Quantity:</strong> {row.quantity}</div>
-                                                                <div><strong>Location:</strong> {row.warehouse}</div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Processed By */}
-                                                        <div style={{
-                                                            background: '#FFFFFF',
-                                                            border: '2px solid #F59E0B',
-                                                            borderRadius: 8,
-                                                            padding: '12px 16px'
-                                                        }}>
                                                             <div style={{ 
-                                                                fontSize: 9, 
-                                                                color: '#F59E0B', 
-                                                                fontWeight: 700, 
-                                                                letterSpacing: '0.1em', 
-                                                                textTransform: 'uppercase', 
-                                                                marginBottom: 4 
+                                                                fontSize: 11, 
+                                                                color: '#059669', 
+                                                                fontWeight: 600, 
+                                                                marginBottom: 8 
                                                             }}>
-                                                                👤 PROCESSED BY
+                                                                {row.warehouse || storeCode}
                                                             </div>
-                                                            <div style={{ fontSize: 11, marginTop: 8, marginBottom: 8, fontWeight: 600 }}>
-                                                                {row.damage_details?.processed_by || 'N/A'}
-                                                            </div>
-                                                            <div style={{ fontSize: 10, color: '#6B7280' }}>
-                                                                <div><strong>Reference:</strong> <span style={{ fontFamily: 'monospace', fontSize: 9 }}>{row.reference}</span></div>
+                                                            <div style={{ 
+                                                                display: 'flex', 
+                                                                justifyContent: 'space-between', 
+                                                                fontSize: 10, 
+                                                                color: '#6B7280' 
+                                                            }}>
+                                                                <span>Stock Before: <strong style={{ color: '#111827' }}>{row.balance_after - row.quantity}</strong></span>
+                                                                <span>Impact: <strong style={{ color: '#059669' }}>+{row.quantity}</strong></span>
+                                                                <span>Stock After: <strong style={{ color: '#111827' }}>{row.balance_after}</strong></span>
                                                             </div>
                                                         </div>
+                                                    </div>
+
+                                                    {/* Product Details */}
+                                                    <div style={{
+                                                        background: '#FFFFFF',
+                                                        border: '1px solid #E5E7EB',
+                                                        borderRadius: 8,
+                                                        padding: '12px 16px'
+                                                    }}>
+                                                        <div style={{ 
+                                                            fontSize: 9, 
+                                                            color: '#6B7280', 
+                                                            marginBottom: 8,
+                                                            fontWeight: 600,
+                                                            letterSpacing: '0.1em',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            RECOVERY DETAILS
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Product</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.product_name || productBarcode}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Barcode</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.barcode}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Quantity Recovered</div>
+                                                                <div style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>
+                                                                    {row.quantity} units
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Location</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.warehouse || storeCode}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Recovery ID</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.reference || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Processed By</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.damage_details?.processed_by || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Action Type</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.damage_details?.action_type || 'recovery'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {row.notes && (
+                                                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Notes</div>
+                                                                <div style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic' }}>
+                                                                    {row.notes}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
