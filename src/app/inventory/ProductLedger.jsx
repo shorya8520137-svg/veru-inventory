@@ -454,17 +454,27 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                                                     <span 
                                                         onClick={() => {
-                                                            console.log('Badge clicked:', {
-                                                                type: row.type,
-                                                                reference: row.reference,
-                                                                hasReference: !!row.reference
-                                                            });
+                                                            const typeValue = row.type;
+                                                            const refValue = row.reference;
+                                                            const typeCheck = ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(typeValue);
                                                             
-                                                            if (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.type) && row.reference) {
-                                                                console.log('Expanding entry:', row.reference);
-                                                                setExpandedEntry(expandedEntry === row.reference ? null : row.reference);
+                                                            console.log('=== BADGE CLICK DEBUG ===');
+                                                            console.log('row.type:', JSON.stringify(typeValue));
+                                                            console.log('row.type length:', typeValue?.length);
+                                                            console.log('row.type charCodes:', typeValue?.split('').map(c => c.charCodeAt(0)));
+                                                            console.log('row.reference:', refValue);
+                                                            console.log('hasReference:', !!refValue);
+                                                            console.log('typeCheck result:', typeCheck);
+                                                            console.log('Expected types:', ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY']);
+                                                            console.log('========================');
+                                                            
+                                                            if (typeCheck && refValue) {
+                                                                console.log('✅ Expanding entry:', refValue);
+                                                                setExpandedEntry(expandedEntry === refValue ? null : refValue);
                                                             } else {
-                                                                console.log('Conditions not met for expansion');
+                                                                console.log('❌ Conditions not met');
+                                                                console.log('   - typeCheck:', typeCheck);
+                                                                console.log('   - hasReference:', !!refValue);
                                                             }
                                                         }}
                                                         style={{ 
