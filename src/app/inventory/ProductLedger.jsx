@@ -78,13 +78,17 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                 if (data.success && data.data && data.data.timeline) {
                     let timelineData = data.data.timeline;
                     
+                    console.log('Raw timeline data (first entry):', timelineData[0]);
+                    
                     // Normalize field names: warehouse API uses 'type', store API uses 'movement_type'
                     if (isWarehouse) {
+                        console.log('Normalizing warehouse data...');
                         timelineData = timelineData.map(entry => ({
                             ...entry,
                             movement_type: entry.type, // Add movement_type field for consistency
                             created_at: entry.timestamp // Warehouse API uses 'timestamp', store uses 'created_at'
                         }));
+                        console.log('Normalized data (first entry):', timelineData[0]);
                     }
                     
                     setTimeline(timelineData);
@@ -461,8 +465,19 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                                                     <span 
                                                         onClick={() => {
+                                                            console.log('Badge clicked:', {
+                                                                movement_type: row.movement_type,
+                                                                type: row.type,
+                                                                reference: row.reference,
+                                                                hasReference: !!row.reference,
+                                                                isClickable: ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type)
+                                                            });
+                                                            
                                                             if (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.movement_type) && row.reference) {
+                                                                console.log('Expanding entry:', row.reference);
                                                                 setExpandedEntry(expandedEntry === row.reference ? null : row.reference);
+                                                            } else {
+                                                                console.log('Conditions not met for expansion');
                                                             }
                                                         }}
                                                         style={{ 
