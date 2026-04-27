@@ -149,35 +149,56 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
             setMsg("");
 
             const token = localStorage.getItem('token');
-            await Promise.all(
-                validRows.map(r => {
-                    const endpoint = action === "damage" 
-                        ? `${process.env.NEXT_PUBLIC_API_BASE}/api/damage-recovery/damage`
-                        : `${process.env.NEXT_PUBLIC_API_BASE}/api/damage-recovery/recover`;
-                    return fetch(endpoint, {
-                        method: "POST",
-                        headers: { 
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            product_type: r.selectedProduct.product_name,
-                            barcode: r.selectedProduct.barcode,
-                            inventory_location: selectedLoc.id,
-                            quantity: Number(r.qty),
-                            action_type: action === "recovery" ? "recover" : action,
-                            processed_by: processedBy || undefined
-                        }),
+            
+            // Process each row
+            for (const r of validRows) {
+                const endpoint = action === "damage" 
+                    ? `${process.env.NEXT_PUBLIC_API_BASE}/api/damage-recovery/damage`
+                    : `${process.env.NEXT_PUBLIC_API_BASE}/api/damage-recovery/recover`;
+                
+                const payload = {
+                    product_type: r.selectedProduct.product_name,
+                    barcode: r.selectedProduct.barcode,
+                    inventory_location: selectedLoc.id,
+                    quantity: Number(r.qty),
+                    action_type: action === "recovery" ? "recover" : action,
+                    processed_by: processedBy || undefined
+                };
+                
+                console.log('📤 Sending damage/recovery request:', {
+                    endpoint,
+                    payload
+                });
+                
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload),
+                });
+                
+                const responseData = await response.json();
+                
+                if (!response.ok) {
+                    console.error('❌ API Error:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: responseData
                     });
-                })
-            );
+                    throw new Error(responseData.message || `API returned ${response.status}`);
+                }
+                
+                console.log('✅ Success:', responseData);
+            }
 
             setMsg("✔ Successfully processed");
             setTimeout(onClose, 900);
 
         } catch (err) {
-            console.error(err);
-            setMsg("Operation failed");
+            console.error('❌ Submit error:', err);
+            setMsg(err.message || "Operation failed");
         } finally {
             setLoading(false);
         }
