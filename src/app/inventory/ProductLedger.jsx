@@ -76,7 +76,17 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                 if (!mounted) return;
 
                 if (data.success && data.data && data.data.timeline) {
-                    const timelineData = data.data.timeline;
+                    let timelineData = data.data.timeline;
+                    
+                    // Normalize field names: warehouse API uses 'type', store API uses 'movement_type'
+                    if (isWarehouse) {
+                        timelineData = timelineData.map(entry => ({
+                            ...entry,
+                            movement_type: entry.type, // Add movement_type field for consistency
+                            created_at: entry.timestamp // Warehouse API uses 'timestamp', store uses 'created_at'
+                        }));
+                    }
+                    
                     setTimeline(timelineData);
                     calculateSummary(timelineData);
                 } else {
