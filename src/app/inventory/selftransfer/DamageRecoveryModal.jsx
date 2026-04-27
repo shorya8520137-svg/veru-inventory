@@ -9,6 +9,8 @@ const API = `${process.env.NEXT_PUBLIC_API_BASE}/api/dispatch`;
 export default function DamageRecoveryModal({ onClose, initialMode = 'damage', prefilledProduct = null, prefilledLocation = null }) {
     const [locationType, setLocationType] = useState(prefilledLocation ? "STORE" : "WAREHOUSE");
     const [selectedLocationId, setSelectedLocationId] = useState("");
+    const [selectedLocation, setSelectedLocation] = useState(null);
+    const [locationQuery, setLocationQuery] = useState("");
     const [locations, setLocations] = useState([]);
 
     const [action, setAction] = useState(initialMode);
@@ -22,12 +24,30 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
         {
             selectedProductId: "",
             qty: 1,
+            productQuery: "",
+            products: [],
+            selectedProduct: null,
         },
     ]);
     
     const [products, setProducts] = useState([]);
     const [processedByOptions, setProcessedByOptions] = useState([]);
     const [processedBy, setProcessedBy] = useState("");
+
+    /* ---------------- FETCH PROCESSED BY OPTIONS ---------------- */
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        fetch(`${API}/processed-persons`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setProcessedByOptions(data);
+                }
+            })
+            .catch(err => console.error('Error fetching processed persons:', err));
+    }, []);
 
     /* ---------------- LOCATION SEARCH ---------------- */
     useEffect(() => {
@@ -128,7 +148,8 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
                                     ? selectedLocation.warehouse_code
                                     : selectedLocation.store_code,
                             quantity: Number(r.qty),
-                            action_type: action === "recovery" ? "recover" : action
+                            action_type: action === "recovery" ? "recover" : action,
+                            processed_by: processedBy || undefined
                         }),
                     });
                 })
@@ -296,6 +317,23 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
                 >
                     + Add Product
                 </button>
+
+                {/* PROCESSED BY */}
+                <div className={styles.field}>
+                    <label className={styles.label}>Processed By (optional)</label>
+                    <select
+                        className={styles.select}
+                        value={processedBy}
+                        onChange={e => setProcessedBy(e.target.value)}
+                    >
+                        <option value="">Select Executive</option>
+                        {processedByOptions.map(name => (
+                            <option key={name} value={name}>
+                                {name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
                 {/* ACTION */}
                 <div className={styles.actionRow}>
