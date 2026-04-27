@@ -26,24 +26,21 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
     const [msg, setMsg] = useState("");
 
     /* ------------------------------
-       FETCH PROCESSED BY OPTIONS (USERS API)
+       FETCH PROCESSED BY OPTIONS (SAME AS SELF-TRANSFER)
     -------------------------------- */
     useEffect(() => {
         const token = localStorage.getItem('token');
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/users`, {
+        fetch(`${API}/processed-persons`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => r.json())
             .then(data => {
-                if (data.success && Array.isArray(data.data)) {
-                    setProcessedByOptions(data.data);
-                } else if (data.success && Array.isArray(data.users)) {
-                    setProcessedByOptions(data.users);
-                } else if (Array.isArray(data)) {
+                // API returns array of names like ["Anurag Singh", "Mahesh", "Manisha", "Ritik"]
+                if (Array.isArray(data)) {
                     setProcessedByOptions(data);
                 }
             })
-            .catch(err => console.error('Error fetching users:', err));
+            .catch(err => console.error('Error fetching processed persons:', err));
     }, []);
 
     /* ------------------------------
@@ -165,7 +162,7 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
                 condition: 'good', // Default condition
                 awb: awb || undefined,
                 return_reason: subtype || undefined,
-                processed_by: processedBy ? Number(processedBy) : undefined,
+                processed_by: processedBy || undefined, // Send name as string
                 notes: subtype || undefined,
                 // Legacy support
                 warehouse: locationType === "WAREHOUSE" ? selectedLocation.id : undefined
@@ -395,10 +392,10 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
                         onChange={e => setProcessedBy(e.target.value)}
                         style={{ cursor: 'pointer' }}
                     >
-                        <option value="">Select user</option>
-                        {processedByOptions.map(user => (
-                            <option key={user.id} value={user.id}>
-                                {user.name} ({user.email})
+                        <option value="">Select Executive</option>
+                        {processedByOptions.map(name => (
+                            <option key={name} value={name}>
+                                {name}
                             </option>
                         ))}
                     </select>
