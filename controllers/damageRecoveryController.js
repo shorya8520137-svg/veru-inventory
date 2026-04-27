@@ -23,7 +23,8 @@ exports.reportDamage = (req, res) => {
         barcode,
         inventory_location,
         quantity = 1,
-        action_type = 'damage'
+        action_type = 'damage',
+        processed_by  // Add processed_by parameter
     } = req.body;
 
     // Basic validation
@@ -76,11 +77,11 @@ exports.reportDamage = (req, res) => {
             // Step 2: Insert into damage_recovery_log table
             const logSql = `
                 INSERT INTO damage_recovery_log (
-                    product_type, barcode, inventory_location, action_type, quantity
-                ) VALUES (?, ?, ?, ?, ?)
+                    product_type, barcode, inventory_location, action_type, quantity, processed_by
+                ) VALUES (?, ?, ?, ?, ?, ?)
             `;
 
-            db.query(logSql, [product_type, barcode, inventory_location, action_type, qty], (err, result) => {
+            db.query(logSql, [product_type, barcode, inventory_location, action_type, qty, processed_by], (err, result) => {
                 if (err) {
                     console.log('❌ Insert failed:', err);
                     return db.rollback(() =>
@@ -226,7 +227,8 @@ exports.recoverStock = (req, res) => {
         product_type,
         barcode,
         inventory_location,
-        quantity = 1
+        quantity = 1,
+        processed_by  // Add processed_by parameter
     } = req.body;
 
     // Basic validation
@@ -255,11 +257,11 @@ exports.recoverStock = (req, res) => {
         // Step 1: Insert into damage_recovery_log table
         const logSql = `
             INSERT INTO damage_recovery_log (
-                product_type, barcode, inventory_location, action_type, quantity
-            ) VALUES (?, ?, ?, 'recover', ?)
+                product_type, barcode, inventory_location, action_type, quantity, processed_by
+            ) VALUES (?, ?, ?, 'recover', ?, ?)
         `;
 
-        db.query(logSql, [product_type, barcode, inventory_location, qty], (err, result) => {
+        db.query(logSql, [product_type, barcode, inventory_location, qty, processed_by], (err, result) => {
             if (err) {
                 console.log('❌ Insert failed:', err);
                 return db.rollback(() =>

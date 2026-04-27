@@ -69,12 +69,31 @@ exports.getProductTimeline = (req, res) => {
             wd.width,
             wd.height,
             wd.actual_weight,
-            wd.status as dispatch_status
+            wd.status as dispatch_status,
+            -- Include return details for RETURN entries
+            r.processed_by as return_processed_by,
+            r.condition as return_condition,
+            r.return_reason,
+            r.notes as return_notes,
+            r.source_location as return_source,
+            r.destination_location as return_destination,
+            r.return_type,
+            -- Include damage/recovery details
+            d.processed_by as damage_processed_by,
+            d.action_type as damage_action_type
         FROM inventory_ledger_base ilb
         LEFT JOIN warehouse_dispatch wd ON (
             ilb.movement_type = 'DISPATCH' 
             AND ilb.reference LIKE CONCAT('DISPATCH_', wd.id, '%')
             AND ilb.barcode = wd.barcode
+        )
+        LEFT JOIN returns_main r ON (
+            ilb.movement_type = 'RETURN'
+            AND ilb.reference LIKE CONCAT('RETURN_', r.id, '%')
+        )
+        LEFT JOIN damage_recovery_log d ON (
+            (ilb.movement_type = 'DAMAGE' AND ilb.reference = CONCAT('damage#', d.id))
+            OR (ilb.movement_type = 'RECOVER' AND ilb.reference = CONCAT('recover#', d.id))
         )
         WHERE ${filters.join(' AND ')}
         ORDER BY ilb.event_time DESC
@@ -207,6 +226,21 @@ exports.getProductTimeline = (req, res) => {
                         height: parseFloat(item.height) || 0,
                         actual_weight: parseFloat(item.actual_weight) || 0,
                         status: item.dispatch_status
+                    } : null,
+                    // Include return details for RETURN entries
+                    return_details: (item.type.toUpperCase() === 'RETURN') ? {
+                        processed_by: item.return_processed_by,
+                        condition: item.return_condition,
+                        return_reason: item.return_reason,
+                        notes: item.return_notes,
+                        source_location: item.return_source,
+                        destination_location: item.return_destination,
+                        return_type: item.return_type
+                    } : null,
+                    // Include damage/recovery details
+                    damage_details: (item.type.toUpperCase() === 'DAMAGE' || item.type.toUpperCase() === 'RECOVER') ? {
+                        processed_by: item.damage_processed_by,
+                        action_type: item.damage_action_type
                     } : null
                 };
             });

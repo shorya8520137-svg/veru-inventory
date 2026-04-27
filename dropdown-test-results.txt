@@ -1,0 +1,30 @@
+[8:37:19 PM] 🧪 Starting Self Transfer Form Test...
+[8:37:20 PM] 📝 Step 1: Logging in...
+[8:37:24 PM] ✅ ✅ Login successful
+[8:37:25 PM] 📝 Step 2: Opening inventory...
+[8:37:27 PM] 📝 Step 3: Opening Transfer Stock form...
+[8:37:29 PM] ✅ ✅ Form opened
+[8:37:29 PM] 🧪 
+🧪 Testing Transfer Type Logic:
+
+[8:37:29 PM] 🧪 
+Testing: W to W
+[8:37:29 PM] 📝   Actual select value in DOM: W to W
+[8:37:29 PM] ✅   ✅ Correct labels: Source Warehouse, Destination Warehouse
+[8:37:29 PM] 🧪 
+Testing: W to S
+[8:37:30 PM] 📝   Actual select value in DOM: W to W
+[8:37:30 PM] ❌   ❌ Wrong labels. Expected: Source Warehouse, Destination Store
+[8:37:30 PM] ❌      Found: Source Warehouse *, Destination Warehouse *
+[8:37:30 PM] 🧪 
+Testing: S to W
+[8:37:31 PM] 📝   Actual select value in DOM: W to W
+[8:37:31 PM] ❌   ❌ Wrong labels. Expected: Source Store, Destination Warehouse
+[8:37:31 PM] ❌      Found: Source Warehouse *, Destination Warehouse *
+[8:37:31 PM] 🧪 
+Testing: S to S
+[8:37:32 PM] 📝   Actual select value in DOM: W to W
+[8:37:32 PM] ❌   ❌ Wrong labels. Expected: Source Store, Destination Store
+[8:37:32 PM] ❌      Found: Source Warehouse *, Destination Warehouse *
+[8:37:32 PM] ✅ 
+✅ Test completed!
