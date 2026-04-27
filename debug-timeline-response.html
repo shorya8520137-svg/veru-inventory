@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Timeline Response</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        pre { background: #2a2a2a; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 0; }
+        button:hover { background: #45a049; }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+    </style>
+</head>
+<body>
+    <h1>Timeline API Debug</h1>
+    <button onclick="testTimeline()">Test Timeline API</button>
+    <div id="output"></div>
+
+    <script>
+        async function testTimeline() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Loading...</p>';
+
+            try {
+                // Login first
+                const loginRes = await fetch('https://api.giftgala.in/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@company.com',
+                        password: 'Admin@123'
+                    })
+                });
+
+                const loginData = await loginRes.json();
+                const token = loginData.token;
+
+                output.innerHTML += '<p class="success">✅ Login successful</p>';
+
+                // Fetch timeline
+                const barcode = '972946773347';
+                const warehouse = 'BLR_WH';
+                const timelineRes = await fetch(
+                    `https://api.giftgala.in/api/timeline/${barcode}?warehouse=${warehouse}&limit=10`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+
+                const timelineData = await timelineRes.json();
+
+                output.innerHTML += '<p class="success">✅ Timeline fetched</p>';
+                output.innerHTML += '<h2>Full Response:</h2>';
+                output.innerHTML += '<pre>' + JSON.stringify(timelineData, null, 2) + '</pre>';
+
+                // Check for DAMAGE entries
+                if (timelineData.success && timelineData.data.timeline) {
+                    const damageEntries = timelineData.data.timeline.filter(t => 
+                        t.type === 'DAMAGE' || t.type === 'DAMAGED'
+                    );
+
+                    output.innerHTML += '<h2>DAMAGE Entries:</h2>';
+                    output.innerHTML += '<pre>' + JSON.stringify(damageEntries, null, 2) + '</pre>';
+
+                    if (damageEntries.length > 0) {
+                        const entry = damageEntries[0];
+                        output.innerHTML += '<h2>First DAMAGE Entry Analysis:</h2>';
+                        output.innerHTML += '<p>Type: ' + entry.type + '</p>';
+                        output.innerHTML += '<p>Reference: ' + entry.reference + '</p>';
+                        output.innerHTML += '<p>Has damage_details: ' + (entry.damage_details ? 'YES' : 'NO') + '</p>';
+                        if (entry.damage_details) {
+                            output.innerHTML += '<p>Processed By: ' + entry.damage_details.processed_by + '</p>';
+                            output.innerHTML += '<p>Action Type: ' + entry.damage_details.action_type + '</p>';
+                        }
+                    }
+                }
+
+            } catch (error) {
+                output.innerHTML += '<p class="error">❌ Error: ' + error.message + '</p>';
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -200,7 +200,10 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                 {/* ── Top bar ── */}
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', background:'#F9FAFB', borderBottom:'1px solid #E5E7EB', flexShrink:0 }}>
                     <div>
-                        <div style={{ fontSize:10, color:'#6B7280', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:3 }}>Audit Log / Stock Control</div>
+                        <div style={{ fontSize:10, color:'#6B7280', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:3 }}>
+                            Audit Log / Stock Control 
+                            <span style={{ marginLeft:8, padding:'2px 6px', background:'#10B981', color:'#FFFFFF', borderRadius:4, fontSize:8 }}>v2.1</span>
+                        </div>
                         <div style={{ fontSize:16, fontWeight:700, color:'#111827', letterSpacing:'-0.01em' }}>
                             Product Ledger — <span style={{ color:'#2563EB' }}>{productBarcode}</span>
                         </div>
@@ -454,27 +457,23 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                                                     <span 
                                                         onClick={() => {
-                                                            const typeValue = row.type;
-                                                            const refValue = row.reference;
-                                                            const typeCheck = ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(typeValue);
+                                                            console.log('🔍 BADGE CLICK v2.1');
+                                                            console.log('Type:', row.type, '| Length:', row.type?.length, '| CharCodes:', row.type?.split('').map(c => c.charCodeAt(0)));
+                                                            console.log('Reference:', row.reference);
+                                                            console.log('Current expandedEntry:', expandedEntry);
                                                             
-                                                            console.log('=== BADGE CLICK DEBUG ===');
-                                                            console.log('row.type:', JSON.stringify(typeValue));
-                                                            console.log('row.type length:', typeValue?.length);
-                                                            console.log('row.type charCodes:', typeValue?.split('').map(c => c.charCodeAt(0)));
-                                                            console.log('row.reference:', refValue);
-                                                            console.log('hasReference:', !!refValue);
-                                                            console.log('typeCheck result:', typeCheck);
-                                                            console.log('Expected types:', ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY']);
-                                                            console.log('========================');
+                                                            const validTypes = ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'];
+                                                            const isValidType = validTypes.includes(row.type);
+                                                            const hasRef = !!row.reference;
                                                             
-                                                            if (typeCheck && refValue) {
-                                                                console.log('✅ Expanding entry:', refValue);
-                                                                setExpandedEntry(expandedEntry === refValue ? null : refValue);
+                                                            console.log('Is valid type?', isValidType, '| Has reference?', hasRef);
+                                                            
+                                                            if (isValidType && hasRef) {
+                                                                const newValue = expandedEntry === row.reference ? null : row.reference;
+                                                                console.log('✅ Setting expandedEntry to:', newValue);
+                                                                setExpandedEntry(newValue);
                                                             } else {
-                                                                console.log('❌ Conditions not met');
-                                                                console.log('   - typeCheck:', typeCheck);
-                                                                console.log('   - hasReference:', !!refValue);
+                                                                console.log('❌ Cannot expand - Type valid:', isValidType, '| Has ref:', hasRef);
                                                             }
                                                         }}
                                                         style={{ 
@@ -750,7 +749,9 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             )}
 
                                             {/* Expansion for DAMAGE */}
-                                            {expandedEntry === row.reference && (row.type === 'DAMAGE' || row.type === 'DAMAGED') && (
+                                            {expandedEntry === row.reference && (row.type === 'DAMAGE' || row.type === 'DAMAGED') && (() => {
+                                                console.log('🎨 Rendering DAMAGE expansion for:', row.reference);
+                                                return (
                                                 <div style={{ 
                                                     background: '#FEF2F2', 
                                                     borderBottom: '1px solid #FECACA',
@@ -873,10 +874,13 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                         )}
                                                     </div>
                                                 </div>
-                                            )}
+                                                );
+                                            })()}
 
                                             {/* Expansion for RECOVER */}
-                                            {expandedEntry === row.reference && (row.type === 'RECOVER' || row.type === 'RECOVERY') && (
+                                            {expandedEntry === row.reference && (row.type === 'RECOVER' || row.type === 'RECOVERY') && (() => {
+                                                console.log('🎨 Rendering RECOVER expansion for:', row.reference);
+                                                return (
                                                 <div style={{ 
                                                     background: '#F0FDF4', 
                                                     borderBottom: '1px solid #D1FAE5',
@@ -999,7 +1003,8 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                         )}
                                                     </div>
                                                 </div>
-                                            )}
+                                                );
+                                            })()}
                                         </div>
                                     );
                                 })
