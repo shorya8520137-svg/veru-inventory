@@ -12,8 +12,10 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
     const [selectedLocationId, setSelectedLocationId] = useState("");
     const [locations, setLocations] = useState([]);
 
-    const [selectedProductId, setSelectedProductId] = useState("");
-    const [products, setProducts] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [productSearch, setProductSearch] = useState("");
+    const [productSuggestions, setProductSuggestions] = useState([]);
+    const [showProductSuggestions, setShowProductSuggestions] = useState(false);
 
     const [qty, setQty] = useState(1);
     const [awb, setAwb] = useState("");
@@ -24,17 +26,21 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
     const [msg, setMsg] = useState("");
 
     /* ------------------------------
-       FETCH PROCESSED BY OPTIONS
+       FETCH PROCESSED BY OPTIONS (USERS API)
     -------------------------------- */
     useEffect(() => {
         const token = localStorage.getItem('token');
-        fetch(`${RETURNS_API.replace('/returns', '')}/users`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/users`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => r.json())
             .then(data => {
-                if (data.success && Array.isArray(data.users)) {
+                if (data.success && Array.isArray(data.data)) {
+                    setProcessedByOptions(data.data);
+                } else if (data.success && Array.isArray(data.users)) {
                     setProcessedByOptions(data.users);
+                } else if (Array.isArray(data)) {
+                    setProcessedByOptions(data);
                 }
             })
             .catch(err => console.error('Error fetching users:', err));
@@ -91,35 +97,56 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
     }, [locationType]);
 
     /* ------------------------------
-       PRODUCT SEARCH
+       PRODUCT SEARCH WITH AUTOCOMPLETE
     -------------------------------- */
     useEffect(() => {
+        if (productSearch.length < 2) {
+            setProductSuggestions([]);
+            return;
+        }
+
         const token = localStorage.getItem('token');
-        fetch(`${API}/search-products?query=`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(r => r.json())
-            .then(data => {
-                const allProducts = Array.isArray(data) ? data : (data.data || []);
-                setProducts(allProducts);
+        const timeoutId = setTimeout(() => {
+            fetch(`${API}/search-products?query=${encodeURIComponent(productSearch)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             })
-            .catch(() => setProducts([]));
-    }, []);
+                .then(r => r.json())
+                .then(data => {
+                    const allProducts = Array.isArray(data) ? data : (data.data || []);
+                    setProductSuggestions(allProducts.slice(0, 10)); // Limit to 10 suggestions
+                })
+                .catch(() => setProductSuggestions([]));
+        }, 300); // Debounce search
+
+        return () => clearTimeout(timeoutId);
+    }, [productSearch]);
+
+    /* ------------------------------
+       CLOSE SUGGESTIONS ON CLICK OUTSIDE
+    -------------------------------- */
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (showProductSuggestions && !event.target.closest('.product-search-container')) {
+                setShowProductSuggestions(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showProductSuggestions]);
 
     /* ------------------------------
        SUBMIT RETURN
     -------------------------------- */
     async function submit() {
-        if (!selectedLocationId || !selectedProductId || !qty) {
+        if (!selectedLocationId || !selectedProduct || !qty) {
             setMsg("Please complete all required fields");
             return;
         }
 
         const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
-        const selectedProduct = products.find(prod => prod.p_id === selectedProductId);
 
-        if (!selectedLocation || !selectedProduct) {
-            setMsg("Invalid selection");
+        if (!selectedLocation) {
+            setMsg("Invalid location selection");
             return;
         }
 
@@ -129,21 +156,20 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
 
             const token = localStorage.getItem('token');
             const payload = {
+                return_type: locationType, // 'WAREHOUSE' or 'STORE'
+                source_location: selectedLocation.id,
+                destination_location: selectedLocation.id, // Same location for now
                 product_type: selectedProduct.product_name,
                 barcode: selectedProduct.barcode,
                 quantity: Number(qty),
+                condition: 'good', // Default condition
                 awb: awb || undefined,
-                subtype: subtype || undefined,
-                processed_by: processedBy || undefined,
-                location_type: locationType
+                return_reason: subtype || undefined,
+                processed_by: processedBy ? Number(processedBy) : undefined,
+                notes: subtype || undefined,
+                // Legacy support
+                warehouse: locationType === "WAREHOUSE" ? selectedLocation.id : undefined
             };
-
-            // Add warehouse or store_code based on location type
-            if (locationType === "WAREHOUSE") {
-                payload.warehouse = selectedLocation.warehouse_code;
-            } else {
-                payload.store_code = selectedLocation.store_code;
-            }
 
             const res = await fetch(RETURNS_API, {
                 method: "POST",
@@ -155,7 +181,7 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed");
+            if (!res.ok) throw new Error(data.message || data.error || "Failed");
 
             setMsg("✔ Return created successfully");
             setTimeout(onClose, 900);
@@ -240,22 +266,90 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
                     </select>
                 </div>
 
-                {/* Product */}
+                {/* Product Search with Autocomplete */}
                 <div className={styles.field}>
                     <label className={styles.label}>Product</label>
-                    <select
-                        className={styles.input}
-                        value={selectedProductId}
-                        onChange={e => setSelectedProductId(e.target.value)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <option value="">Select product</option>
-                        {products.map(product => (
-                            <option key={product.p_id} value={product.p_id}>
-                                {product.product_name} ({product.barcode})
-                            </option>
-                        ))}
-                    </select>
+                    <div className="product-search-container" style={{ position: 'relative' }}>
+                        <input
+                            className={styles.input}
+                            type="text"
+                            placeholder="Search product by name or barcode..."
+                            value={selectedProduct ? `${selectedProduct.product_name} (${selectedProduct.barcode})` : productSearch}
+                            onChange={e => {
+                                setProductSearch(e.target.value);
+                                setSelectedProduct(null);
+                                setShowProductSuggestions(true);
+                            }}
+                            onFocus={() => setShowProductSuggestions(true)}
+                            style={{ paddingRight: selectedProduct ? '40px' : '12px' }}
+                        />
+                        {selectedProduct && (
+                            <button
+                                onClick={() => {
+                                    setSelectedProduct(null);
+                                    setProductSearch("");
+                                    setShowProductSuggestions(false);
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    right: '12px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '18px',
+                                    color: '#666',
+                                    padding: '4px'
+                                }}
+                            >
+                                ✕
+                            </button>
+                        )}
+                        {showProductSuggestions && productSuggestions.length > 0 && !selectedProduct && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                background: 'white',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '8px',
+                                marginTop: '4px',
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                zIndex: 1000,
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                            }}>
+                                {productSuggestions.map(product => (
+                                    <div
+                                        key={product.p_id}
+                                        onClick={() => {
+                                            setSelectedProduct(product);
+                                            setProductSearch("");
+                                            setShowProductSuggestions(false);
+                                        }}
+                                        style={{
+                                            padding: '12px',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                                    >
+                                        <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                                            {product.product_name}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                                            Barcode: {product.barcode}
+                                            {product.product_variant && ` • ${product.product_variant}`}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Quantity */}
