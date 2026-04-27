@@ -6,13 +6,12 @@ import styles from "./damageRecovery.module.css";
 
 const API = `${process.env.NEXT_PUBLIC_API_BASE}/api/dispatch`;
 
-export default function DamageRecoveryModal({ onClose, initialMode = 'damage' }) {
-    const [locationType, setLocationType] = useState("WAREHOUSE");
-    const [locationQuery, setLocationQuery] = useState("");
+export default function DamageRecoveryModal({ onClose, initialMode = 'damage', prefilledProduct = null, prefilledLocation = null }) {
+    const [locationType, setLocationType] = useState(prefilledLocation ? "STORE" : "WAREHOUSE");
+    const [selectedLocationId, setSelectedLocationId] = useState("");
     const [locations, setLocations] = useState([]);
-    const [selectedLocation, setSelectedLocation] = useState(null);
 
-    const [action, setAction] = useState(initialMode); // Use initialMode prop
+    const [action, setAction] = useState(initialMode);
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState("");
 
@@ -21,12 +20,14 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage' })
     /* ---------- MULTI PRODUCT ROWS ---------- */
     const [rows, setRows] = useState([
         {
-            productQuery: "",
-            products: [],
-            selectedProduct: null,
+            selectedProductId: "",
             qty: 1,
         },
     ]);
+    
+    const [products, setProducts] = useState([]);
+    const [processedByOptions, setProcessedByOptions] = useState([]);
+    const [processedBy, setProcessedBy] = useState("");
 
     /* ---------------- LOCATION SEARCH ---------------- */
     useEffect(() => {

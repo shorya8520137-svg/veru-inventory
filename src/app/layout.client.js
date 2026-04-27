@@ -31,14 +31,20 @@ export default function ClientLayout({ children }) {
     const [operationTab, setOperationTab] = useState("dispatch");
     const [showBulkUpload, setShowBulkUpload] = useState(false);
     const [showProductUpload, setShowProductUpload] = useState(false);
+    const [showDamageModal, setShowDamageModal] = useState(false);
+    const [showReturnModal, setShowReturnModal] = useState(false);
 
-    // Expose bulk upload function globally for navbar access - MUST be at top level
+    // Expose functions globally for navbar access - MUST be at top level
     useEffect(() => {
         window.openBulkUpload = () => setShowBulkUpload(true);
         window.openProductUpload = () => setShowProductUpload(true);
+        window.openDamageModal = () => setShowDamageModal(true);
+        window.openReturnModal = () => setShowReturnModal(true);
         return () => {
             delete window.openBulkUpload;
             delete window.openProductUpload;
+            delete window.openDamageModal;
+            delete window.openReturnModal;
         };
     }, []);
 
@@ -569,6 +575,21 @@ export default function ClientLayout({ children }) {
                     {/* Product Upload Modal */}
                     {showProductUpload && (
                         <ProductUpload onClose={() => setShowProductUpload(false)} />
+                    )}
+
+                    {/* Navbar Damage Modal */}
+                    {showDamageModal && (
+                        <DamageRecoveryModal 
+                            onClose={() => setShowDamageModal(false)}
+                            initialMode="damage"
+                        />
+                    )}
+
+                    {/* Navbar Return Modal */}
+                    {showReturnModal && (
+                        <ReturnModal 
+                            onClose={() => setShowReturnModal(false)}
+                        />
                     )}
 
                 </SidebarProvider>

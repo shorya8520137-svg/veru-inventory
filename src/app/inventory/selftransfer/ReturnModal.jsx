@@ -7,74 +7,119 @@ import styles from "./returnModal.module.css";
 const API = `${process.env.NEXT_PUBLIC_API_BASE}/api/dispatch`;
 const RETURNS_API = `${process.env.NEXT_PUBLIC_API_BASE}/api/returns`;
 
-export default function ReturnModal({ onClose }) {
-    const [warehouseQuery, setWarehouseQuery] = useState("");
-    const [warehouses, setWarehouses] = useState([]);
-    const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+export default function ReturnModal({ onClose, prefilledProduct = null, prefilledWarehouse = null }) {
+    const [locationType, setLocationType] = useState("WAREHOUSE"); // WAREHOUSE or STORE
+    const [selectedLocationId, setSelectedLocationId] = useState("");
+    const [locations, setLocations] = useState([]);
 
-    const [productQuery, setProductQuery] = useState("");
+    const [selectedProductId, setSelectedProductId] = useState("");
     const [products, setProducts] = useState([]);
-    const [selectedProduct, setSelectedProduct] = useState(null);
 
     const [qty, setQty] = useState(1);
-    const [awb, setAwb] = useState(""); // Added AWB field
+    const [awb, setAwb] = useState("");
     const [subtype, setSubtype] = useState("");
+    const [processedBy, setProcessedBy] = useState("");
+    const [processedByOptions, setProcessedByOptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState("");
 
     /* ------------------------------
-       WAREHOUSE SEARCH
+       FETCH PROCESSED BY OPTIONS
     -------------------------------- */
     useEffect(() => {
         const token = localStorage.getItem('token');
-        fetch(`${API}/warehouses`, {
+        fetch(`${RETURNS_API.replace('/returns', '')}/users`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => r.json())
             .then(data => {
-                const allWarehouses = Array.isArray(data) ? data : [];
-                // Filter warehouses based on query
-                if (warehouseQuery.length < 2) {
-                    setWarehouses([]);
-                } else {
-                    const filtered = allWarehouses
-                        .map(code => ({ warehouse_code: code, Warehouse_name: code }))
-                        .filter(w => 
-                            w.warehouse_code.toLowerCase().includes(warehouseQuery.toLowerCase()) ||
-                            w.Warehouse_name.toLowerCase().includes(warehouseQuery.toLowerCase())
-                        );
-                    setWarehouses(filtered);
+                if (data.success && Array.isArray(data.users)) {
+                    setProcessedByOptions(data.users);
                 }
             })
-            .catch(() => setWarehouses([]));
-    }, [warehouseQuery]);
+            .catch(err => console.error('Error fetching users:', err));
+    }, []);
+
+    /* ------------------------------
+       FETCH LOCATIONS (WAREHOUSE OR STORE)
+    -------------------------------- */
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        
+        if (locationType === "WAREHOUSE") {
+            // Fetch warehouses
+            fetch(`${API}/warehouses`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    const allWarehouses = Array.isArray(data) ? data : [];
+                    const formattedWarehouses = allWarehouses.map(code => ({ 
+                        id: code, 
+                        warehouse_code: code, 
+                        Warehouse_name: code,
+                        display_name: code
+                    }));
+                    setLocations(formattedWarehouses);
+                })
+                .catch(() => setLocations([]));
+        } else {
+            // Fetch stores
+            fetch(`${RETURNS_API.replace('/returns', '')}/warehouse-management/stores`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && Array.isArray(data.stores)) {
+                        const formattedStores = data.stores.map(store => ({
+                            id: store.store_code,
+                            store_code: store.store_code,
+                            store_name: store.store_name,
+                            city: store.city,
+                            display_name: `${store.store_name} - ${store.city} (${store.store_code})`
+                        }));
+                        setLocations(formattedStores);
+                    } else {
+                        setLocations([]);
+                    }
+                })
+                .catch(() => setLocations([]));
+        }
+        
+        // Reset selection when location type changes
+        setSelectedLocationId("");
+    }, [locationType]);
 
     /* ------------------------------
        PRODUCT SEARCH
     -------------------------------- */
     useEffect(() => {
-        if (productQuery.length < 2) {
-            setProducts([]);
-            return;
-        }
-
         const token = localStorage.getItem('token');
-        fetch(`${API}/search-products?query=${productQuery}`, {
+        fetch(`${API}/search-products?query=`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => r.json())
             .then(data => {
-                setProducts(Array.isArray(data) ? data : (data.data || []));
+                const allProducts = Array.isArray(data) ? data : (data.data || []);
+                setProducts(allProducts);
             })
             .catch(() => setProducts([]));
-    }, [productQuery]);
+    }, []);
 
     /* ------------------------------
        SUBMIT RETURN
     -------------------------------- */
     async function submit() {
-        if (!selectedWarehouse || !selectedProduct || !qty) {
+        if (!selectedLocationId || !selectedProductId || !qty) {
             setMsg("Please complete all required fields");
+            return;
+        }
+
+        const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
+        const selectedProduct = products.find(prod => prod.p_id === selectedProductId);
+
+        if (!selectedLocation || !selectedProduct) {
+            setMsg("Invalid selection");
             return;
         }
 
@@ -83,20 +128,30 @@ export default function ReturnModal({ onClose }) {
             setMsg("");
 
             const token = localStorage.getItem('token');
+            const payload = {
+                product_type: selectedProduct.product_name,
+                barcode: selectedProduct.barcode,
+                quantity: Number(qty),
+                awb: awb || undefined,
+                subtype: subtype || undefined,
+                processed_by: processedBy || undefined,
+                location_type: locationType
+            };
+
+            // Add warehouse or store_code based on location type
+            if (locationType === "WAREHOUSE") {
+                payload.warehouse = selectedLocation.warehouse_code;
+            } else {
+                payload.store_code = selectedLocation.store_code;
+            }
+
             const res = await fetch(RETURNS_API, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    product_type: selectedProduct.product_name,
-                    barcode: selectedProduct.barcode,
-                    warehouse: selectedWarehouse.warehouse_code,
-                    quantity: Number(qty),
-                    awb: awb || undefined, // Added AWB field
-                    subtype: subtype || undefined
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await res.json();
@@ -136,76 +191,71 @@ export default function ReturnModal({ onClose }) {
 
                 <div className={styles.header}>Product Return</div>
 
-                {/* Warehouse */}
+                {/* Location Type Radio Buttons */}
                 <div className={styles.field}>
-                    <label className={styles.label}>Warehouse</label>
-                    <div className={styles.suggestWrap}>
-                        <input
-                            className={styles.input}
-                            placeholder="Search warehouse"
-                            value={warehouseQuery}
-                            onChange={e => {
-                                setWarehouseQuery(e.target.value);
-                                setSelectedWarehouse(null);
-                            }}
-                        />
-
-                        {warehouses.length > 0 && (
-                            <div className={styles.suggestBox}>
-                                {warehouses.map(w => (
-                                    <div
-                                        key={w.warehouse_code}
-                                        className={styles.suggestItem}
-                                        onMouseDown={() => {
-                                            setSelectedWarehouse(w);
-                                            setWarehouseQuery(
-                                                `${w.Warehouse_name} (${w.warehouse_code})`
-                                            );
-                                            setWarehouses([]);
-                                        }}
-                                    >
-                                        <b>{w.Warehouse_name}</b>
-                                        <span>{w.warehouse_code}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                    <label className={styles.label}>Location Type</label>
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                checked={locationType === "WAREHOUSE"}
+                                onChange={() => {
+                                    setLocationType("WAREHOUSE");
+                                    setSelectedLocationId("");
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '14px', fontWeight: '500' }}>Warehouse</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                checked={locationType === "STORE"}
+                                onChange={() => {
+                                    setLocationType("STORE");
+                                    setSelectedLocationId("");
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '14px', fontWeight: '500' }}>Store</span>
+                        </label>
                     </div>
+                </div>
+
+                {/* Location Search */}
+                <div className={styles.field}>
+                    <label className={styles.label}>{locationType === "WAREHOUSE" ? "Warehouse" : "Store"}</label>
+                    <select
+                        className={styles.input}
+                        value={selectedLocationId}
+                        onChange={e => setSelectedLocationId(e.target.value)}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <option value="">Select {locationType.toLowerCase()}</option>
+                        {locations.map(loc => (
+                            <option key={loc.id} value={loc.id}>
+                                {loc.display_name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Product */}
                 <div className={styles.field}>
                     <label className={styles.label}>Product</label>
-                    <div className={styles.suggestWrap}>
-                        <input
-                            className={styles.input}
-                            placeholder="Search product"
-                            value={productQuery}
-                            onChange={e => {
-                                setProductQuery(e.target.value);
-                                setSelectedProduct(null);
-                            }}
-                        />
-
-                        {products.length > 0 && (
-                            <div className={styles.suggestBox}>
-                                {products.map(p => (
-                                    <div
-                                        key={p.p_id}
-                                        className={styles.suggestItem}
-                                        onMouseDown={() => {
-                                            setSelectedProduct(p);
-                                            setProductQuery(p.product_name);
-                                            setProducts([]);
-                                        }}
-                                    >
-                                        <b>{p.product_name}</b>
-                                        <span>{p.barcode}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <select
+                        className={styles.input}
+                        value={selectedProductId}
+                        onChange={e => setSelectedProductId(e.target.value)}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <option value="">Select product</option>
+                        {products.map(product => (
+                            <option key={product.p_id} value={product.p_id}>
+                                {product.product_name} ({product.barcode})
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Quantity */}
@@ -240,6 +290,24 @@ export default function ReturnModal({ onClose }) {
                         value={subtype}
                         onChange={e => setSubtype(e.target.value)}
                     />
+                </div>
+
+                {/* Processed By */}
+                <div className={styles.field}>
+                    <label className={styles.label}>Processed By (optional)</label>
+                    <select
+                        className={styles.input}
+                        value={processedBy}
+                        onChange={e => setProcessedBy(e.target.value)}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <option value="">Select user</option>
+                        {processedByOptions.map(user => (
+                            <option key={user.id} value={user.id}>
+                                {user.name} ({user.email})
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className={styles.footer}>

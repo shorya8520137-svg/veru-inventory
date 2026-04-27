@@ -12,27 +12,45 @@ const eventAuditLogger = new ProductionEventAuditLogger();
  */
 
 /**
- * CREATE NEW RETURN
+ * CREATE NEW RETURN - FIXED WITH TIMELINE INTEGRATION
  */
 exports.createReturn = (req, res) => {
     const {
+        return_type = 'WAREHOUSE',    // 'WAREHOUSE' or 'STORE'
+        source_location,              // warehouse code or store code
+        destination_location,         // where return goes (usually warehouse)
         order_ref,
         awb,
         product_type,
-        warehouse,
         quantity = 1,
         barcode,
-        has_parts = false,
+        condition = 'good',          // 'good', 'damaged', 'defective'
         return_reason,
-        condition = 'good', // good, damaged, defective
-        processed_by
+        original_dispatch_id,        // link to original dispatch
+        processed_by,                // user ID who processed
+        notes,
+        has_parts = false,
+        parts = [],                  // array of return parts
+        // Legacy support
+        warehouse
     } = req.body;
 
-    // Validation
-    if (!product_type || !warehouse || !barcode) {
+    // Support legacy warehouse parameter
+    const finalSourceLocation = source_location || warehouse;
+    const finalDestination = destination_location || finalSourceLocation;
+
+    // Enhanced validation
+    if (!return_type || !finalSourceLocation || !barcode || !product_type) {
         return res.status(400).json({
             success: false,
-            message: 'product_type, warehouse, barcode are required'
+            message: 'return_type, source_location (or warehouse), barcode, and product_type are required'
+        });
+    }
+
+    if (!['WAREHOUSE', 'STORE'].includes(return_type)) {
+        return res.status(400).json({
+            success: false,
+            message: 'return_type must be either WAREHOUSE or STORE'
         });
     }
 
@@ -44,92 +62,144 @@ exports.createReturn = (req, res) => {
         });
     }
 
-    db.beginTransaction(err => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
+    console.log(`🔄 Creating ${return_type} return: ${finalSourceLocation} → ${finalDestination}`);
 
-        // Step 1: Create return record
+    db.beginTransaction(err => {
+        if (err) {
+            console.error('❌ Transaction start failed:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+
+        // Step 1: Create return record with new schema
         const returnSql = `
             INSERT INTO returns_main (
-                order_ref, awb, product_type, warehouse, quantity, barcode, has_parts
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                return_type, source_location, destination_location,
+                order_ref, awb, product_type, warehouse, quantity, barcode, 
+                \`condition\`, return_reason, original_dispatch_id,
+                processed_by, notes, has_parts, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         `;
 
         db.query(returnSql, [
-            order_ref, awb, product_type, warehouse, qty, barcode, has_parts
+            return_type, finalSourceLocation, finalDestination,
+            order_ref, awb, product_type, finalSourceLocation, qty, barcode,
+            condition, return_reason, original_dispatch_id,
+            processed_by, notes, has_parts
         ], (err, returnResult) => {
             if (err) {
+                console.error('❌ Error creating return record:', err);
                 return db.rollback(() =>
                     res.status(500).json({ success: false, error: err.message })
                 );
             }
 
             const returnId = returnResult.insertId;
+            console.log(`✅ Return record created with ID: ${returnId}`);
 
-            // Step 2: Add stock back to inventory (only if condition is good)
+            // Step 2: Update stock if condition is good
             if (condition === 'good') {
-                // Check if there's an existing active batch for this product
-                const findBatchSql = `
-                    SELECT id, qty_available 
-                    FROM stock_batches 
-                    WHERE barcode = ? AND warehouse = ? AND product_name = ? AND status = 'active'
-                    ORDER BY created_at DESC 
-                    LIMIT 1
-                `;
-
-                db.query(findBatchSql, [barcode, warehouse, product_type], (err, batches) => {
+                updateStockForReturn(barcode, product_type, finalDestination, qty, returnId, (err) => {
                     if (err) {
+                        console.error('❌ Error updating stock:', err);
+                        return db.rollback(() =>
+                            res.status(500).json({ success: false, error: err.message })
+                        );
+                    }
+                    createTimelineEntries();
+                });
+            } else {
+                createTimelineEntries();
+            }
+
+            function createTimelineEntries() {
+                // Step 3: Create appropriate timeline entries based on return type
+                if (return_type === 'WAREHOUSE') {
+                    createWarehouseTimelineEntry(returnId, barcode, product_type, finalSourceLocation, finalDestination, qty, condition, (err) => {
+                        if (err) {
+                            console.error('❌ Error creating warehouse timeline:', err);
+                            return db.rollback(() =>
+                                res.status(500).json({ success: false, error: err.message })
+                            );
+                        }
+                        finalizeReturn();
+                    });
+                } else if (return_type === 'STORE') {
+                    createStoreTimelineEntry(returnId, barcode, product_type, finalSourceLocation, qty, condition, (err) => {
+                        if (err) {
+                            console.error('❌ Error creating store timeline:', err);
+                            return db.rollback(() =>
+                                res.status(500).json({ success: false, error: err.message })
+                            );
+                        }
+                        // Also create warehouse timeline if destination is different
+                        if (finalDestination !== finalSourceLocation) {
+                            createWarehouseTimelineEntry(returnId, barcode, product_type, finalSourceLocation, finalDestination, qty, condition, (err) => {
+                                if (err) {
+                                    console.error('❌ Error creating warehouse timeline for store return:', err);
+                                    return db.rollback(() =>
+                                        res.status(500).json({ success: false, error: err.message })
+                                    );
+                                }
+                                finalizeReturn();
+                            });
+                        } else {
+                            finalizeReturn();
+                        }
+                    });
+                }
+            }
+
+            function finalizeReturn() {
+                // Step 4: Update return status to processed
+                const updateStatusSql = `UPDATE returns_main SET status = 'processed', processed_at = NOW() WHERE id = ?`;
+
+                db.query(updateStatusSql, [returnId], (err) => {
+                    if (err) {
+                        console.error('❌ Error updating return status:', err);
                         return db.rollback(() =>
                             res.status(500).json({ success: false, error: err.message })
                         );
                     }
 
-                    if (batches.length > 0) {
-                        // Update existing batch
-                        const batch = batches[0];
-                        const newQty = batch.qty_available + qty;
-
-                        const updateBatchSql = `
-                            UPDATE stock_batches 
-                            SET qty_available = ?, status = 'active'
-                            WHERE id = ?
-                        `;
-
-                        db.query(updateBatchSql, [newQty, batch.id], (err) => {
-                            if (err) {
-                                return db.rollback(() =>
-                                    res.status(500).json({ success: false, error: err.message })
-                                );
-                            }
-
-                            // Add ledger entry and complete transaction
-                            addLedgerEntryAndCommit(returnId, barcode, product_type, warehouse, qty, awb, res, db, 'good', req);
-                        });
-                    } else {
-                        // Create new batch
-                        const createBatchSql = `
-                            INSERT INTO stock_batches (
-                                product_name, barcode, warehouse, source_type,
-                                qty_initial, qty_available, unit_cost, status, source_ref_id
-                            ) VALUES (?, ?, ?, 'RETURN', ?, ?, 0.00, 'active', ?)
-                        `;
-
-                        db.query(createBatchSql, [
-                            product_type, barcode, warehouse, qty, qty, returnId
-                        ], (err) => {
-                            if (err) {
-                                return db.rollback(() =>
-                                    res.status(500).json({ success: false, error: err.message })
-                                );
-                            }
-
-                            // Add ledger entry and complete transaction
-                            addLedgerEntryAndCommit(returnId, barcode, product_type, warehouse, qty, awb, res, db, 'good', req);
+                    // Step 5: Log audit event
+                    if (req && req.user) {
+                        eventAuditLogger.logEvent('RETURN_CREATED', {
+                            return_id: returnId,
+                            return_type,
+                            source_location: finalSourceLocation,
+                            destination_location: finalDestination,
+                            barcode,
+                            quantity: qty,
+                            condition,
+                            user_id: processed_by || req.user.id
                         });
                     }
+
+                    // Step 6: Commit transaction
+                    db.commit((err) => {
+                        if (err) {
+                            console.error('❌ Transaction commit failed:', err);
+                            return db.rollback(() =>
+                                res.status(500).json({ success: false, message: err.message })
+                            );
+                        }
+
+                        console.log(`✅ Return ${returnId} processed successfully`);
+
+                        res.status(201).json({
+                            success: true,
+                            message: 'Return created and processed successfully',
+                            return_id: returnId,
+                            return_type,
+                            source_location: finalSourceLocation,
+                            destination_location: finalDestination,
+                            status: 'processed',
+                            condition,
+                            stock_added: condition === 'good',
+                            timeline_entries_created: return_type === 'STORE' && finalDestination !== finalSourceLocation ? 2 : 1
+                        });
+                    });
                 });
-            } else {
-                // For damaged/defective items, just add ledger entry without adding stock
-                addLedgerEntryAndCommit(returnId, barcode, product_type, warehouse, qty, awb, res, db, condition, req);
             }
         });
     });
@@ -480,4 +550,128 @@ function completeBulkReturn(results, res, db) {
             });
         });
     }
+}
+
+
+/**
+ * =====================================================
+ * HELPER FUNCTIONS FOR TIMELINE INTEGRATION
+ * =====================================================
+ */
+
+/**
+ * Update stock for returns
+ */
+function updateStockForReturn(barcode, productName, warehouse, qty, returnId, callback) {
+    // Check if there's an existing active batch for this product
+    const findBatchSql = `
+        SELECT id, qty_available 
+        FROM stock_batches 
+        WHERE barcode = ? AND warehouse = ? AND product_name = ? AND status = 'active'
+        ORDER BY created_at DESC 
+        LIMIT 1
+    `;
+
+    db.query(findBatchSql, [barcode, warehouse, productName], (err, batches) => {
+        if (err) return callback(err);
+
+        if (batches.length > 0) {
+            // Update existing batch
+            const batch = batches[0];
+            const newQty = batch.qty_available + qty;
+
+            const updateBatchSql = `
+                UPDATE stock_batches 
+                SET qty_available = ?, status = 'active', updated_at = NOW()
+                WHERE id = ?
+            `;
+
+            db.query(updateBatchSql, [newQty, batch.id], (err) => {
+                if (err) return callback(err);
+                console.log(`✅ Updated existing batch ${batch.id}: +${qty} units (new total: ${newQty})`);
+                callback(null);
+            });
+        } else {
+            // Create new batch for return
+            const createBatchSql = `
+                INSERT INTO stock_batches (
+                    barcode, product_name, warehouse, 
+                    qty_initial, qty_available, status,
+                    source_type, source_ref_id, tenant_id
+                ) VALUES (?, ?, ?, ?, ?, 'active', 'RETURN', ?, 1)
+            `;
+
+            db.query(createBatchSql, [
+                barcode, productName, warehouse, qty, qty, returnId
+            ], (err, result) => {
+                if (err) return callback(err);
+                console.log(`✅ Created new return batch ${result.insertId}: ${qty} units`);
+                callback(null);
+            });
+        }
+    });
+}
+
+/**
+ * Create warehouse timeline entry
+ */
+function createWarehouseTimelineEntry(returnId, barcode, productName, sourceLocation, destinationLocation, qty, condition, callback) {
+    const movementType = condition === 'good' ? 'RETURN' : `RETURN_${condition.toUpperCase()}`;
+    const reference = `RETURN_${returnId}_${sourceLocation}_${destinationLocation}`;
+
+    const timelineSql = `
+        INSERT INTO inventory_ledger_base (
+            event_time, movement_type, barcode, product_name,
+            location_code, qty, direction, reference, tenant_id
+        ) VALUES (NOW(), ?, ?, ?, ?, ?, 'IN', ?, 1)
+    `;
+
+    db.query(timelineSql, [
+        movementType, barcode, productName, destinationLocation, qty, reference
+    ], (err, result) => {
+        if (err) return callback(err);
+        console.log(`✅ Created warehouse timeline entry ${result.insertId}: ${movementType} IN ${qty} units to ${destinationLocation}`);
+        callback(null);
+    });
+}
+
+/**
+ * Create store timeline entry
+ */
+function createStoreTimelineEntry(returnId, barcode, productName, storeCode, qty, condition, callback) {
+    // Get current balance for this product in this store
+    const balanceSql = `
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN direction = 'IN' THEN quantity 
+                WHEN direction = 'OUT' THEN -quantity 
+                ELSE 0 
+            END
+        ), 0) as current_balance
+        FROM store_timeline
+        WHERE store_code = ? AND product_barcode = ?
+    `;
+
+    db.query(balanceSql, [storeCode, barcode], (err, result) => {
+        if (err) return callback(err);
+
+        const currentBalance = result[0]?.current_balance || 0;
+        const newBalance = currentBalance + qty;
+        const reference = `RETURN_${returnId}_${storeCode}`;
+
+        const timelineSql = `
+            INSERT INTO store_timeline (
+                store_code, product_barcode, product_name,
+                movement_type, direction, quantity, balance_after, reference, created_at
+            ) VALUES (?, ?, ?, 'RETURN', 'IN', ?, ?, ?, NOW())
+        `;
+
+        db.query(timelineSql, [
+            storeCode, barcode, productName, qty, newBalance, reference
+        ], (err, result) => {
+            if (err) return callback(err);
+            console.log(`✅ Created store timeline entry ${result.insertId}: RETURN IN ${qty} units to ${storeCode} (balance: ${newBalance})`);
+            callback(null);
+        });
+    });
 }
