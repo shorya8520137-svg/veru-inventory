@@ -1018,10 +1018,15 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                             {/* Expansion for DISPATCH */}
                                             {expandedEntry === row.reference && row.type === 'DISPATCH' && (() => {
                                                 console.log('🎨 Rendering DISPATCH expansion for:', row.reference);
+                                                
+                                                // Determine if this is warehouse to store dispatch (IN) or store dispatch out (OUT)
+                                                const isReceived = row.direction === 'IN';
+                                                const isDispatched = row.direction === 'OUT';
+                                                
                                                 return (
                                                 <div style={{ 
-                                                    background: '#FEF2F2', 
-                                                    borderBottom: '1px solid #FECACA',
+                                                    background: isReceived ? '#F0FDF4' : '#FEF2F2', 
+                                                    borderBottom: isReceived ? '1px solid #D1FAE5' : '1px solid #FECACA',
                                                     padding: '16px 20px'
                                                 }}>
                                                     {/* Stock Impact Section */}
@@ -1033,27 +1038,30 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                     }}>
                                                         <div style={{
                                                             background: '#FFFFFF',
-                                                            border: '2px solid #DC2626',
+                                                            border: isReceived ? '2px solid #059669' : '2px solid #DC2626',
                                                             borderRadius: 8,
                                                             padding: '12px 16px'
                                                         }}>
                                                             <div style={{ 
                                                                 fontSize: 9, 
-                                                                color: '#DC2626', 
+                                                                color: isReceived ? '#059669' : '#DC2626', 
                                                                 fontWeight: 700, 
                                                                 letterSpacing: '0.1em', 
                                                                 textTransform: 'uppercase', 
                                                                 marginBottom: 8 
                                                             }}>
-                                                                📦 DISPATCH - STOCK SENT OUT
+                                                                {isReceived ? '📥 DISPATCH RECEIVED FROM WAREHOUSE' : '📤 DISPATCH - STOCK SENT OUT'}
                                                             </div>
                                                             <div style={{ 
                                                                 fontSize: 11, 
-                                                                color: '#DC2626', 
+                                                                color: isReceived ? '#059669' : '#DC2626', 
                                                                 fontWeight: 600, 
                                                                 marginBottom: 8 
                                                             }}>
-                                                                {row.warehouse || storeCode}
+                                                                {isReceived ? 
+                                                                    `From: ${row.source_location || 'Warehouse'} → To: ${row.destination_location || storeCode}` :
+                                                                    `${row.warehouse || storeCode}`
+                                                                }
                                                             </div>
                                                             <div style={{ 
                                                                 display: 'flex', 
@@ -1061,14 +1069,18 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 fontSize: 10, 
                                                                 color: '#6B7280' 
                                                             }}>
-                                                                <span>Stock Before: <strong style={{ color: '#111827' }}>{row.balance_after + row.quantity}</strong></span>
-                                                                <span>Impact: <strong style={{ color: '#DC2626' }}>-{row.quantity}</strong></span>
+                                                                <span>Stock Before: <strong style={{ color: '#111827' }}>
+                                                                    {isReceived ? row.balance_after - row.quantity : row.balance_after + row.quantity}
+                                                                </strong></span>
+                                                                <span>Impact: <strong style={{ color: isReceived ? '#059669' : '#DC2626' }}>
+                                                                    {isReceived ? `+${row.quantity}` : `-${row.quantity}`}
+                                                                </strong></span>
                                                                 <span>Stock After: <strong style={{ color: '#111827' }}>{row.balance_after}</strong></span>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Product Details */}
+                                                    {/* Transfer Details */}
                                                     <div style={{
                                                         background: '#FFFFFF',
                                                         border: '1px solid #E5E7EB',
@@ -1093,11 +1105,48 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 </div>
                                                             </div>
                                                             <div>
-                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Barcode</div>
-                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
-                                                                    {row.barcode}
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Quantity</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.quantity} units
                                                                 </div>
                                                             </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Transfer Type</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.transfer_type || 'W to S'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Transfer ID</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.reference || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Source and Destination */}
+                                                        {(row.source_location || row.destination_location) && (
+                                                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                                                    <div>
+                                                                        <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Source Location</div>
+                                                                        <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                            {row.source_location || 'N/A'}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Destination Location</div>
+                                                                        <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                            {row.destination_location || 'N/A'}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                );
+                                            })()}
                                                             <div>
                                                                 <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Quantity Dispatched</div>
                                                                 <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 700 }}>
