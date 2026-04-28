@@ -126,6 +126,12 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
 
     /* ---------------- SUBMIT ---------------- */
     async function submit() {
+        // Prevent double submission
+        if (loading) {
+            console.log('⚠️ Already submitting, ignoring duplicate call');
+            return;
+        }
+        
         if (!selectedLocationId) {
             setMsg("Please select location");
             return;
@@ -150,6 +156,8 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
 
             const token = localStorage.getItem('token');
             
+            console.log('🚀 Starting damage/recovery submission...');
+            
             // Process each row
             for (const r of validRows) {
                 const endpoint = action === "damage" 
@@ -165,7 +173,7 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
                     processed_by: processedBy || undefined
                 };
                 
-                console.log('📤 Sending damage/recovery request:', {
+                console.log('📤 Sending request:', {
                     endpoint,
                     payload
                 });
@@ -194,12 +202,14 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
             }
 
             setMsg("✔ Successfully processed");
-            setTimeout(onClose, 900);
+            setTimeout(() => {
+                setLoading(false);
+                onClose();
+            }, 900);
 
         } catch (err) {
             console.error('❌ Submit error:', err);
             setMsg(err.message || "Operation failed");
-        } finally {
             setLoading(false);
         }
     }

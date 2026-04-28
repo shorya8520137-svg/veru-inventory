@@ -675,3 +675,193 @@ function createStoreTimelineEntry(returnId, barcode, productName, storeCode, qty
         });
     });
 }
+
+/**
+ * GET RETURN TIMELINE - Shows complete audit trail
+ */
+exports.getReturnTimeline = (req, res) => {
+    const { returnId } = req.params;
+
+    if (!returnId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Return ID is required'
+        });
+    }
+
+    // Get return details first
+    const returnSql = `SELECT * FROM returns_main WHERE id = ?`;
+
+    db.query(returnSql, [returnId], (err, returnData) => {
+        if (err) {
+            console.error('Error fetching return:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch return',
+                error: err.message
+            });
+        }
+
+        if (returnData.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Return not found'
+            });
+        }
+
+        const returnInfo = returnData[0];
+
+        // Get timeline entries for this return
+        const timelineSql = `
+            (
+                SELECT 
+                    'warehouse' as timeline_type,
+                    ilb.id,
+                    ilb.event_time as timestamp,
+                    ilb.movement_type,
+                    ilb.barcode,
+                    ilb.product_name,
+                    ilb.location_code,
+                    ilb.qty as quantity,
+                    ilb.direction,
+                    ilb.reference,
+                    NULL as balance_after
+                FROM inventory_ledger_base ilb
+                WHERE ilb.reference LIKE ?
+            )
+            UNION ALL
+            (
+                SELECT 
+                    'store' as timeline_type,
+                    st.id,
+                    st.created_at as timestamp,
+                    st.movement_type,
+                    st.product_barcode as barcode,
+                    st.product_name,
+                    st.store_code as location_code,
+                    st.quantity,
+                    st.direction,
+                    st.reference,
+                    st.balance_after
+                FROM store_timeline st
+                WHERE st.reference LIKE ?
+            )
+            ORDER BY timestamp DESC
+        `;
+
+        const referencePattern = `%RETURN_${returnId}%`;
+
+        db.query(timelineSql, [referencePattern, referencePattern], (err, timeline) => {
+            if (err) {
+                console.error('Error fetching return timeline:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch return timeline',
+                    error: err.message
+                });
+            }
+
+            res.json({
+                success: true,
+                return_info: returnInfo,
+                timeline: timeline
+            });
+        });
+    });
+};
+
+/**
+ * CLEAR ALL RETURN DATA - For testing purposes only
+ */
+exports.clearAllReturnData = (req, res) => {
+    const { confirm } = req.body;
+
+    if (confirm !== 'YES_DELETE_ALL_RETURNS') {
+        return res.status(400).json({
+            success: false,
+            message: 'Must provide confirm: "YES_DELETE_ALL_RETURNS" to proceed'
+        });
+    }
+
+    db.beginTransaction(err => {
+        if (err) {
+            return res.status(500).json({ success: false, message: err.message });
+        }
+
+        // Step 1: Delete return parts
+        db.query('DELETE FROM return_parts', (err) => {
+            if (err) {
+                return db.rollback(() =>
+                    res.status(500).json({ success: false, error: err.message })
+                );
+            }
+
+            // Step 2: Delete return timeline entries
+            db.query('DELETE FROM inventory_ledger_base WHERE movement_type LIKE "RETURN%"', (err) => {
+                if (err) {
+                    return db.rollback(() =>
+                        res.status(500).json({ success: false, error: err.message })
+                    );
+                }
+
+                // Step 3: Delete store timeline return entries
+                db.query('DELETE FROM store_timeline WHERE movement_type = "RETURN"', (err) => {
+                    if (err) {
+                        return db.rollback(() =>
+                            res.status(500).json({ success: false, error: err.message })
+                        );
+                    }
+
+                    // Step 4: Delete return stock batches
+                    db.query('DELETE FROM stock_batches WHERE source_type = "RETURN"', (err) => {
+                        if (err) {
+                            return db.rollback(() =>
+                                res.status(500).json({ success: false, error: err.message })
+                            );
+                        }
+
+                        // Step 5: Delete returns_main records
+                        db.query('DELETE FROM returns_main', (err) => {
+                            if (err) {
+                                return db.rollback(() =>
+                                    res.status(500).json({ success: false, error: err.message })
+                                );
+                            }
+
+                            // Step 6: Reset auto-increment
+                            db.query('ALTER TABLE returns_main AUTO_INCREMENT = 1', (err) => {
+                                if (err) {
+                                    return db.rollback(() =>
+                                        res.status(500).json({ success: false, error: err.message })
+                                    );
+                                }
+
+                                db.commit((err) => {
+                                    if (err) {
+                                        return db.rollback(() =>
+                                            res.status(500).json({ success: false, message: err.message })
+                                        );
+                                    }
+
+                                    console.log('✅ All return data cleared successfully');
+
+                                    res.json({
+                                        success: true,
+                                        message: 'All return data cleared successfully',
+                                        cleared: [
+                                            'return_parts',
+                                            'inventory_ledger_base (RETURN entries)',
+                                            'store_timeline (RETURN entries)',
+                                            'stock_batches (RETURN source)',
+                                            'returns_main'
+                                        ]
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+};

@@ -67,6 +67,9 @@ export default function ProductTracker({
     const [expandedSelfTransfers, setExpandedSelfTransfers] = useState(new Set());
     const [selfTransferDetailsMap, setSelfTransferDetailsMap] = useState(new Map());
 
+    /* 💥 DAMAGE / RECOVER INLINE EXPANSION */
+    const [expandedDamageEntries, setExpandedDamageEntries] = useState(new Set());
+
     /* ðŸ“œ SCROLL TRACKING */
     const [scrollPosition, setScrollPosition] = useState(0);
     const [visibleRowIndex, setVisibleRowIndex] = useState(null);
@@ -807,6 +810,13 @@ export default function ProductTracker({
                                                             } else if (row.type === 'SELF_TRANSFER' && row.reference) {
                                                                 console.log('🔄 Toggling self-transfer expansion for:', row.reference);
                                                                 toggleSelfTransferExpansion(row.reference);
+                                                            } else if ((row.type === 'DAMAGE' || row.type === 'DAMAGED' || row.type === 'RECOVER' || row.type === 'RECOVERY') && row.reference) {
+                                                                console.log('💥 Toggling damage/recover expansion for:', row.reference);
+                                                                setExpandedDamageEntries(prev => {
+                                                                    const next = new Set(prev);
+                                                                    next.has(row.reference) ? next.delete(row.reference) : next.add(row.reference);
+                                                                    return next;
+                                                                });
                                                             } else {
                                                                 console.log('❌ No action taken - conditions not met');
                                                             }
@@ -819,7 +829,7 @@ export default function ProductTracker({
                                                                 fontSize:9, 
                                                                 fontWeight:700, 
                                                                 letterSpacing:'0.06em', 
-                                                                cursor: (isDispatch || row.type === 'SELF_TRANSFER') && row.reference ? 'pointer' : 'default', 
+                                                                cursor: (isDispatch || row.type === 'SELF_TRANSFER' || row.type === 'DAMAGE' || row.type === 'DAMAGED' || row.type === 'RECOVER' || row.type === 'RECOVERY') && row.reference ? 'pointer' : 'default', 
                                                                 userSelect:'none' 
                                                             }}>
                                                             {badge.label}
@@ -1001,6 +1011,83 @@ export default function ProductTracker({
                                                         })()}
                                                     </motion.div>
                                                 )}
+
+                                                {/* 💥 DAMAGE Inline Expansion */}
+                                                {expandedDamageEntries.has(row.reference) && (row.type === 'DAMAGE' || row.type === 'DAMAGED') && (
+                                                    <motion.div
+                                                        initial={{ opacity:0, height:0 }}
+                                                        animate={{ opacity:1, height:'auto' }}
+                                                        exit={{ opacity:0, height:0 }}
+                                                        transition={{ duration:0.3 }}
+                                                        style={{ background:'#0B1120', borderBottom:'1px solid #1E293B', padding:'16px 20px' }}
+                                                    >
+                                                        {/* Stock Impact */}
+                                                        <div style={{ background:'#1E293B', border:'2px solid #DC2626', borderRadius:8, padding:'12px 16px', marginBottom:12 }}>
+                                                            <div style={{ fontSize:9, color:'#F87171', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:8 }}>
+                                                                ⚠️ DAMAGE REPORTED — STOCK DEDUCTED
+                                                            </div>
+                                                            <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#94A3B8' }}>
+                                                                <span>Before: <strong style={{ color:'#F1F5F9' }}>{(row.balance_after || 0) + (row.quantity || 0)}</strong></span>
+                                                                <span>Deducted: <strong style={{ color:'#F87171' }}>-{row.quantity}</strong></span>
+                                                                <span>After: <strong style={{ color:'#F1F5F9' }}>{row.balance_after}</strong></span>
+                                                            </div>
+                                                        </div>
+                                                        {/* Details */}
+                                                        <div style={{ background:'#1E293B', border:'1px solid #334155', borderRadius:8, padding:'12px 16px' }}>
+                                                            <div style={{ fontSize:9, color:'#475569', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>DAMAGE DETAILS</div>
+                                                            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Product</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.product_name || barcode}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Barcode</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600, fontFamily:'monospace' }}>{row.barcode}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Qty Damaged</div><div style={{ fontSize:11, color:'#F87171', fontWeight:700 }}>{row.quantity} units</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Warehouse</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.warehouse}</div></div>
+                                                            </div>
+                                                            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginTop:12, paddingTop:12, borderTop:'1px solid #334155' }}>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Damage ID</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600, fontFamily:'monospace' }}>{row.reference}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Processed By</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.damage_details?.processed_by || 'N/A'}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Action Type</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.damage_details?.action_type || 'damage'}</div></div>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+
+                                                {/* ✅ RECOVER Inline Expansion */}
+                                                {expandedDamageEntries.has(row.reference) && (row.type === 'RECOVER' || row.type === 'RECOVERY') && (
+                                                    <motion.div
+                                                        initial={{ opacity:0, height:0 }}
+                                                        animate={{ opacity:1, height:'auto' }}
+                                                        exit={{ opacity:0, height:0 }}
+                                                        transition={{ duration:0.3 }}
+                                                        style={{ background:'#0B1120', borderBottom:'1px solid #1E293B', padding:'16px 20px' }}
+                                                    >
+                                                        {/* Stock Impact */}
+                                                        <div style={{ background:'#1E293B', border:'2px solid #059669', borderRadius:8, padding:'12px 16px', marginBottom:12 }}>
+                                                            <div style={{ fontSize:9, color:'#4ADE80', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:8 }}>
+                                                                ✅ STOCK RECOVERED — ADDED BACK
+                                                            </div>
+                                                            <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#94A3B8' }}>
+                                                                <span>Before: <strong style={{ color:'#F1F5F9' }}>{(row.balance_after || 0) - (row.quantity || 0)}</strong></span>
+                                                                <span>Added: <strong style={{ color:'#4ADE80' }}>+{row.quantity}</strong></span>
+                                                                <span>After: <strong style={{ color:'#F1F5F9' }}>{row.balance_after}</strong></span>
+                                                            </div>
+                                                        </div>
+                                                        {/* Details */}
+                                                        <div style={{ background:'#1E293B', border:'1px solid #334155', borderRadius:8, padding:'12px 16px' }}>
+                                                            <div style={{ fontSize:9, color:'#475569', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>RECOVERY DETAILS</div>
+                                                            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Product</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.product_name || barcode}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Barcode</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600, fontFamily:'monospace' }}>{row.barcode}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Qty Recovered</div><div style={{ fontSize:11, color:'#4ADE80', fontWeight:700 }}>{row.quantity} units</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Warehouse</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.warehouse}</div></div>
+                                                            </div>
+                                                            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginTop:12, paddingTop:12, borderTop:'1px solid #334155' }}>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Recovery ID</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600, fontFamily:'monospace' }}>{row.reference}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Processed By</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.damage_details?.processed_by || 'N/A'}</div></div>
+                                                                <div><div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>Action Type</div><div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600 }}>{row.damage_details?.action_type || 'recovery'}</div></div>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+
                                             </motion.div>
                                         );
                                     })}

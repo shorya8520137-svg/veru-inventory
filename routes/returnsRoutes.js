@@ -25,6 +25,12 @@ router.get('/search-products', authenticateToken, checkPermission('OPERATIONS_RE
 // GET /api/returns/:id - Get return by ID
 router.get('/:id', authenticateToken, checkPermission('OPERATIONS_RETURN'), returnsController.getReturnById);
 
+// GET /api/returns/:returnId/timeline - Get return timeline (audit trail)
+router.get('/:returnId/timeline', authenticateToken, checkPermission('OPERATIONS_RETURN'), returnsController.getReturnTimeline);
+
+// DELETE /api/returns/clear-all - Clear all return data (testing only)
+router.delete('/clear-all', authenticateToken, checkPermission('OPERATIONS_RETURN'), returnsController.clearAllReturnData);
+
 // POST /api/returns/bulk - Process bulk returns
 router.post('/bulk', authenticateToken, checkPermission('OPERATIONS_RETURN'), returnsController.processBulkReturns);
 
