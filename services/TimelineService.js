@@ -158,7 +158,7 @@ class TimelineService {
                 sft.destination_location,
                 sft.transfer_type
             FROM store_timeline st
-            LEFT JOIN self_transfer sft ON CONVERT(st.reference USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(sft.transfer_reference USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            LEFT JOIN self_transfer sft ON st.reference = sft.transfer_reference
             WHERE st.store_code = ?
         `;
         
