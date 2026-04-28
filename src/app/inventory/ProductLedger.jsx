@@ -76,9 +76,18 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                 if (!mounted) return;
 
                 if (data.success && data.data && data.data.timeline) {
-                    const timelineData = data.data.timeline;
-                    console.log('Timeline data loaded:', timelineData.length, 'entries');
-                    console.log('First entry:', timelineData[0]);
+                    const rawTimeline = data.data.timeline;
+                    console.log('Timeline data loaded:', rawTimeline.length, 'entries');
+                    console.log('First entry:', rawTimeline[0]);
+                    
+                    // Normalize: store API returns movement_type, warehouse API returns type
+                    const timelineData = rawTimeline.map(entry => ({
+                        ...entry,
+                        type: entry.type || entry.movement_type,
+                        barcode: entry.barcode || entry.product_barcode,
+                        product_name: entry.product_name,
+                        timestamp: entry.timestamp || entry.created_at,
+                    }));
                     
                     setTimeline(timelineData);
                     calculateSummary(timelineData);
@@ -462,7 +471,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                             console.log('Reference:', row.reference);
                                                             console.log('Current expandedEntry:', expandedEntry);
                                                             
-                                                            const validTypes = ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'];
+                                                            const validTypes = ['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY', 'DISPATCH'];
                                                             const isValidType = validTypes.includes(row.type);
                                                             const hasRef = !!row.reference;
                                                             
@@ -484,7 +493,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                             fontSize:9, 
                                                             fontWeight:700, 
                                                             letterSpacing:'0.06em',
-                                                            cursor: (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY'].includes(row.type) && row.reference) ? 'pointer' : 'default',
+                                                            cursor: (['SELF_TRANSFER', 'RETURN', 'DAMAGE', 'DAMAGED', 'RECOVER', 'RECOVERY', 'DISPATCH'].includes(row.type) && row.reference) ? 'pointer' : 'default',
                                                             userSelect:'none'
                                                         }}>
                                                         {badge.label}
@@ -990,6 +999,135 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Action Type</div>
                                                                 <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
                                                                     {row.damage_details?.action_type || 'recovery'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {row.notes && (
+                                                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Notes</div>
+                                                                <div style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic' }}>
+                                                                    {row.notes}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                );
+                                            })()}
+
+                                            {/* Expansion for DISPATCH */}
+                                            {expandedEntry === row.reference && row.type === 'DISPATCH' && (() => {
+                                                console.log('🎨 Rendering DISPATCH expansion for:', row.reference);
+                                                return (
+                                                <div style={{ 
+                                                    background: '#FEF2F2', 
+                                                    borderBottom: '1px solid #FECACA',
+                                                    padding: '16px 20px'
+                                                }}>
+                                                    {/* Stock Impact Section */}
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '1fr',
+                                                        gap: 12,
+                                                        marginBottom: 12
+                                                    }}>
+                                                        <div style={{
+                                                            background: '#FFFFFF',
+                                                            border: '2px solid #DC2626',
+                                                            borderRadius: 8,
+                                                            padding: '12px 16px'
+                                                        }}>
+                                                            <div style={{ 
+                                                                fontSize: 9, 
+                                                                color: '#DC2626', 
+                                                                fontWeight: 700, 
+                                                                letterSpacing: '0.1em', 
+                                                                textTransform: 'uppercase', 
+                                                                marginBottom: 8 
+                                                            }}>
+                                                                📦 DISPATCH - STOCK SENT OUT
+                                                            </div>
+                                                            <div style={{ 
+                                                                fontSize: 11, 
+                                                                color: '#DC2626', 
+                                                                fontWeight: 600, 
+                                                                marginBottom: 8 
+                                                            }}>
+                                                                {row.warehouse || storeCode}
+                                                            </div>
+                                                            <div style={{ 
+                                                                display: 'flex', 
+                                                                justifyContent: 'space-between', 
+                                                                fontSize: 10, 
+                                                                color: '#6B7280' 
+                                                            }}>
+                                                                <span>Stock Before: <strong style={{ color: '#111827' }}>{row.balance_after + row.quantity}</strong></span>
+                                                                <span>Impact: <strong style={{ color: '#DC2626' }}>-{row.quantity}</strong></span>
+                                                                <span>Stock After: <strong style={{ color: '#111827' }}>{row.balance_after}</strong></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Product Details */}
+                                                    <div style={{
+                                                        background: '#FFFFFF',
+                                                        border: '1px solid #E5E7EB',
+                                                        borderRadius: 8,
+                                                        padding: '12px 16px'
+                                                    }}>
+                                                        <div style={{ 
+                                                            fontSize: 9, 
+                                                            color: '#6B7280', 
+                                                            marginBottom: 8,
+                                                            fontWeight: 600,
+                                                            letterSpacing: '0.1em',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            DISPATCH DETAILS
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Product</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.product_name || productBarcode}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Barcode</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.barcode}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Quantity Dispatched</div>
+                                                                <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 700 }}>
+                                                                    {row.quantity} units
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>From Location</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.warehouse || storeCode}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Transfer ID</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                                    {row.reference || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Destination</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.destination_location || 'Store'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 2 }}>Type</div>
+                                                                <div style={{ fontSize: 11, color: '#111827', fontWeight: 600 }}>
+                                                                    {row.source_location && row.source_location.endsWith('_WH') ? 'W→S (Warehouse to Store)' : 'Dispatch'}
                                                                 </div>
                                                             </div>
                                                         </div>

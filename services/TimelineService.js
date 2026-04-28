@@ -143,46 +143,50 @@ class TimelineService {
         
         let sql = `
             SELECT 
-                id,
-                store_code,
-                product_barcode,
-                product_name,
-                movement_type,
-                direction,
-                quantity,
-                balance_after,
-                reference,
-                user_id,
-                created_at
-            FROM store_timeline
-            WHERE store_code = ?
+                st.id,
+                st.store_code,
+                st.product_barcode,
+                st.product_name,
+                st.movement_type,
+                st.direction,
+                st.quantity,
+                st.balance_after,
+                st.reference,
+                st.user_id,
+                st.created_at,
+                sft.source_location,
+                sft.destination_location,
+                sft.transfer_type
+            FROM store_timeline st
+            LEFT JOIN self_transfer sft ON CONVERT(st.reference USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(sft.transfer_reference USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            WHERE st.store_code = ?
         `;
         
         const params = [storeCode];
         
         // Apply filters
         if (dateFrom) {
-            sql += ` AND created_at >= ?`;
+            sql += ` AND st.created_at >= ?`;
             params.push(dateFrom);
         }
         
         if (dateTo) {
-            sql += ` AND created_at <= ?`;
+            sql += ` AND st.created_at <= ?`;
             params.push(dateTo);
         }
         
         if (productBarcode) {
-            sql += ` AND product_barcode = ?`;
+            sql += ` AND st.product_barcode = ?`;
             params.push(productBarcode);
         }
         
         if (movementType) {
-            sql += ` AND movement_type = ?`;
+            sql += ` AND st.movement_type = ?`;
             params.push(movementType);
         }
         
         // Order by most recent first
-        sql += ` ORDER BY created_at DESC`;
+        sql += ` ORDER BY st.created_at DESC`;
         
         // Apply pagination
         sql += ` LIMIT ? OFFSET ?`;
