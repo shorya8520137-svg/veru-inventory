@@ -274,6 +274,9 @@ export const api = {
     },
     
     getSystemStats: () => apiRequest('/api/system/stats'),
+    
+    // Warehouses
+    getWarehouses: () => apiRequest('/api/permissions/warehouses'),
 };
 
 // Legacy function - use checkAPIHealth from src/services/api instead

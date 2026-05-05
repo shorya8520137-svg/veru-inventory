@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/utils/api";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
+import ModernUsersTab from "./ModernUsersTab";
+import ModernRolesTab from "./ModernRolesTab";
+import RoleModalNew from "./RoleModalNew";
 import styles from "./permissions.module.css";
 
 export default function PermissionsPage() {
@@ -310,7 +313,7 @@ export default function PermissionsPage() {
 
                     <div className={styles.content}>
                         {activeTab === "users" && canManageUsers && (
-                            <UsersTab
+                            <ModernUsersTab
                                 users={users}
                                 roles={roles}
                                 onCreateUser={() => {
@@ -327,7 +330,7 @@ export default function PermissionsPage() {
                         )}
 
                         {activeTab === "roles" && canManageRoles && (
-                            <RolesTab
+                            <ModernRolesTab
                                 roles={roles}
                                 permissions={permissions}
                                 onCreateRole={() => {
@@ -369,7 +372,7 @@ export default function PermissionsPage() {
 
             {/* Role Modal */}
             {showRoleModal && (
-                <RoleModal
+                <RoleModalNew
                     role={selectedRole}
                     permissions={permissions}
                     onSave={selectedRole ? handleUpdateRole : handleCreateRole}

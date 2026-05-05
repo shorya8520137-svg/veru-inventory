@@ -519,6 +519,46 @@ router.get('/permissions',
     PermissionsController.getPermissions
 );
 
+// GET /api/permissions/warehouses - Get all active warehouses for dynamic permission generation
+router.get('/permissions/warehouses', 
+    authenticateToken,
+    async (req, res) => {
+        try {
+            const db = require('../db/connection');
+            
+            db.query(`
+                SELECT 
+                    id,
+                    code as warehouse_code,
+                    name as warehouse_name,
+                    is_active
+                FROM warehouses 
+                WHERE is_active = TRUE
+                ORDER BY name ASC
+            `, (err, warehouses) => {
+                if (err) {
+                    console.error('Get warehouses error:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to fetch warehouses'
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    data: warehouses
+                });
+            });
+        } catch (error) {
+            console.error('Get warehouses error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch warehouses'
+            });
+        }
+    }
+);
+
 // GET /api/permissions/:permissionId - Get permission by ID
 router.get('/permissions/:permissionId', 
     authenticateToken, 
