@@ -12,6 +12,332 @@ export default function StoreTimeline() {
     const [loading, setLoading] = useState(false);
     const [filterType, setFilterType] = useState('all');
 
+    // Download invoice function for self transfers using pdfMake
+    const downloadInvoice = async (event) => {
+        try {
+            const selectedStoreData = stores.find(s => s.id === parseInt(selectedStore));
+            const referenceMatch = event.notes?.match(/Reference: (.+)/);
+            const transferReference = referenceMatch ? referenceMatch[1] : `TRF_${Date.now()}`;
+            
+            // Generate professional PDF invoice
+            await generateProfessionalInvoice(event, selectedStoreData, transferReference);
+        } catch (error) {
+            console.error('Error generating invoice:', error);
+            alert('Failed to generate invoice. Please try again.');
+        }
+    };
+
+    // Generate professional invoice using pdfMake with dynamic import
+    const generateProfessionalInvoice = async (event, storeData, transferReference) => {
+        try {
+            // Dynamic import to avoid SSR issues
+            const pdfMakeModule = await import('pdfmake/build/pdfmake');
+            const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+            
+            const pdfMake = pdfMakeModule.default || pdfMakeModule;
+            const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+            
+            // Initialize fonts
+            if (pdfFonts && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
+                pdfMake.vfs = pdfFonts.pdfMake.vfs;
+            }
+            
+            const invoiceDate = new Date(event.timestamp);
+            const invoiceId = `INS-TRF-${invoiceDate.getFullYear()}-${transferReference.split('_')[1] || '001'}`;
+            
+            // Determine source and destination
+            const isOutgoing = event.direction === 'OUT';
+            
+            // Use source_location and destination_location from timeline data
+            const fromLocation = isOutgoing 
+                ? (storeData?.store_name || event.source_location || 'Store') 
+                : (event.source_location || 'Warehouse');
+            
+            const toLocation = isOutgoing 
+                ? (event.destination_location || 'Warehouse') 
+                : (storeData?.store_name || event.destination_location || 'Store');
+            
+            // Extract city/state from location codes (e.g., "GGM_WH" -> "Gurugram, Haryana")
+            const getLocationDetails = (locationCode) => {
+                if (!locationCode) return 'N/A';
+                
+                // Map of warehouse/store codes to locations
+                const locationMap = {
+                    'GGM_WH': 'Gurugram, Haryana',
+                    'GGM_NH48': 'Gurugram, Haryana',
+                    'DEL_MOTI_NAGAR': 'Delhi',
+                    'BLR_WH': 'Bangalore, Karnataka',
+                    'MUM_WH': 'Mumbai, Maharashtra',
+                    'AMD_WH': 'Ahmedabad, Gujarat',
+                    'HYD_WH': 'Hyderabad, Telangana',
+                    'Bhiwandi_Lonad_GW': 'Bhiwandi, Maharashtra'
+                };
+                
+                return locationMap[locationCode] || locationCode;
+            };
+            
+            const fromCity = isOutgoing 
+                ? (storeData?.city ? `${storeData.city}, ${storeData.state || ''}` : getLocationDetails(event.source_location))
+                : getLocationDetails(event.source_location);
+            
+            const toCity = isOutgoing 
+                ? getLocationDetails(event.destination_location)
+                : (storeData?.city ? `${storeData.city}, ${storeData.state || ''}` : getLocationDetails(event.destination_location));
+            
+            // Calculate totals (using dummy price for now - should come from API)
+            const quantity = Math.abs(event.quantity);
+            const unitPrice = 500; // This should come from product data
+            const totalPrice = quantity * unitPrice;
+            
+            const docDefinition = {
+                pageSize: 'A4',
+                pageMargins: [40, 60, 40, 60],
+                content: [
+                    // 🔥 HEADER WITH LOGO
+                    {
+                        columns: [
+                            {
+                                stack: [
+                                    {
+                                        columns: [
+                                            {
+                                                stack: [
+                                                    { text: '.in', fontSize: 32, bold: true, color: '#000000', margin: [0, 0, 5, 0] },
+                                                    { text: 'INVENTORY', fontSize: 7, color: '#808080', margin: [0, 5, 0, 0] },
+                                                    { text: 'INSIGHTS', fontSize: 7, color: '#808080' },
+                                                    { text: 'IMPACT', fontSize: 7, color: '#808080' }
+                                                ],
+                                                width: 'auto'
+                                            },
+                                            {
+                                                canvas: [
+                                                    {
+                                                        type: 'line',
+                                                        x1: 0,
+                                                        y1: 0,
+                                                        x2: 0,
+                                                        y2: 50,
+                                                        lineWidth: 2,
+                                                        lineColor: '#CCCCCC'
+                                                    }
+                                                ],
+                                                width: 20,
+                                                margin: [5, 0, 5, 0]
+                                            },
+                                            {
+                                                stack: [
+                                                    { text: 'Insora', fontSize: 32, bold: true, color: '#000000', margin: [0, 0, 0, 5] },
+                                                    { text: 'EST.2024', fontSize: 8, bold: true, color: '#000000', margin: [0, 5, 0, 0] },
+                                                    { text: 'LOCATED IN', fontSize: 7, color: '#808080' },
+                                                    { text: 'DELHI', fontSize: 7, color: '#808080' }
+                                                ],
+                                                width: 'auto'
+                                            }
+                                        ]
+                                    }
+                                ],
+                                width: 250
+                            },
+                            {
+                                alignment: 'right',
+                                stack: [
+                                    { text: 'INTERNAL TRANSFER INVOICE', fontSize: 16, bold: true, color: '#000000' },
+                                    { text: '\n' },
+                                    { text: `Invoice ID    : ${invoiceId}`, fontSize: 10 },
+                                    { text: `Date          : ${invoiceDate.toLocaleDateString('en-GB')}`, fontSize: 10 },
+                                    { text: `Document Type : Self Transfer (Dispatch)`, fontSize: 10 }
+                                ]
+                            }
+                        ],
+                        margin: [0, 0, 0, 20]
+                    },
+                    
+                    // Horizontal line
+                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#CCCCCC' }], margin: [0, 10, 0, 20] },
+                    
+                    // 🔹 FROM → TO
+                    {
+                        columns: [
+                            {
+                                stack: [
+                                    { text: 'FROM (STORE)', fontSize: 12, bold: true, color: '#000000', margin: [0, 0, 0, 10] },
+                                    { text: `Store Name : ${fromLocation}`, fontSize: 10 },
+                                    { text: `Location   : ${fromCity}`, fontSize: 10 }
+                                ],
+                                width: '48%'
+                            },
+                            {
+                                alignment: 'right',
+                                stack: [
+                                    { text: 'TO (WAREHOUSE)', fontSize: 12, bold: true, color: '#000000', margin: [0, 0, 0, 10] },
+                                    { text: `Warehouse Name : ${toLocation}`, fontSize: 10 },
+                                    { text: `Location       : ${toCity}`, fontSize: 10 }
+                                ],
+                                width: '48%'
+                            }
+                        ],
+                        margin: [0, 0, 0, 30]
+                    },
+                    
+                    // 🔥 TABLE
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: [30, '*', 100, 80, 80, 100],
+                            body: [
+                                [
+                                    { text: '#', style: 'tableHeader', alignment: 'center' },
+                                    { text: 'Product', style: 'tableHeader' },
+                                    { text: 'SKU', style: 'tableHeader' },
+                                    { text: 'Quantity\n(Units)', style: 'tableHeader', alignment: 'center' },
+                                    { text: 'Unit Price\n(INR)', style: 'tableHeader', alignment: 'right' },
+                                    { text: 'Total Price\n(INR)', style: 'tableHeader', alignment: 'right' }
+                                ],
+                                [
+                                    { text: '1', alignment: 'center' },
+                                    { text: event.productName || 'Product', fontSize: 10 },
+                                    { text: event.productBarcode || 'N/A', fontSize: 10 },
+                                    { text: quantity.toString(), alignment: 'center', fontSize: 10 },
+                                    { text: `₹${unitPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 10 },
+                                    { text: `₹${totalPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 10, bold: true }
+                                ]
+                            ]
+                        },
+                        layout: {
+                            fillColor: function (rowIndex) {
+                                return rowIndex === 0 ? '#F3F4F6' : null;
+                            },
+                            hLineWidth: function (i, node) {
+                                return 1;
+                            },
+                            vLineWidth: function (i) {
+                                return 1;
+                            },
+                            hLineColor: function () {
+                                return '#E5E7EB';
+                            },
+                            vLineColor: function () {
+                                return '#E5E7EB';
+                            }
+                        },
+                        margin: [0, 0, 0, 10]
+                    },
+                    
+                    // Total Summary
+                    {
+                        columns: [
+                            { text: '', width: '*' },
+                            {
+                                stack: [
+                                    {
+                                        table: {
+                                            widths: [120, 100],
+                                            body: [
+                                                [
+                                                    { text: 'TOTAL QUANTITY', bold: true, fontSize: 10, border: [false, false, false, false] },
+                                                    { text: `${quantity} Units`, alignment: 'right', fontSize: 10, border: [false, false, false, false] }
+                                                ],
+                                                [
+                                                    { text: 'TOTAL AMOUNT', bold: true, fontSize: 12, border: [false, true, false, false], borderColor: ['', '#000000', '', ''] },
+                                                    { text: `₹${totalPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 12, bold: true, border: [false, true, false, false], borderColor: ['', '#000000', '', ''] }
+                                                ]
+                                            ]
+                                        },
+                                        layout: 'noBorders'
+                                    }
+                                ],
+                                width: 220
+                            }
+                        ],
+                        margin: [0, 0, 0, 30]
+                    },
+                    
+                    // EVENT DETAILS & AI INSIGHT
+                    {
+                        columns: [
+                            {
+                                stack: [
+                                    { text: 'EVENT DETAILS', fontSize: 11, bold: true, margin: [0, 0, 0, 10] },
+                                    { text: `Event Type        : Self Transfer (Store → Warehouse)`, fontSize: 9 },
+                                    { text: `Transaction Type  : Dispatch`, fontSize: 9 },
+                                    { text: `Reference ID      : ${transferReference}`, fontSize: 9 },
+                                    { text: `Created By        : Insora Inventory System`, fontSize: 9 },
+                                    { text: `Remarks           : ${quantity} Units dispatched from ${fromLocation} to ${toLocation}`, fontSize: 9 }
+                                ],
+                                width: '48%'
+                            },
+                            {
+                                stack: [
+                                    { text: 'AI INSIGHT', fontSize: 11, bold: true, margin: [0, 0, 0, 10] },
+                                    { text: `High dispatch observed from ${fromLocation}.`, fontSize: 9 },
+                                    { text: `Recommendation: Monitor stock balance at the source location to avoid future shortages.`, fontSize: 9 },
+                                    { text: '\n' },
+                                    { text: 'Generated by Insora AI.', fontSize: 8, italics: true, color: '#666666' }
+                                ],
+                                width: '48%'
+                            }
+                        ],
+                        margin: [0, 0, 0, 30]
+                    },
+                    
+                    // AUTHORIZED BY & NOTE
+                    {
+                        columns: [
+                            {
+                                stack: [
+                                    { text: 'AUTHORIZED BY', fontSize: 10, bold: true, margin: [0, 0, 0, 10] },
+                                    { text: '_____________________', margin: [0, 20, 0, 5] },
+                                    { text: 'System Generated', fontSize: 9 },
+                                    { text: 'Insora Inventory System', fontSize: 9 }
+                                ],
+                                width: '48%'
+                            },
+                            {
+                                stack: [
+                                    { text: 'NOTE', fontSize: 10, bold: true, margin: [0, 0, 0, 10] },
+                                    { text: 'This is a system-generated internal transfer document.', fontSize: 9 },
+                                    { text: 'No physical signature is required.', fontSize: 9 },
+                                    { text: 'For any queries, contact support@insora.in', fontSize: 9 }
+                                ],
+                                width: '48%'
+                            }
+                        ],
+                        margin: [0, 0, 0, 40]
+                    },
+                    
+                    // Footer
+                    {
+                        text: 'Thank you for using Insora Inventory Intelligence Platform.',
+                        alignment: 'center',
+                        fontSize: 10,
+                        margin: [0, 20, 0, 10]
+                    },
+                    {
+                        columns: [
+                            { text: 'www.insora.in', fontSize: 8, color: '#666666', alignment: 'center' },
+                            { text: 'support@insora.in', fontSize: 8, color: '#666666', alignment: 'center' },
+                            { text: 'Delhi, India', fontSize: 8, color: '#666666', alignment: 'center' }
+                        ]
+                    }
+                ],
+                styles: {
+                    tableHeader: {
+                        bold: true,
+                        fontSize: 10,
+                        color: '#000000',
+                        fillColor: '#F3F4F6'
+                    }
+                }
+            };
+            
+            // Generate and download PDF
+            pdfMake.createPdf(docDefinition).download(`Transfer-Invoice-${invoiceId}.pdf`);
+        } catch (error) {
+            console.error('PDF Generation Error:', error);
+            alert('Failed to generate PDF invoice. Error: ' + error.message);
+        }
+    };
+
     useEffect(() => {
         fetchStores();
     }, []);
@@ -88,8 +414,10 @@ export default function StoreTimeline() {
                         quantity: item.direction === 'IN' ? item.quantity : -item.quantity,
                         stockBefore: stockBefore,
                         stockAfter: item.balance_after,
-                        source: item.direction === 'OUT' ? storeCode : 'External',
-                        destination: item.direction === 'IN' ? storeCode : 'External',
+                        source: item.source_location || (item.direction === 'OUT' ? storeCode : 'External'),
+                        destination: item.destination_location || (item.direction === 'IN' ? storeCode : 'External'),
+                        source_location: item.source_location,
+                        destination_location: item.destination_location,
                         notes: item.reference ? `Reference: ${item.reference}` : '',
                         status: 'COMPLETED',
                         unit: 'units',
@@ -97,7 +425,8 @@ export default function StoreTimeline() {
                         productBarcode: item.product_barcode,
                         movementType: item.movement_type,
                         direction: item.direction,
-                        userId: item.user_id
+                        userId: item.user_id,
+                        reference: item.reference
                     };
                 });
                 
@@ -172,10 +501,9 @@ export default function StoreTimeline() {
             overflow: 'hidden'
         }}>
             {/* Header */}
-            <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '20px 24px', flexShrink: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
+            <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '20px 0', flexShrink: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px', padding: '0 24px' }}>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: '#111827' }}>Store Timeline</h1>
                         <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Track all inventory movements and events</p>
                     </div>
                     <button
@@ -186,7 +514,7 @@ export default function StoreTimeline() {
                 </div>
 
                 {/* Store Selector */}
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '0 24px' }}>
                     <label style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280' }}>Select Store:</label>
                     <select
                         value={selectedStore}
@@ -214,8 +542,8 @@ export default function StoreTimeline() {
 
             {/* Store Info Card */}
             {selectedStoreData && (
-                <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '16px 24px', flexShrink: 0 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '16px 0', flexShrink: 0 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', padding: '0 24px' }}>
                         <div>
                             <div style={{ fontSize: '11px', fontWeight: '600', color: '#9CA3AF', marginBottom: '4px' }}>STORE NAME</div>
                             <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{selectedStoreData.store_name}</div>
@@ -237,7 +565,7 @@ export default function StoreTimeline() {
             )}
 
             {/* Timeline */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', paddingTop: '40px', color: '#9CA3AF' }}>Loading timeline...</div>
                 ) : timeline.length === 0 ? (
@@ -262,38 +590,21 @@ export default function StoreTimeline() {
                     </div>
                 ) : (
                     <div style={{ position: 'relative' }}>
-                        {/* Timeline Line */}
-                        <div style={{ position: 'absolute', left: '20px', top: '0', bottom: '0', width: '2px', background: '#E5E7EB' }} />
-
-                        {/* Timeline Events */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Timeline Events - No gaps, edge to edge */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                             {timeline.map((event, idx) => (
-                                <div key={idx} style={{ display: 'flex', gap: '16px', position: 'relative' }}>
-                                    {/* Timeline Dot */}
-                                    <div style={{
-                                        width: '44px',
-                                        height: '44px',
-                                        borderRadius: '50%',
-                                        background: getEventColor(event.eventType),
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                        border: '2px solid #fff',
-                                        position: 'relative',
-                                        zIndex: 1
-                                    }}>
-                                        {getEventIcon(event.eventType)}
-                                    </div>
+                                <div key={idx} style={{ display: 'flex', position: 'relative', padding: '0' }}>
+                                    {/* Timeline Dot - Removed */}
 
-                                    {/* Event Card */}
+                                    {/* Event Card - Full width, no gaps */}
                                     <div style={{
-                                        flex: 1,
+                                        width: '100%',
                                         background: '#fff',
-                                        borderRadius: '12px',
-                                        padding: '16px',
-                                        border: '1px solid #E5E7EB',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                        borderRadius: '0',
+                                        padding: '20px 24px',
+                                        border: 'none',
+                                        borderBottom: '1px solid #E5E7EB',
+                                        boxShadow: 'none'
                                     }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                                             <div>
@@ -348,44 +659,73 @@ export default function StoreTimeline() {
                                             </div>
                                         )}
 
-                                        {/* Status Badge */}
-                                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '4px 8px',
-                                                borderRadius: '4px',
-                                                fontSize: '11px',
-                                                fontWeight: '600',
-                                                background: event.status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7',
-                                                color: event.status === 'COMPLETED' ? '#166534' : '#92400E'
-                                            }}>
-                                                {event.status || 'COMPLETED'}
-                                            </span>
-                                            {event.movementType === 'OPENING' && (
+                                        {/* Status Badge and Download Invoice */}
+                                        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
                                                 <span style={{
                                                     display: 'inline-block',
                                                     padding: '4px 8px',
                                                     borderRadius: '4px',
                                                     fontSize: '11px',
                                                     fontWeight: '600',
-                                                    background: '#DBEAFE',
-                                                    color: '#1E40AF'
+                                                    background: event.status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7',
+                                                    color: event.status === 'COMPLETED' ? '#166534' : '#92400E'
                                                 }}>
-                                                    Initial Stock
+                                                    {event.status || 'COMPLETED'}
                                                 </span>
-                                            )}
+                                                {event.movementType === 'OPENING' && (
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        background: '#DBEAFE',
+                                                        color: '#1E40AF'
+                                                    }}>
+                                                        Initial Stock
+                                                    </span>
+                                                )}
+                                                {event.movementType === 'SELF_TRANSFER' && (
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        background: '#F3E8FF',
+                                                        color: '#6B21A8'
+                                                    }}>
+                                                        Store Transfer
+                                                    </span>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Download Invoice Button for Self Transfer */}
                                             {event.movementType === 'SELF_TRANSFER' && (
-                                                <span style={{
-                                                    display: 'inline-block',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '11px',
-                                                    fontWeight: '600',
-                                                    background: '#F3E8FF',
-                                                    color: '#6B21A8'
-                                                }}>
-                                                    Store Transfer
-                                                </span>
+                                                <button
+                                                    onClick={() => downloadInvoice(event)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        background: '#3B82F6',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        fontFamily: 'inherit',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => e.target.style.background = '#2563EB'}
+                                                    onMouseLeave={(e) => e.target.style.background = '#3B82F6'}
+                                                >
+                                                    <Download size={12} />
+                                                    Invoice
+                                                </button>
                                             )}
                                         </div>
                                     </div>

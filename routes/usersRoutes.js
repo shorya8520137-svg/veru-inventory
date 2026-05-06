@@ -257,7 +257,7 @@ router.post('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'),
         }
         
         // Hash password
-        const bcrypt = require('bcrypt');
+        const bcrypt = require('bcryptjs');
         const hashedPassword = await bcrypt.hash(password, 10);
         
         // Insert user
@@ -306,7 +306,7 @@ router.put('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'
         
         // Add password if provided
         if (password) {
-            const bcrypt = require('bcrypt');
+            const bcrypt = require('bcryptjs');
             const hashedPassword = await bcrypt.hash(password, 10);
             updateFields.push('password = ?');
             updateValues.push(hashedPassword);

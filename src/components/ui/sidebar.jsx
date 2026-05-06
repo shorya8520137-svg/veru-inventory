@@ -329,6 +329,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </SidebarMenuItem>
                     )}
 
+                    {/* WEBSITE ORDERS */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/website-orders" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/website-orders", collapsed }))}
+                                >
+                                    <Package size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Website Orders</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
                     {/* CUSTOMER SUPPORT */}
                     {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
                         <SidebarMenuItem>

@@ -1,5 +1,5 @@
 const db = require('./db/connection');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 async function createTestUser() {
     console.log('🔧 Creating test user for order API testing...\n');

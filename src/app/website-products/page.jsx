@@ -282,7 +282,82 @@ const WebsiteProductsPage = () => {
                             <div key={key}><label style={{fontSize:12,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>{label}</label><input type={type} value={formData[key]} onChange={e=>setFormData({...formData,[key]:e.target.value})} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #E5E7EB',fontSize:13,color:'#374151',outline:'none',boxSizing:'border-box'}}/></div>
                         ))}
                         <div><label style={{fontSize:12,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>Category</label><select value={formData.category_id} onChange={e=>setFormData({...formData,category_id:e.target.value})} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #E5E7EB',fontSize:13,color:'#374151',outline:'none'}}><option value=''>Select Category</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                        <div><label style={{fontSize:12,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>Image URL</label><input type='text' value={formData.image_url} onChange={e=>setFormData({...formData,image_url:e.target.value})} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #E5E7EB',fontSize:13,color:'#374151',outline:'none',boxSizing:'border-box'}}/></div>
+                        <div><label style={{fontSize:12,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>Main Image URL</label><input type='text' value={formData.image_url} onChange={e=>setFormData({...formData,image_url:e.target.value})} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #E5E7EB',fontSize:13,color:'#374151',outline:'none',boxSizing:'border-box'}}/></div>
+                    </div>
+                    <div style={{marginBottom:16}}>
+                        <label style={{fontSize:12,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>Additional Images</label>
+                        <div style={{display:'flex',gap:8,marginBottom:8}}>
+                            <input 
+                                type='text' 
+                                placeholder='Enter image URL and click Add' 
+                                id='newImageUrl'
+                                style={{flex:1,padding:'9px 12px',borderRadius:10,border:'1.5px solid #E5E7EB',fontSize:13,color:'#374151',outline:'none',boxSizing:'border-box'}}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        const input = e.target;
+                                        const url = input.value.trim();
+                                        if (url && !formData.additional_images.includes(url)) {
+                                            setFormData({...formData, additional_images: [...formData.additional_images, url]});
+                                            input.value = '';
+                                        }
+                                    }
+                                }}
+                            />
+                            <button 
+                                type='button'
+                                onClick={() => {
+                                    const input = document.getElementById('newImageUrl');
+                                    const url = input.value.trim();
+                                    if (url && !formData.additional_images.includes(url)) {
+                                        setFormData({...formData, additional_images: [...formData.additional_images, url]});
+                                        input.value = '';
+                                    }
+                                }}
+                                style={{padding:'9px 18px',borderRadius:10,border:'none',background:'#2563EB',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
+                            >
+                                + Add
+                            </button>
+                        </div>
+                        {formData.additional_images.length > 0 && (
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))',gap:12,marginTop:12}}>
+                                {formData.additional_images.map((imgUrl, idx) => (
+                                    <div key={idx} style={{position:'relative',borderRadius:10,border:'1.5px solid #E5E7EB',overflow:'hidden',background:'#F9FAFB'}}>
+                                        <img 
+                                            src={imgUrl} 
+                                            alt={`Additional ${idx + 1}`}
+                                            style={{width:'100%',height:100,objectFit:'cover',display:'block'}}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                        <div style={{display:'none',width:'100%',height:100,alignItems:'center',justifyContent:'center',fontSize:11,color:'#9CA3AF',textAlign:'center',padding:8}}>
+                                            Invalid Image
+                                        </div>
+                                        <button
+                                            type='button'
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData, 
+                                                    additional_images: formData.additional_images.filter((_, i) => i !== idx)
+                                                });
+                                            }}
+                                            style={{position:'absolute',top:4,right:4,width:24,height:24,borderRadius:6,border:'none',background:'rgba(239,68,68,0.9)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',padding:0}}
+                                            title='Remove image'
+                                        >
+                                            ×
+                                        </button>
+                                        <div style={{padding:'6px 8px',fontSize:10,color:'#6B7280',background:'#fff',borderTop:'1px solid #E5E7EB',wordBreak:'break-all',maxHeight:40,overflow:'hidden',textOverflow:'ellipsis'}}>
+                                            {imgUrl.length > 30 ? imgUrl.substring(0, 30) + '...' : imgUrl}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div style={{fontSize:11,color:'#9CA3AF',marginTop:6}}>
+                            Add multiple product images. The main image will be the primary display image.
+                        </div>
                     </div>
                     <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>Description</label><textarea rows={3} value={formData.description} onChange={e=>setFormData({...formData,description:e.target.value})} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #E5E7EB',fontSize:13,color:'#374151',outline:'none',resize:'vertical',boxSizing:'border-box'}}/></div>
                     <div style={{display:'flex',gap:16,marginBottom:16}}>
