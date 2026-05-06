@@ -1,13 +1,15 @@
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const db = require('../db/connection');
 
-// Configure Google Strategy
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: 'https://api.giftgala.in/auth/google/callback'
-},
+// Configure Google Strategy only if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    const GoogleStrategy = require('passport-google-oauth20').Strategy;
+    
+    passport.use(new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || 'https://api.giftgala.in/auth/google/callback'
+    },
 async (accessToken, refreshToken, profile, done) => {
     try {
         const googleId = profile.id;
@@ -82,7 +84,11 @@ async (accessToken, refreshToken, profile, done) => {
         console.error('Error in Google Strategy:', error);
         return done(error, null);
     }
-}));
+    }));
+    console.log('✅ Google OAuth configured');
+} else {
+    console.log('⚠️  Google OAuth not configured (missing credentials)');
+}
 
 // Serialize user for the session (not used with JWT, but required by Passport)
 passport.serializeUser((user, done) => {
