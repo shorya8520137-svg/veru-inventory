@@ -8,6 +8,12 @@
     background: #FFFFFF;
     padding: 32px 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.container::-webkit-scrollbar {
+    display: none;
 }
 
 /* ================= HEADER ================= */
@@ -255,6 +261,55 @@
     border-color: #93C5FD;
     background: #EFF6FF;
     color: #1D4ED8;
+}
+
+.coverageGraph {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.coverageRow {
+    align-items: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 76px minmax(120px, 1fr) 32px;
+    padding: 0;
+    text-align: left;
+}
+
+.coverageLabel,
+.coverageValue {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.coverageValue {
+    text-align: right;
+}
+
+.coverageTrack {
+    background: #EEF2F7;
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+}
+
+.coverageBar {
+    border-radius: inherit;
+    display: block;
+    height: 100%;
+    min-width: 0;
+    transition: width 0.25s ease;
+}
+
+.coverageRow:hover .coverageTrack {
+    background: #E2E8F0;
 }
 
 .eventCatalog {
@@ -729,6 +784,12 @@
     overflow: auto;
     padding: 12px;
     white-space: pre-wrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.detailJson::-webkit-scrollbar {
+    display: none;
 }
 
 .emptyDetail {
@@ -893,5 +954,15 @@
     .table {
         display: block;
         overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .table::-webkit-scrollbar {
+        display: none;
+    }
+
+    .coverageRow {
+        grid-template-columns: 68px minmax(100px, 1fr) 28px;
     }
 }

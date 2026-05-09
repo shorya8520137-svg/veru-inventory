@@ -62,6 +62,21 @@ export default function AuditLogsPage() {
         [eventCatalog]
     );
 
+    const moduleCoverageData = useMemo(() => {
+        const modules = [
+            { label: 'Orders', value: stats.orders, color: '#2563EB' },
+            { label: 'Dispatch', value: stats.dispatches, color: '#0891B2' },
+            { label: 'Returns', value: stats.returns, color: '#7C3AED' },
+            { label: 'Damage', value: stats.damageReports, color: '#DC2626' },
+            { label: 'Users', value: stats.userActions, color: '#059669' }
+        ];
+        const maxValue = Math.max(...modules.map((module) => module.value), 1);
+        return modules.map((module) => ({
+            ...module,
+            percentage: Math.max((module.value / maxValue) * 100, module.value > 0 ? 8 : 0)
+        }));
+    }, [stats]);
+
     const updateFilter = (key, value) => {
         setFilters((current) => ({ ...current, [key]: value }));
         setCurrentPage(1);
@@ -289,6 +304,27 @@ export default function AuditLogsPage() {
                         <button onClick={() => updateFilter('resource', 'RETURN')}>Returns {stats.returns}</button>
                         <button onClick={() => updateFilter('resource', 'DAMAGE')}>Damage {stats.damageReports}</button>
                         <button onClick={() => updateFilter('resource', 'USER')}>Users {stats.userActions}</button>
+                    </div>
+                    <div className={styles.coverageGraph}>
+                        {moduleCoverageData.map((module) => (
+                            <button
+                                key={module.label}
+                                className={styles.coverageRow}
+                                onClick={() => updateFilter('resource', module.label === 'Users' ? 'USER' : module.label.toUpperCase())}
+                            >
+                                <span className={styles.coverageLabel}>{module.label}</span>
+                                <span className={styles.coverageTrack}>
+                                    <span
+                                        className={styles.coverageBar}
+                                        style={{
+                                            width: `${module.percentage}%`,
+                                            backgroundColor: module.color
+                                        }}
+                                    />
+                                </span>
+                                <span className={styles.coverageValue}>{module.value}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
                 <div className={styles.insightPanel}>
