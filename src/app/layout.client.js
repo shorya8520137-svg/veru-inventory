@@ -120,7 +120,7 @@ export default function ClientLayout({ children }) {
                     {/* MAIN CONTENT */}
                     <div className="flex-1 min-w-0 h-full flex flex-col">
                         <main className="flex-1 min-w-0 overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
-                            <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-hide">
+                            <div className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar">
                                 <div className="p-0">
                                     {children}
                                 </div>
