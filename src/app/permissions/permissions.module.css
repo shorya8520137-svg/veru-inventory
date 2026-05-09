@@ -1879,3 +1879,873 @@
         padding: 16px 12px;
     }
 }
+
+
+/* ================= MODERN ENTERPRISE SAAS UPDATES ================= */
+
+/* Enhanced Modal Header */
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+}
+
+.modalHeader h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+/* Modern Close Button */
+.closeButton {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 20px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+    background: #e5e7eb;
+    color: #111827;
+    transform: scale(1.05);
+}
+
+/* Modern Form Inputs */
+.formGroup input[type="text"],
+.formGroup input[type="email"],
+.formGroup textarea,
+.formGroup select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #111827;
+    background: #ffffff;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus,
+.formGroup select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.formGroup label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+/* Color Picker Grid */
+.colorGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.colorOption {
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.colorOption:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.colorOption.selected {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    transform: scale(1.15);
+}
+
+/* Enhanced Tab Navigation */
+.tabNavigation {
+    display: flex;
+    gap: 2px;
+    padding: 16px 24px 0 24px;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.tabButton {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    margin-bottom: -2px;
+    border-radius: 8px 8px 0 0;
+}
+
+.tabButton:hover {
+    color: #111827;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.activeTabButton {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* Enhanced Permission Cards */
+.permissionGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    padding: 24px;
+}
+
+.permissionCheckbox {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+}
+
+.permissionCheckbox:hover {
+    background: #f9fafb;
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.permissionCheckbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+    border-radius: 4px;
+}
+
+.permissionCheckbox span {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    line-height: 1.5;
+}
+
+/* Enhanced Danger Badges */
+.dangerousPermission {
+    border-color: #fca5a5 !important;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+}
+
+.dangerBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-left: 8px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+/* Enhanced Select All Button */
+.selectAllButton {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.selectAllButton:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Enhanced Modal Actions */
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.primaryButton {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.primaryButton:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.secondaryButton {
+    padding: 12px 24px;
+    background: #ffffff;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.secondaryButton:hover {
+    background: #f9fafb;
+    color: #111827;
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+}
+
+/* Enhanced Warehouse Dropdown */
+.dropdownHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 2px solid #d1d5db;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    color: #374151;
+}
+
+.dropdownHeader:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.dropdownHeader.open {
+    border-color: #3b82f6;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dropdownList {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 2px solid #3b82f6;
+    border-top: none;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdownItem:last-child {
+    border-bottom: none;
+}
+
+.dropdownItem:hover {
+    background: #f9fafb;
+}
+
+.dropdownItem input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+/* Enhanced Warehouse Permission Cards */
+.warehousePermissionCard {
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.warehousePermissionCard:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+}
+
+.warehousePermissionCard h5 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.warehousePermissionGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.warehousePermissionGrid label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.warehousePermissionGrid label:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+}
+
+.warehousePermissionGrid input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3b82f6;
+}
+
+/* Smooth Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal {
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modalOverlay {
+    animation: fadeIn 0.2s ease;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 1024px) {
+    .permissionGrid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+        padding: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .permissionGrid {
+        grid-template-columns: 1fr;
+    }
+    
+    .colorGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .warehousePermissionGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ================= MODERN MODAL - EXACT SCREENSHOT MATCH ================= */
+
+.modernModal {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 1000px;
+    width: 95%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modernModalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+
+.modernCloseButton {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 8px;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modernCloseButton:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.modernModalForm {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Top Section - 3 Column Grid */
+.modernTopSection {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.modernFormGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.modernFormGroup label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.modernFormGroup input[type="text"],
+.modernFormGroup textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.modernFormGroup input:focus,
+.modernFormGroup textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modernFormGroup input::placeholder,
+.modernFormGroup textarea::placeholder {
+    color: #9ca3af;
+}
+
+.modernFormGroup textarea {
+    resize: none;
+    font-family: inherit;
+}
+
+/* Color Grid - 4x2 Layout */
+.modernColorGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modernColorOption {
+    width: 100%;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modernColorOption:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modernColorOption.selectedColor {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    transform: scale(1.1);
+}
+
+/* Color Preview */
+.modernColorPreview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.modernColorDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.modernColorLabel {
+    font-size: 11px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.modernColorValue {
+    font-size: 10px;
+    color: #6b7280;
+}
+
+/* Permissions Section */
+.modernPermissionsSection {
+    margin-top: 20px;
+}
+
+.modernPermissionsSection > label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    display: block;
+}
+
+/* Tab Navigation with Hidden Scrollbar */
+.modernTabNavigation {
+    display: flex;
+    gap: 4px;
+    padding: 8px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 20px;
+    
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.modernTabNavigation::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.modernTabButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-bottom: -2px;
+}
+
+.modernTabButton:hover {
+    color: #111827;
+    background: #f9fafb;
+    border-radius: 8px 8px 0 0;
+}
+
+.modernTabButton.modernActiveTab {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    font-weight: 600;
+}
+
+/* Tab Content Area */
+.modernTabContent {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* Custom Scrollbar for Tab Content */
+.modernTabContent::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modernTabContent::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+}
+
+.modernTabContent::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.modernTabContent::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Permission Section Header */
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.sectionHeader h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+/* Select All Button */
+.selectAllButton {
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.selectAllButton:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+}
+
+/* Permission Grid - 2 Columns */
+.permissionGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.permissionCheckbox {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.permissionCheckbox:hover {
+    background: #f9fafb;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.permissionCheckbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+    flex-shrink: 0;
+}
+
+.permissionCheckbox span {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    line-height: 1.4;
+}
+
+/* Danger Badge */
+.dangerBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: #dc2626;
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* Modal Actions */
+.modernModalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 20px;
+}
+
+.modernSecondaryButton {
+    padding: 10px 20px;
+    background: #ffffff;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modernSecondaryButton:hover {
+    background: #f9fafb;
+    color: #111827;
+    border-color: #9ca3af;
+}
+
+.modernPrimaryButton {
+    padding: 10px 24px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modernPrimaryButton:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .modernTopSection {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .modernTopSection > div:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .modernModal {
+        width: 100%;
+        max-height: 95vh;
+    }
+    
+    .modernTopSection {
+        grid-template-columns: 1fr;
+    }
+    
+    .permissionGrid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modernModalForm {
+        padding: 16px;
+    }
+}

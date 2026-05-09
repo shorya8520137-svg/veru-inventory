@@ -1,0 +1,258 @@
+/* Modern Enterprise SaaS Role Management Styles */
+
+/* Smooth animations for all interactive elements */
+* {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom scrollbar for tab navigation */
+.tabNavigation::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabNavigation::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.tabNavigation::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.tabNavigation::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Enhanced focus states */
+.modernInput:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #3b82f6;
+  ring-opacity: 0.5;
+  border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Card hover effects */
+.permissionCard {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.permissionCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Color picker hover effects */
+.colorOption {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.colorOption:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.colorOption.selected {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Toggle switch animations */
+.toggleSwitch {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggleSwitch .toggleThumb {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Button hover effects */
+.primaryButton {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.primaryButton:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.secondaryButton {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.secondaryButton:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+/* Tab active state animation */
+.tabButton {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tabButton.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #3b82f6;
+  border-radius: 1px;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Navbar shadow on scroll */
+.navbar {
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navbar.scrolled {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Permission badge animations */
+.criticalBadge {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.standardBadge {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+/* Loading states */
+.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Responsive design enhancements */
+@media (max-width: 768px) {
+  .permissionGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .colorGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .tabNavigation {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .tabNavigation::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+  .darkModeCard {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+  
+  .darkModeText {
+    color: #f9fafb;
+  }
+  
+  .darkModeSubtext {
+    color: #d1d5db;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .highContrastBorder {
+    border-width: 2px;
+    border-color: #000000;
+  }
+  
+  .highContrastText {
+    color: #000000;
+    font-weight: 600;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .noPrint {
+    display: none !important;
+  }
+  
+  .printOnly {
+    display: block !important;
+  }
+  
+  .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000000;
+  }
+}

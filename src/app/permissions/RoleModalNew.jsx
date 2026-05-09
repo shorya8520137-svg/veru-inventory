@@ -1,33 +1,51 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import styles from "./permissions.module.css";
+import styles from "./fullpage-modal.module.css";
 import { apiRequest } from "@/utils/api";
 
 /**
- * PROFESSIONAL ROLE MODAL WITH TABS AND WAREHOUSE DROPDOWN
- * - Tab-based permission organization
- * - Multi-select warehouse dropdown
- * - Dynamic loading from backend
- * - Production-ready UI
+ * MODERN ENTERPRISE ROLE MODAL - EXACT SCREENSHOT DESIGN
+ * Full-page modal with 2-column layout, toggle switches, and modern UI
  */
 export default function RoleModalNew({ role, permissions, onSave, onClose }) {
     const [activeTab, setActiveTab] = useState("system");
     const [warehouses, setWarehouses] = useState([]);
-    const [selectedWarehouses, setSelectedWarehouses] = useState([]);
-    const [warehousePermissions, setWarehousePermissions] = useState({});
     const [loading, setLoading] = useState(false);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [selectedColor, setSelectedColor] = useState(role?.color || '#3B82F6');
     
     const [formData, setFormData] = useState({
         name: role?.name || '',
         display_name: role?.display_name || '',
         description: role?.description || '',
-        color: role?.color || '#6366f1',
+        color: role?.color || '#3B82F6',
         permissionIds: role?.permissions?.map(p => p.id) || []
     });
 
-    // Load warehouses on mount
+    // Color palette - 8 colors + custom
+    const colorOptions = [
+        { id: 'blue', name: 'Blue', value: '#3B82F6' },
+        { id: 'brown', name: 'Brown', value: '#92400E' },
+        { id: 'gray', name: 'Gray', value: '#4B5563' },
+        { id: 'purple', name: 'Purple', value: '#8B5CF6' },
+        { id: 'pink', name: 'Pink', value: '#EC4899' },
+        { id: 'orange', name: 'Orange', value: '#F97316' },
+        { id: 'green', name: 'Green', value: '#10B981' },
+        { id: 'cyan', name: 'Cyan', value: '#06B6D4' },
+        { id: 'slate', name: 'Dark Slate', value: '#475569' }
+    ];
+
+    // Tab configuration - NO ICONS
+    const tabs = [
+        { id: 'system', label: 'System', section: 'SYSTEM' },
+        { id: 'inventory', label: 'Inventory', section: 'INVENTORY' },
+        { id: 'products', label: 'Products', section: 'PRODUCTS' },
+        { id: 'orders', label: 'Orders', section: 'ORDERS' },
+        { id: 'operations', label: 'Operations', section: 'OPERATIONS' },
+        { id: 'warehouse', label: 'Warehouse Access', section: 'WAREHOUSE' },
+        { id: 'website', label: 'Website', section: 'WEBSITE' }
+    ];
+
     useEffect(() => {
         loadWarehouses();
     }, []);
@@ -44,13 +62,17 @@ export default function RoleModalNew({ role, permissions, onSave, onClose }) {
         }
     };
 
+    const handleColorSelect = (color) => {
+        setSelectedColor(color.value);
+        setFormData({ ...formData, color: color.value });
+    };
+
     // Group permissions by feature section
     const groupedPermissions = permissions.reduce((acc, permission) => {
         const section = permission.feature_section || 'OTHER';
         if (!acc[section]) {
             acc[section] = [];
         }
-        // Exclude warehouse-specific permissions (handled separately)
         if (!permission.name.startsWith('WAREHOUSE_') || 
             permission.name === 'WAREHOUSE_MANAGEMENT' || 
             permission.name === 'STORE_MANAGEMENT') {
@@ -59,41 +81,9 @@ export default function RoleModalNew({ role, permissions, onSave, onClose }) {
         return acc;
     }, {});
 
-    // Tab configuration
-    const tabs = [
-        { id: 'system', label: 'System', icon: '⚙️', section: 'SYSTEM' },
-        { id: 'inventory', label: 'Inventory', icon: '📦', section: 'INVENTORY' },
-        { id: 'products', label: 'Products', icon: '🏷️', section: 'PRODUCTS' },
-        { id: 'orders', label: 'Orders', icon: '🛒', section: 'ORDERS' },
-        { id: 'operations', label: 'Operations', icon: '🔄', section: 'OPERATIONS' },
-        { id: 'warehouse', label: 'Warehouse Access', icon: '🏭', section: 'WAREHOUSE' },
-        { id: 'website', label: 'Website', icon: '🌐', section: 'WEBSITE' },
-        { id: 'support', label: 'Support', icon: '💬', section: 'CUSTOMER_SUPPORT' },
-        { id: 'tickets', label: 'Tickets', icon: '🎫', section: 'TICKETS' },
-        { id: 'billing', label: 'Billing', icon: '💰', section: 'BILLING' },
-        { id: 'notifications', label: 'Notifications', icon: '🔔', section: 'NOTIFICATIONS' }
-    ];
-
     const handleSubmit = (e) => {
         e.preventDefault();
-        
-        // Collect all permission IDs including warehouse permissions
-        const allPermissionIds = [...formData.permissionIds];
-        
-        // Add warehouse permissions based on selections
-        Object.entries(warehousePermissions).forEach(([warehouseCode, perms]) => {
-            Object.entries(perms).forEach(([permType, isSelected]) => {
-                if (isSelected) {
-                    const permName = `WAREHOUSE_${warehouseCode}_${permType}`;
-                    const perm = permissions.find(p => p.name === permName);
-                    if (perm && !allPermissionIds.includes(perm.id)) {
-                        allPermissionIds.push(perm.id);
-                    }
-                }
-            });
-        });
-        
-        onSave({ ...formData, permissionIds: allPermissionIds });
+        onSave(formData);
     };
 
     const togglePermission = (permissionId) => {
@@ -104,58 +94,20 @@ export default function RoleModalNew({ role, permissions, onSave, onClose }) {
         setFormData({ ...formData, permissionIds: newPermissionIds });
     };
 
-    const toggleWarehouse = (warehouseCode) => {
-        if (selectedWarehouses.includes(warehouseCode)) {
-            setSelectedWarehouses(selectedWarehouses.filter(w => w !== warehouseCode));
-            // Remove warehouse permissions
-            const newWarehousePerms = { ...warehousePermissions };
-            delete newWarehousePerms[warehouseCode];
-            setWarehousePermissions(newWarehousePerms);
-        } else {
-            setSelectedWarehouses([...selectedWarehouses, warehouseCode]);
-            // Initialize warehouse permissions
-            setWarehousePermissions({
-                ...warehousePermissions,
-                [warehouseCode]: {
-                    VIEW: false,
-                    EDIT: false,
-                    ORDERS_VIEW: false,
-                    ORDERS_EDIT: false,
-                    MANAGE: false,
-                    REPORTS: false
-                }
-            });
-        }
-    };
-
-    const toggleWarehousePermission = (warehouseCode, permType) => {
-        setWarehousePermissions({
-            ...warehousePermissions,
-            [warehouseCode]: {
-                ...warehousePermissions[warehouseCode],
-                [permType]: !warehousePermissions[warehouseCode]?.[permType]
-            }
-        });
-    };
-
     const selectAllInTab = () => {
         const currentTab = tabs.find(t => t.id === activeTab);
         if (!currentTab) return;
         
         const sectionPerms = groupedPermissions[currentTab.section] || [];
         const sectionPermIds = sectionPerms.map(p => p.id);
-        
-        // Check if all are selected
         const allSelected = sectionPermIds.every(id => formData.permissionIds.includes(id));
         
         if (allSelected) {
-            // Deselect all
             setFormData({
                 ...formData,
                 permissionIds: formData.permissionIds.filter(id => !sectionPermIds.includes(id))
             });
         } else {
-            // Select all
             const newPermissionIds = [...new Set([...formData.permissionIds, ...sectionPermIds])];
             setFormData({ ...formData, permissionIds: newPermissionIds });
         }
@@ -165,158 +117,6 @@ export default function RoleModalNew({ role, permissions, onSave, onClose }) {
         const currentTab = tabs.find(t => t.id === activeTab);
         if (!currentTab) return null;
 
-        // Special handling for warehouse tab
-        if (currentTab.id === 'warehouse') {
-            return (
-                <div className={styles.warehouseAccessTab}>
-                    {/* Warehouse Management Permissions */}
-                    <div className={styles.permissionSection}>
-                        <h4>Warehouse & Store Management</h4>
-                        <div className={styles.permissionGrid}>
-                            {(groupedPermissions['WAREHOUSE'] || [])
-                                .filter(p => p.name === 'WAREHOUSE_MANAGEMENT' || p.name === 'STORE_MANAGEMENT')
-                                .map((permission) => (
-                                    <label key={permission.id} className={styles.permissionCheckbox}>
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.permissionIds.includes(permission.id)}
-                                            onChange={() => togglePermission(permission.id)}
-                                        />
-                                        <span>{permission.display_name}</span>
-                                    </label>
-                                ))}
-                        </div>
-                    </div>
-
-                    {/* Warehouse-Specific Access */}
-                    <div className={styles.permissionSection}>
-                        <h4>Warehouse-Specific Access</h4>
-                        <p className={styles.sectionDescription}>
-                            Select warehouses and assign specific permissions for each
-                        </p>
-                        
-                        {/* Warehouse Selection Dropdown */}
-                        <div className={styles.warehouseDropdown}>
-                            <label>Select Warehouses:</label>
-                            <div className={styles.dropdownContainer}>
-                                <div 
-                                    className={`${styles.dropdownHeader} ${dropdownOpen ? styles.open : ''}`}
-                                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                                >
-                                    {selectedWarehouses.length === 0 ? (
-                                        <span className={styles.dropdownPlaceholder}>Choose warehouses...</span>
-                                    ) : (
-                                        <span className={styles.dropdownSelectedCount}>
-                                            {selectedWarehouses.length} warehouse(s) selected
-                                        </span>
-                                    )}
-                                    <svg 
-                                        className={`${styles.dropdownArrow} ${dropdownOpen ? styles.open : ''}`}
-                                        width="16" 
-                                        height="16" 
-                                        viewBox="0 0 20 20" 
-                                        fill="currentColor"
-                                    >
-                                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                                {dropdownOpen && (
-                                    <div className={styles.dropdownList}>
-                                        {warehouses.length === 0 ? (
-                                            <div className={styles.emptyWarehouseState}>
-                                                <p>No warehouses available</p>
-                                            </div>
-                                        ) : (
-                                            warehouses.map((warehouse) => (
-                                                <div key={warehouse.id} className={styles.dropdownItem}>
-                                                    <input
-                                                        type="checkbox"
-                                                        id={`warehouse-${warehouse.warehouse_code}`}
-                                                        checked={selectedWarehouses.includes(warehouse.warehouse_code)}
-                                                        onChange={() => toggleWarehouse(warehouse.warehouse_code)}
-                                                    />
-                                                    <label htmlFor={`warehouse-${warehouse.warehouse_code}`}>
-                                                        {warehouse.warehouse_name} ({warehouse.warehouse_code})
-                                                    </label>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Selected Warehouses Permissions */}
-                        {selectedWarehouses.length > 0 && (
-                            <div className={styles.selectedWarehouses}>
-                                {selectedWarehouses.map((warehouseCode) => {
-                                    const warehouse = warehouses.find(w => w.warehouse_code === warehouseCode);
-                                    if (!warehouse) return null;
-
-                                    return (
-                                        <div key={warehouseCode} className={styles.warehousePermissionCard}>
-                                            <h5>{warehouse.warehouse_name}</h5>
-                                            <div className={styles.warehousePermissionGrid}>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={warehousePermissions[warehouseCode]?.VIEW || false}
-                                                        onChange={() => toggleWarehousePermission(warehouseCode, 'VIEW')}
-                                                    />
-                                                    <span>View Inventory</span>
-                                                </label>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={warehousePermissions[warehouseCode]?.EDIT || false}
-                                                        onChange={() => toggleWarehousePermission(warehouseCode, 'EDIT')}
-                                                    />
-                                                    <span>Edit Inventory</span>
-                                                </label>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={warehousePermissions[warehouseCode]?.ORDERS_VIEW || false}
-                                                        onChange={() => toggleWarehousePermission(warehouseCode, 'ORDERS_VIEW')}
-                                                    />
-                                                    <span>View Orders</span>
-                                                </label>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={warehousePermissions[warehouseCode]?.ORDERS_EDIT || false}
-                                                        onChange={() => toggleWarehousePermission(warehouseCode, 'ORDERS_EDIT')}
-                                                    />
-                                                    <span>Edit Orders</span>
-                                                </label>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={warehousePermissions[warehouseCode]?.MANAGE || false}
-                                                        onChange={() => toggleWarehousePermission(warehouseCode, 'MANAGE')}
-                                                    />
-                                                    <span>Manage Settings</span>
-                                                </label>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={warehousePermissions[warehouseCode]?.REPORTS || false}
-                                                        onChange={() => toggleWarehousePermission(warehouseCode, 'REPORTS')}
-                                                    />
-                                                    <span>Generate Reports</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        // Regular permission tabs
         const sectionPerms = groupedPermissions[currentTab.section] || [];
         
         if (sectionPerms.length === 0) {
@@ -328,112 +128,174 @@ export default function RoleModalNew({ role, permissions, onSave, onClose }) {
         }
 
         return (
-            <div className={styles.permissionSection}>
-                <div className={styles.sectionHeader}>
-                    <h4>{currentTab.label} Permissions</h4>
-                    <button 
-                        type="button" 
-                        className={styles.selectAllButton}
-                        onClick={selectAllInTab}
-                    >
-                        {sectionPerms.every(p => formData.permissionIds.includes(p.id)) 
-                            ? 'Deselect All' 
-                            : 'Select All'}
-                    </button>
-                </div>
-                <div className={styles.permissionGrid}>
-                    {sectionPerms.map((permission) => (
-                        <label key={permission.id} className={styles.permissionCheckbox}>
-                            <input
-                                type="checkbox"
-                                checked={formData.permissionIds.includes(permission.id)}
-                                onChange={() => togglePermission(permission.id)}
-                            />
-                            <span className={permission.is_dangerous ? styles.dangerousPermission : ''}>
-                                {permission.display_name}
-                                {permission.is_dangerous && <span className={styles.dangerBadge}>⚠️</span>}
-                            </span>
-                        </label>
-                    ))}
+            <div className={styles.fullPagePermissionSection}>
+                <div className={styles.fullPagePermissionGrid}>
+                    {sectionPerms.map((permission) => {
+                        const isEnabled = formData.permissionIds.includes(permission.id);
+                        return (
+                            <div key={permission.id} className={styles.permissionCard}>
+                                {permission.is_dangerous && (
+                                    <div className={styles.criticalBadge}>
+                                        <span>⚠ CRITICAL</span>
+                                    </div>
+                                )}
+                                
+                                <div className={styles.permissionInfo}>
+                                    <h4 className={styles.permissionTitle}>
+                                        {permission.display_name}
+                                    </h4>
+                                    <p className={styles.permissionDescription}>
+                                        {permission.description || 'Manage access and control for this feature.'}
+                                    </p>
+                                </div>
+                                
+                                <label className={styles.toggleSwitch}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isEnabled}
+                                        onChange={() => togglePermission(permission.id)}
+                                    />
+                                    <span className={styles.toggleSlider}></span>
+                                </label>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );
     };
 
     return (
-        <div className={styles.modalOverlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                <div className={styles.modalHeader}>
-                    <h2>{role ? 'Edit Role' : 'Create Role'}</h2>
-                    <button className={styles.closeButton} onClick={onClose}>×</button>
-                </div>
-                
-                <form onSubmit={handleSubmit} className={styles.modalForm}>
-                    {/* Basic Info */}
-                    <div className={styles.formRow}>
-                        <div className={styles.formGroup}>
-                            <label>Name</label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                required
-                                placeholder="e.g., warehouse_manager"
-                            />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>Display Name</label>
-                            <input
-                                type="text"
-                                value={formData.display_name}
-                                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                                required
-                                placeholder="e.g., Warehouse Manager"
-                            />
-                        </div>
+        <div className={styles.fullPageModalOverlay} onClick={onClose}>
+            <div className={styles.fullPageModal} onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className={styles.fullPageHeader}>
+                    <button type="button" className={styles.fullPageCloseBtn} onClick={onClose} title="Close">
+                        ✕
+                    </button>
+                    <p className={styles.fullPageSubtitle}>
+                        Define the permission scope and access levels for organization members.
+                    </p>
+                    <div className={styles.fullPageHeaderActions}>
+                        <button type="button" className={styles.fullPageCancelBtn} onClick={onClose}>
+                            Cancel
+                        </button>
+                        <button type="submit" form="roleForm" className={styles.fullPageSaveBtn}>
+                            Save Changes
+                        </button>
                     </div>
-                    
-                    <div className={styles.formRow}>
-                        <div className={styles.formGroup} style={{ flex: 3 }}>
-                            <label>Description</label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                rows={2}
-                                placeholder="Brief description of this role"
-                            />
+                </div>
+
+                <form id="roleForm" onSubmit={handleSubmit} className={styles.fullPageContent}>
+                    {/* Two Column Layout */}
+                    <div className={styles.fullPageTwoColumn}>
+                        {/* Left Column - General Information */}
+                        <div className={styles.fullPageCard}>
+                            <h2 className={styles.fullPageCardTitle}>General Information</h2>
+                            
+                            <div className={styles.fullPageFormRow}>
+                                <div className={styles.fullPageFormGroup}>
+                                    <label>Role Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="e.g. Operations Manager"
+                                        required
+                                    />
+                                </div>
+                                <div className={styles.fullPageFormGroup}>
+                                    <label>Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.display_name}
+                                        onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                                        placeholder="e.g. OPS_MGR_01"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.fullPageFormGroup}>
+                                <label>Description</label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="Describe the responsibilities and access context for this role..."
+                                    rows={4}
+                                />
+                            </div>
                         </div>
-                        <div className={styles.formGroup} style={{ flex: 1 }}>
-                            <label>Color</label>
-                            <input
-                                type="color"
-                                value={formData.color}
-                                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                            />
+
+                        {/* Right Column - Visual Identity */}
+                        <div className={styles.fullPageCard}>
+                            <h2 className={styles.fullPageCardTitle}>Visual Identity</h2>
+                            <p className={styles.fullPageCardDesc}>
+                                Select a color tag for role identification across the system.
+                            </p>
+                            
+                            <div className={styles.fullPageColorGrid}>
+                                {colorOptions.map((color) => (
+                                    <button
+                                        key={color.id}
+                                        type="button"
+                                        onClick={() => handleColorSelect(color)}
+                                        className={`${styles.fullPageColorBtn} ${selectedColor === color.value ? styles.fullPageColorSelected : ''}`}
+                                        style={{ backgroundColor: color.value }}
+                                        title={color.name}
+                                    />
+                                ))}
+                                <button
+                                    type="button"
+                                    className={styles.fullPageColorCustom}
+                                    title="Custom color"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            <div className={styles.fullPageColorPreview}>
+                                <div 
+                                    className={styles.fullPageColorDot} 
+                                    style={{ backgroundColor: selectedColor }}
+                                />
+                                <div>
+                                    <div className={styles.fullPageColorLabel}>Kinetic Obsidian</div>
+                                    <div className={styles.fullPageColorSub}>Active branding profile applied.</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Permission Tabs */}
-                    <div className={styles.formGroup}>
-                        <label>Permissions</label>
-                        
+                    {/* Permissions Section */}
+                    <div className={styles.fullPagePermissionsWrapper}>
                         {/* Tab Navigation */}
-                        <div className={styles.tabNavigation}>
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    className={`${styles.tabButton} ${activeTab === tab.id ? styles.activeTabButton : ''}`}
-                                    onClick={() => setActiveTab(tab.id)}
-                                >
-                                    <span className={styles.tabIcon}>{tab.icon}</span>
-                                    <span className={styles.tabLabel}>{tab.label}</span>
-                                </button>
-                            ))}
+                        <div className={styles.fullPageTabsWrapper}>
+                            <div className={styles.fullPageTabs}>
+                                <button type="button" className={styles.fullPageTabArrow}>‹</button>
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        className={`${styles.fullPageTab} ${activeTab === tab.id ? styles.fullPageTabActive : ''}`}
+                                        onClick={() => setActiveTab(tab.id)}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                                <button type="button" className={styles.fullPageTabArrow}>›</button>
+                            </div>
+                            <button 
+                                type="button" 
+                                className={styles.fullPageSelectAllTop}
+                                onClick={selectAllInTab}
+                            >
+                                ✓ Select All
+                            </button>
                         </div>
 
                         {/* Tab Content */}
-                        <div className={styles.tabContentArea}>
+                        <div className={styles.fullPageTabContent}>
                             {loading ? (
                                 <div className={styles.loadingState}>Loading...</div>
                             ) : (
@@ -442,13 +304,13 @@ export default function RoleModalNew({ role, permissions, onSave, onClose }) {
                         </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className={styles.modalActions}>
-                        <button type="button" className={styles.secondaryButton} onClick={onClose}>
+                    {/* Bottom Actions */}
+                    <div className={styles.fullPageFooter}>
+                        <button type="button" className={styles.fullPageCancelBtn} onClick={onClose}>
                             Cancel
                         </button>
-                        <button type="submit" className={styles.primaryButton}>
-                            {role ? 'Update Role' : 'Create Role'}
+                        <button type="submit" className={styles.fullPageSaveBtn}>
+                            Create Role
                         </button>
                     </div>
                 </form>

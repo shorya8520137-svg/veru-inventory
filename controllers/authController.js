@@ -4,6 +4,7 @@ const { generateToken, getUserPermissions } = require('../middleware/auth');
 const ExistingSchemaNotificationService = require('../services/ExistingSchemaNotificationService');
 const IPGeolocationTracker = require('../IPGeolocationTracker');
 const TwoFactorAuthService = require('../services/TwoFactorAuthService');
+const auditLogger = require('../EnhancedAuditLogger');
 
 /**
  * LOGIN USER (with 2FA support)
@@ -59,6 +60,15 @@ exports.login = async (req, res) => {
 
             if (users.length === 0) {
                 console.log('❌ User not found:', identifier);
+                
+                // Log failed login attempt
+                await auditLogger.logEvent('USER_LOGIN_FAILED', {
+                    email: identifier,
+                    reason: 'User not found',
+                    status: 'FAILURE',
+                    responseStatus: 401
+                }, req, null);
+                
                 return res.status(401).json({
                     success: false,
                     message: 'Invalid credentials'
@@ -87,6 +97,16 @@ exports.login = async (req, res) => {
 
             if (!passwordValid) {
                 console.log('❌ Invalid password for user:', identifier);
+                
+                // Log failed login attempt
+                await auditLogger.logEvent('USER_LOGIN_FAILED', {
+                    email: identifier,
+                    user_id: user.id,
+                    reason: 'Invalid password',
+                    status: 'FAILURE',
+                    responseStatus: 401
+                }, req, null);
+                
                 return res.status(401).json({
                     success: false,
                     message: 'Invalid credentials'
@@ -109,6 +129,15 @@ exports.login = async (req, res) => {
                 try {
                     const verification = await TwoFactorAuthService.verifyLoginToken(user.id, two_factor_token);
                     if (!verification.success) {
+                        // Log failed 2FA verification
+                        await auditLogger.logEvent('2FA_VERIFY_FAILED', {
+                            user_id: user.id,
+                            email: user.email,
+                            reason: 'Invalid 2FA token',
+                            status: 'FAILURE',
+                            responseStatus: 400
+                        }, req, user.id);
+                        
                         return res.status(400).json({
                             success: false,
                             message: 'Invalid 2FA token'
@@ -116,11 +145,30 @@ exports.login = async (req, res) => {
                     }
                     
                     console.log(`✅ 2FA verification successful (${verification.method})`);
+                    
+                    // Log successful 2FA verification
+                    await auditLogger.logEvent('2FA_VERIFY_SUCCESS', {
+                        user_id: user.id,
+                        email: user.email,
+                        method: verification.method,
+                        responseStatus: 200
+                    }, req, user.id);
+                    
                     if (verification.remaining_codes !== undefined) {
                         console.log(`⚠️ Backup codes remaining: ${verification.remaining_codes}`);
                     }
                 } catch (twoFactorError) {
                     console.error('2FA verification error:', twoFactorError);
+                    
+                    // Log 2FA verification error
+                    await auditLogger.logEvent('2FA_VERIFY_FAILED', {
+                        user_id: user.id,
+                        email: user.email,
+                        error: twoFactorError.message,
+                        status: 'FAILURE',
+                        responseStatus: 400
+                    }, req, user.id);
+                    
                     return res.status(400).json({
                         success: false,
                         message: 'Invalid 2FA token'
@@ -144,6 +192,16 @@ exports.login = async (req, res) => {
                 });
 
                 console.log('✅ Login successful for user:', user.email);
+
+                // Log successful login with EnhancedAuditLogger
+                await auditLogger.logEvent('USER_LOGIN_SUCCESS', {
+                    resourceId: user.id,
+                    loginMethod: user.two_factor_enabled ? '2FA' : 'PASSWORD',
+                    responseStatus: 200
+                }, req, user.id);
+
+                // Track session
+                await auditLogger.trackSession(user.id, token, req);
 
                 // Send login notification to other users
                 try {
@@ -281,16 +339,34 @@ exports.getCurrentUser = async (req, res) => {
 /**
  * LOGOUT USER
  */
-exports.logout = (req, res) => {
-    // In a more sophisticated setup, you might want to blacklist the token
-    // For now, we'll just return success and let the frontend handle token removal
-    
-    console.log('🚪 User logged out:', req.user.email);
-    
-    res.json({
-        success: true,
-        message: 'Logged out successfully'
-    });
+exports.logout = async (req, res) => {
+    try {
+        // Log logout event
+        await auditLogger.logEvent('USER_LOGOUT', {
+            resourceId: req.user?.id,
+            responseStatus: 200
+        }, req, req.user?.id);
+        
+        // End session if session token is available
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.substring(7);
+            await auditLogger.endSession(token);
+        }
+        
+        console.log('🚪 User logged out:', req.user?.email || 'Unknown');
+        
+        res.json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
 };
 
 /**
@@ -340,6 +416,14 @@ exports.changePassword = async (req, res) => {
             const currentPasswordValid = await bcrypt.compare(currentPassword, user.password);
             
             if (!currentPasswordValid) {
+                // Log failed password change attempt
+                await auditLogger.logEvent('PASSWORD_CHANGE_FAILED', {
+                    user_id: userId,
+                    reason: 'Current password incorrect',
+                    status: 'FAILURE',
+                    responseStatus: 401
+                }, req, userId);
+                
                 return res.status(401).json({
                     success: false,
                     message: 'Current password is incorrect'
@@ -363,6 +447,12 @@ exports.changePassword = async (req, res) => {
                 }
 
                 console.log('✅ Password changed for user:', req.user.email);
+
+                // Log successful password change
+                await auditLogger.logEvent('PASSWORD_CHANGE', {
+                    user_id: userId,
+                    responseStatus: 200
+                }, req, userId);
 
                 res.json({
                     success: true,

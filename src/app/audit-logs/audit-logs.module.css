@@ -1,0 +1,608 @@
+/* ================= MODERN AUDIT LOGS - SCREENSHOT DESIGN ================= */
+
+.container {
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #F5F7FA;
+    padding: 32px 40px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ================= HEADER ================= */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.headerLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.liveDot {
+    width: 8px;
+    height: 8px;
+    background: #10B981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.liveText {
+    font-size: 11px;
+    font-weight: 700;
+    color: #10B981;
+    letter-spacing: 0.08em;
+}
+
+.title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Auto-Refresh Toggle */
+.autoRefreshToggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.autoRefreshToggle input[type="checkbox"] {
+    display: none;
+}
+
+.toggleSlider {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: #CBD5E1;
+    border-radius: 12px;
+    transition: background 0.3s;
+}
+
+.toggleSlider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.3s;
+}
+
+.autoRefreshToggle input:checked + .toggleSlider {
+    background: #3B82F6;
+}
+
+.autoRefreshToggle input:checked + .toggleSlider::before {
+    transform: translateX(20px);
+}
+
+.exportBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.exportBtn:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+}
+
+/* ================= STATS GRID ================= */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.statCard {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.2s;
+}
+
+.statCard:hover {
+    border-color: #CBD5E1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+}
+
+.statLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.statNumber {
+    font-size: 36px;
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 8px;
+}
+
+.statChange,
+.statSubtext {
+    font-size: 13px;
+    color: #64748B;
+}
+
+.statChangePositive {
+    color: #10B981;
+    font-weight: 600;
+}
+
+.statChangeInfo {
+    color: #3B82F6;
+    font-weight: 500;
+}
+
+/* ================= FILTERS ================= */
+.filtersCard {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+}
+
+.filtersRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.searchBox {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.searchBox svg {
+    position: absolute;
+    left: 14px;
+    color: #94A3B8;
+}
+
+.searchBox input {
+    width: 100%;
+    padding: 10px 14px 10px 40px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #1E293B;
+    background: #F8FAFC;
+    transition: all 0.2s;
+}
+
+.searchBox input:focus {
+    outline: none;
+    border-color: #3B82F6;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.searchBox input::placeholder {
+    color: #94A3B8;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filterGroup label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.filterGroup select {
+    padding: 10px 14px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #1E293B;
+    background: #F8FAFC;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 140px;
+}
+
+.filterGroup select:focus {
+    outline: none;
+    border-color: #3B82F6;
+    background: #FFFFFF;
+}
+
+.dateRange {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    background: #F8FAFC;
+    cursor: pointer;
+    font-size: 14px;
+    color: #1E293B;
+    white-space: nowrap;
+}
+
+.dateRange svg {
+    color: #64748B;
+}
+
+.filterToggle {
+    padding: 10px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filterToggle:hover {
+    background: #FFFFFF;
+    border-color: #CBD5E1;
+}
+
+.filterToggle svg {
+    color: #64748B;
+}
+
+/* ================= TABLE ================= */
+.tableCard {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table thead {
+    background: #F8FAFC;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.table th {
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid #F1F5F9;
+    transition: background 0.2s;
+}
+
+.table tbody tr:hover {
+    background: #F8FAFC;
+}
+
+.table td {
+    padding: 20px;
+    vertical-align: middle;
+}
+
+/* User Cell */
+.userCell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.userAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.userInitials {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #3B82F6;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.userInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.userName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.userEmail {
+    font-size: 12px;
+    color: #64748B;
+}
+
+/* Action Badge */
+.actionBadge {
+    display: inline-flex;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badgeCreate {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.badgeUpdate {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.badgeDelete {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.badgeLogin {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.badgeDefault {
+    background: #F1F5F9;
+    color: #475569;
+}
+
+/* Resource Cell */
+.resourceCell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.resourceName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.resourceDesc {
+    font-size: 12px;
+    color: #64748B;
+}
+
+/* Metadata Cell */
+.metadataCell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.metadataRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.metadataLabel {
+    font-weight: 600;
+    color: #64748B;
+}
+
+.metadataValue {
+    color: #1E293B;
+}
+
+/* Timestamp Cell */
+.timestampCell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.timeAgo {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.timeExact {
+    font-size: 11px;
+    color: #64748B;
+}
+
+/* Expand Button */
+.expandBtn {
+    padding: 8px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expandBtn:hover {
+    background: #F1F5F9;
+}
+
+.expandBtn svg {
+    color: #94A3B8;
+}
+
+/* Empty State */
+.emptyState {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.emptyState div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.emptyState svg {
+    color: #CBD5E1;
+}
+
+.emptyState h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+}
+
+.emptyState p {
+    font-size: 14px;
+    color: #94A3B8;
+    margin: 0;
+}
+
+/* Loading State */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 16px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #E2E8F0;
+    border-top-color: #3B82F6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading p {
+    font-size: 14px;
+    color: #64748B;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1200px) {
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+
+    .header {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .headerRight {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .statsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .filtersRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filterGroup {
+        width: 100%;
+    }
+
+    .table {
+        display: block;
+        overflow-x: auto;
+    }
+}
