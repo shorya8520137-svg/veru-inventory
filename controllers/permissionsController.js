@@ -2,6 +2,17 @@ const db = require('../db/connection');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const AUDIT_EVENT_CATALOG = [
+    { group: 'Auth & Security', events: ['USER_LOGIN_SUCCESS', 'USER_LOGIN_FAILED', 'USER_LOGOUT', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', '2FA_ENABLE', '2FA_DISABLE', '2FA_VERIFY_FAILED', 'BACKUP_CODES_REGENERATE', 'NEW_DEVICE_LOGIN', 'NEW_IP_LOGIN', 'SESSION_EXPIRED', 'ACCOUNT_LOCK', 'ACCOUNT_UNLOCK'] },
+    { group: 'Users & Permissions', events: ['USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'USER_DISABLE', 'USER_ENABLE', 'USER_ROLE_CHANGE', 'ROLE_CREATE', 'ROLE_UPDATE', 'ROLE_DELETE', 'PERMISSION_ADD', 'PERMISSION_REMOVE', 'WAREHOUSE_ACCESS_CHANGE', 'SUPER_ADMIN_ACTION'] },
+    { group: 'Products', events: ['PRODUCT_CREATE', 'PRODUCT_UPDATE', 'PRODUCT_DELETE', 'PRODUCT_IMAGE_UPLOAD', 'PRODUCT_IMAGE_DELETE', 'PRODUCT_PRICE_CHANGE', 'PRODUCT_CATEGORY_CHANGE', 'PRODUCT_THRESHOLD_CHANGE', 'PRODUCT_BULK_UPLOAD', 'PRODUCT_BULK_UPLOAD_FAILED', 'PRODUCT_ACTIVATE', 'PRODUCT_DEACTIVATE'] },
+    { group: 'Inventory', events: ['STOCK_ADD', 'STOCK_REDUCE', 'STOCK_ADJUST', 'INVENTORY_TRANSFER', 'INVENTORY_RECEIVE', 'INVENTORY_REJECT', 'STOCK_MISMATCH_DETECTED', 'LOW_STOCK_ALERT', 'INVENTORY_COUNT_CORRECTED', 'STORE_INVENTORY_UPDATE', 'WAREHOUSE_INVENTORY_UPDATE', 'BATCH_UPDATE'] },
+    { group: 'Orders & Dispatch', events: ['ORDER_CREATE', 'ORDER_UPDATE', 'ORDER_CANCEL', 'ORDER_STATUS_CHANGE', 'PAYMENT_STATUS_CHANGE', 'CUSTOMER_DETAILS_CHANGE', 'ORDER_PRODUCT_ADD', 'ORDER_PRODUCT_REMOVE', 'ORDER_ASSIGN_WAREHOUSE', 'INVOICE_GENERATE', 'BILL_GENERATE', 'DISPATCH_CREATE', 'DISPATCH_UPDATE', 'DISPATCH_CANCEL', 'AWB_ADD', 'COURIER_ASSIGN', 'DISPATCH_STATUS_CHANGE', 'PACKAGE_SHIPPED', 'DELIVERY_COMPLETE', 'DELIVERY_FAILED', 'RETURN_TO_ORIGIN'] },
+    { group: 'Returns & Damage', events: ['RETURN_CREATE', 'RETURN_APPROVE', 'RETURN_REJECT', 'RETURN_RECEIVE', 'REFUND_INITIATE', 'REFUND_COMPLETE', 'DAMAGE_REPORT_CREATE', 'DAMAGE_RECOVERY_CREATE', 'DAMAGE_ITEM_RECOVERED', 'DAMAGE_ITEM_WRITTEN_OFF'] },
+    { group: 'Website & Support', events: ['WEBSITE_CUSTOMER_REGISTER', 'WEBSITE_CUSTOMER_LOGIN', 'WEBSITE_ORDER_CREATE', 'WEBSITE_PRODUCT_PUBLISH', 'WEBSITE_PRODUCT_UNPUBLISH', 'WEBSITE_PRODUCT_PRICE_CHANGE', 'SUPPORT_CONVERSATION_CREATE', 'SUPPORT_MESSAGE_SEND', 'TICKET_CREATE', 'TICKET_STATUS_CHANGE', 'TICKET_ASSIGN'] },
+    { group: 'API & System', events: ['API_KEY_CREATE', 'API_KEY_DELETE', 'API_KEY_REGENERATE', 'API_KEY_USED', 'API_KEY_AUTH_FAILED', 'WEBHOOK_RECEIVED', 'WEBHOOK_FAILED', 'SHIPROCKET_API_SUCCESS', 'SHIPROCKET_API_FAILED', 'DATABASE_CLEANUP_RUN', 'MIGRATION_EXECUTE', 'SETTINGS_CHANGE', 'EXPORT_GENERATE', 'REPORT_DOWNLOAD', 'AUTO_REFRESH_TOGGLE', 'SENSITIVE_PAGE_VIEW', 'BACKUP_CREATE', 'SERVER_HEALTH_FAILED'] }
+];
+
 class PermissionsController {
     // ================= AUTHENTICATION ================= //
     
@@ -846,42 +857,96 @@ class PermissionsController {
     // ================= AUDIT LOG ================= //
     
     static async getAuditLogs(req, res) {
-        const { page = 1, limit = 50, userId, action, resource } = req.query;
-        const offset = (page - 1) * limit;
-        
+        const {
+            page = 1,
+            limit = 50,
+            userId,
+            action,
+            resource,
+            eventType,
+            severity,
+            status,
+            search,
+            dateRange
+        } = req.query;
+        const safeLimit = Math.min(parseInt(limit, 10) || 50, 100);
+        const safePage = Math.max(parseInt(page, 10) || 1, 1);
+        const offset = (safePage - 1) * safeLimit;
+
         let whereClause = '1=1';
-        let params = [];
-        
+        const params = [];
+
         if (userId) {
             whereClause += ' AND al.user_id = ?';
             params.push(userId);
         }
-        
+
         if (action) {
             whereClause += ' AND al.action = ?';
             params.push(action);
         }
-        
+
         if (resource) {
             whereClause += ' AND al.resource_type = ?';
             params.push(resource);
         }
-        
-        // Query with enhanced columns (location_country, location_city) if they exist
+
+        if (eventType) {
+            whereClause += ' AND al.event_type = ?';
+            params.push(eventType);
+        }
+
+        if (severity) {
+            whereClause += ' AND al.severity = ?';
+            params.push(severity);
+        }
+
+        if (status) {
+            whereClause += ' AND al.status = ?';
+            params.push(status);
+        }
+
+        if (dateRange === 'today') {
+            whereClause += ' AND DATE(al.created_at) = CURDATE()';
+        } else if (dateRange === 'yesterday') {
+            whereClause += ' AND DATE(al.created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+        } else if (dateRange === '7d') {
+            whereClause += ' AND al.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+        } else if (dateRange === '30d') {
+            whereClause += ' AND al.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+        }
+
+        if (search) {
+            whereClause += `
+                AND (
+                    al.event_type LIKE ?
+                    OR al.action LIKE ?
+                    OR al.resource_type LIKE ?
+                    OR al.resource_id LIKE ?
+                    OR al.details LIKE ?
+                    OR al.ip_address LIKE ?
+                    OR u.name LIKE ?
+                    OR u.email LIKE ?
+                )
+            `;
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+
         const logsSql = `
-            SELECT 
+            SELECT
                 al.*,
                 al.resource_type as resource,
-                u.name as user_name,
-                u.email as user_email
+                u.name as joined_user_name,
+                u.email as joined_user_email
             FROM audit_logs al
             LEFT JOIN users u ON al.user_id = u.id
             WHERE ${whereClause}
             ORDER BY al.created_at DESC
             LIMIT ? OFFSET ?
         `;
-        
-        db.query(logsSql, [...params, parseInt(limit), parseInt(offset)], async (err, logs) => {
+
+        db.query(logsSql, [...params, safeLimit, offset], async (err, logs) => {
             if (err) {
                 console.error('Get audit logs error:', err);
                 return res.status(500).json({
@@ -918,18 +983,37 @@ class PermissionsController {
                     }
                 }
                 
+                let oldValues = log.old_values;
+                let newValues = log.new_values;
+                try {
+                    oldValues = typeof log.old_values === 'string' ? JSON.parse(log.old_values || 'null') : log.old_values;
+                } catch {
+                    oldValues = log.old_values;
+                }
+                try {
+                    newValues = typeof log.new_values === 'string' ? JSON.parse(log.new_values || 'null') : log.new_values;
+                } catch {
+                    newValues = log.new_values;
+                }
+
                 return {
                     ...log,
-                    details: details
+                    user_name: log.user_name || log.joined_user_name,
+                    user_email: log.user_email || log.joined_user_email,
+                    resource: log.resource || log.resource_type,
+                    details,
+                    old_values: oldValues,
+                    new_values: newValues
                 };
             }));
-            
+
             const countSql = `
                 SELECT COUNT(*) as total
                 FROM audit_logs al
+                LEFT JOIN users u ON al.user_id = u.id
                 WHERE ${whereClause}
             `;
-            
+
             db.query(countSql, params, (countErr, countResult) => {
                 if (countErr) {
                     console.error('Count audit logs error:', countErr);
@@ -938,24 +1022,57 @@ class PermissionsController {
                         message: 'Failed to fetch audit logs count'
                     });
                 }
-                
-                res.json({
-                    success: true,
-                    data: {
-                        logs: enhancedLogs,
-                        pagination: {
-                            page: parseInt(page),
-                            limit: parseInt(limit),
-                            total: countResult[0].total,
-                            pages: Math.ceil(countResult[0].total / limit)
-                        },
-                        stats: {
-                            properties: 10,
-                            returns: 0,
-                            damageReports: 0,
-                            userActions: enhancedLogs.length
-                        }
+
+                const statsSql = `
+                    SELECT
+                        COUNT(*) as totalEvents,
+                        SUM(CASE WHEN al.resource_type = 'PRODUCT' THEN 1 ELSE 0 END) as products,
+                        SUM(CASE WHEN al.resource_type = 'INVENTORY' THEN 1 ELSE 0 END) as inventory,
+                        SUM(CASE WHEN al.resource_type = 'ORDER' THEN 1 ELSE 0 END) as orders,
+                        SUM(CASE WHEN al.resource_type = 'DISPATCH' THEN 1 ELSE 0 END) as dispatches,
+                        SUM(CASE WHEN al.resource_type = 'RETURN' THEN 1 ELSE 0 END) as returns,
+                        SUM(CASE WHEN al.resource_type = 'DAMAGE' THEN 1 ELSE 0 END) as damageReports,
+                        SUM(CASE WHEN al.resource_type IN ('USER', 'ROLE', 'PERMISSION') THEN 1 ELSE 0 END) as userActions,
+                        SUM(CASE WHEN al.severity IN ('HIGH', 'CRITICAL') THEN 1 ELSE 0 END) as highRisk,
+                        SUM(CASE WHEN al.status = 'FAILURE' THEN 1 ELSE 0 END) as failedEvents,
+                        MAX(al.created_at) as lastActiveAt
+                    FROM audit_logs al
+                    LEFT JOIN users u ON al.user_id = u.id
+                    WHERE ${whereClause}
+                `;
+
+                db.query(statsSql, params, (statsErr, statsResult) => {
+                    const rawStats = statsErr ? {} : (statsResult[0] || {});
+                    if (statsErr) {
+                        console.error('Audit stats error:', statsErr);
                     }
+
+                    res.json({
+                        success: true,
+                        data: {
+                            logs: enhancedLogs,
+                            pagination: {
+                                page: safePage,
+                                limit: safeLimit,
+                                total: countResult[0].total,
+                                pages: Math.ceil(countResult[0].total / safeLimit)
+                            },
+                            stats: {
+                                totalEvents: Number(rawStats.totalEvents || 0),
+                                products: Number(rawStats.products || 0),
+                                inventory: Number(rawStats.inventory || 0),
+                                orders: Number(rawStats.orders || 0),
+                                dispatches: Number(rawStats.dispatches || 0),
+                                returns: Number(rawStats.returns || 0),
+                                damageReports: Number(rawStats.damageReports || 0),
+                                userActions: Number(rawStats.userActions || 0),
+                                highRisk: Number(rawStats.highRisk || 0),
+                                failedEvents: Number(rawStats.failedEvents || 0),
+                                lastActiveAt: rawStats.lastActiveAt || null
+                            },
+                            eventCatalog: AUDIT_EVENT_CATALOG
+                        },
+                    });
                 });
             });
         });

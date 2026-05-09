@@ -36,7 +36,19 @@ const CRITICAL_EVENTS = [
     'USER_LOGIN_FAILED',
     'USER_FORCE_LOGOUT',
     'USER_DISABLE',
+    'USER_DELETE',
+    'USER_ROLE_CHANGE',
     'PERMISSION_BULK_UPDATE',
+    'PERMISSION_ADD',
+    'PERMISSION_REMOVE',
+    'ROLE_DELETE',
+    'API_KEY_DELETE',
+    'API_KEY_REGENERATE',
+    'API_KEY_AUTH_FAILED',
+    '2FA_VERIFY_FAILED',
+    'ACCOUNT_LOCK',
+    'STOCK_MISMATCH_DETECTED',
+    'DAMAGE_ITEM_WRITTEN_OFF',
     'DATABASE_BACKUP',
     'DATABASE_RESTORE',
     'MAINTENANCE_MODE_ENABLE',
@@ -147,13 +159,21 @@ class EnhancedAuditLogger {
      * Parse action from event type
      */
     parseAction(eventType) {
-        if (eventType.includes('CREATE')) return 'CREATE';
-        if (eventType.includes('UPDATE') || eventType.includes('CHANGE')) return 'UPDATE';
-        if (eventType.includes('DELETE')) return 'DELETE';
-        if (eventType.includes('VIEW') || eventType.includes('ACCESS')) return 'VIEW';
-        if (eventType.includes('EXPORT')) return 'EXPORT';
         if (eventType.includes('LOGIN')) return 'LOGIN';
         if (eventType.includes('LOGOUT')) return 'LOGOUT';
+        if (eventType.includes('CREATE')) return 'CREATE';
+        if (eventType.includes('ADD')) return 'CREATE';
+        if (eventType.includes('REGENERATE')) return 'UPDATE';
+        if (eventType.includes('GENERATE')) return 'CREATE';
+        if (eventType.includes('UPDATE') || eventType.includes('CHANGE') || eventType.includes('ADJUST') || eventType.includes('ASSIGN')) return 'UPDATE';
+        if (eventType.includes('DELETE')) return 'DELETE';
+        if (eventType.includes('DISABLE') || eventType.includes('LOCK')) return 'DELETE';
+        if (eventType.includes('CANCEL') || eventType.includes('REJECT') || eventType.includes('FAILED')) return 'DELETE';
+        if (eventType.includes('APPROVE') || eventType.includes('RECEIVE') || eventType.includes('COMPLETE') || eventType.includes('SUCCESS')) return 'UPDATE';
+        if (eventType.includes('VIEW') || eventType.includes('ACCESS')) return 'VIEW';
+        if (eventType.includes('USED')) return 'VIEW';
+        if (eventType.includes('EXPORT')) return 'EXPORT';
+        if (eventType.includes('DOWNLOAD')) return 'EXPORT';
         return 'OTHER';
     }
 
@@ -175,6 +195,9 @@ class EnhancedAuditLogger {
         if (eventType.includes('BILL') || eventType.includes('INVOICE') || eventType.includes('PAYMENT')) return 'BILLING';
         if (eventType.includes('SUPPORT') || eventType.includes('TICKET')) return 'SUPPORT';
         if (eventType.includes('WEBSITE') || eventType.includes('CUSTOMER')) return 'WEBSITE';
+        if (eventType.includes('API_KEY') || eventType.includes('WEBHOOK')) return 'API';
+        if (eventType.includes('DELIVERY') || eventType.includes('COURIER') || eventType.includes('AWB') || eventType.includes('PACKAGE')) return 'DISPATCH';
+        if (eventType.includes('SESSION') || eventType.includes('2FA') || eventType.includes('PASSWORD') || eventType.includes('ACCOUNT')) return 'SECURITY';
         if (eventType.includes('SYSTEM') || eventType.includes('DATABASE')) return 'SYSTEM';
         return 'OTHER';
     }
