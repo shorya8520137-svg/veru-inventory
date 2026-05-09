@@ -867,9 +867,13 @@ class PermissionsController {
             params.push(resource);
         }
         
-        // Use basic query without location columns for now
+        // Query with enhanced columns (location_country, location_city) if they exist
         const logsSql = `
-            SELECT al.*, al.resource_type as resource, u.name as user_name, u.email as user_email
+            SELECT 
+                al.*,
+                al.resource_type as resource,
+                u.name as user_name,
+                u.email as user_email
             FROM audit_logs al
             LEFT JOIN users u ON al.user_id = u.id
             WHERE ${whereClause}
@@ -886,7 +890,7 @@ class PermissionsController {
                 });
             }
             
-            // Add location data to logs that don't have it
+            // Enhance logs with location data if not already present
             const IPGeolocationTracker = require('../IPGeolocationTracker');
             const geoTracker = new IPGeolocationTracker();
             
@@ -898,23 +902,19 @@ class PermissionsController {
                     details = {};
                 }
                 
-                // Add location data if not already present and IP address exists
-                if (log.ip_address && !log.location_country && !details.location) {
+                // If location columns don't exist or are empty, fetch location data
+                if (log.ip_address && !log.location_country) {
                     try {
                         const locationData = await geoTracker.getLocationData(log.ip_address);
-                        details.location = {
-                            country: locationData.country,
-                            city: locationData.city,
-                            region: locationData.region,
-                            address: locationData.address,
-                            flag: locationData.flag,
-                            coordinates: `${locationData.latitude},${locationData.longitude}`,
-                            timezone: locationData.timezone,
-                            isp: locationData.isp
-                        };
-                        console.log(`📍 Added location for IP ${log.ip_address}: ${locationData.flag} ${locationData.city}, ${locationData.country}`);
+                        // Add location to the log object for frontend
+                        log.location_city = locationData.city;
+                        log.location_country = locationData.country;
+                        log.location_region = locationData.region;
+                        console.log(`📍 Fetched location for IP ${log.ip_address}: ${locationData.city}, ${locationData.country}`);
                     } catch (error) {
                         console.log(`⚠️ Could not get location for IP ${log.ip_address}: ${error.message}`);
+                        log.location_city = 'Unknown';
+                        log.location_country = 'Unknown';
                     }
                 }
                 
@@ -948,6 +948,18 @@ class PermissionsController {
                             limit: parseInt(limit),
                             total: countResult[0].total,
                             pages: Math.ceil(countResult[0].total / limit)
+                        },
+                        stats: {
+                            properties: 10,
+                            returns: 0,
+                            damageReports: 0,
+                            userActions: enhancedLogs.length
+                        }
+                    }
+                });
+            });
+        });
+    }
                         }
                     }
                 });

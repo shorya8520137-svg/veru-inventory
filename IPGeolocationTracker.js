@@ -70,7 +70,8 @@ class IPGeolocationTracker {
             // Using ip-api.com (free, no API key required)
             const url = `http://ip-api.com/json/${ipAddress}?fields=status,message,country,regionName,city,query`;
             
-            const request = https.get(url.replace('http:', 'https:'), (response) => {
+            const http = require('http'); // Use http module for http:// URLs
+            const request = http.get(url, (response) => {
                 let data = '';
                 
                 response.on('data', (chunk) => {
