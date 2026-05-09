@@ -46,6 +46,7 @@ function formatCurrency(value) {
 export default function MarketplaceDashboard({ marketplace }) {
     const [activeTab, setActiveTab] = useState("listing");
     const [search, setSearch] = useState("");
+    const [showListingForm, setShowListingForm] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState(["HH-CRIB-101", "HH-CHAIR-310"]);
     const [listingForm, setListingForm] = useState({
         sku: "HH-CRIB-101",
@@ -94,7 +95,11 @@ export default function MarketplaceDashboard({ marketplace }) {
                         <UploadCloud size={17} />
                         Bulk Sync
                     </button>
-                    <button className={styles.primaryButton} style={{ background: marketplace.color }}>
+                    <button
+                        className={styles.primaryButton}
+                        style={{ background: marketplace.color }}
+                        onClick={() => setShowListingForm(true)}
+                    >
                         <Send size={17} />
                         List Selected
                     </button>
@@ -154,54 +159,21 @@ export default function MarketplaceDashboard({ marketplace }) {
                             </div>
                         </div>
 
-                        <form className={styles.listingForm}>
-                            <div className={styles.formField}>
-                                <label>Product</label>
-                                <select value={listingForm.sku} onChange={(event) => updateListingForm("sku", event.target.value)}>
-                                    {products.map((product) => (
-                                        <option key={product.sku} value={product.sku}>{product.name}</option>
-                                    ))}
-                                </select>
+                        <div className={styles.listingActionBar}>
+                            <div>
+                                <strong>{selectedProducts.length} products selected</strong>
+                                <span>Open the form to map category, price, buffer stock and fulfillment before publishing.</span>
                             </div>
-                            <div className={styles.formField}>
-                                <label>{marketplace.name} Category</label>
-                                <input
-                                    value={listingForm.marketplaceCategory}
-                                    onChange={(event) => updateListingForm("marketplaceCategory", event.target.value)}
-                                    placeholder="Marketplace category"
-                                />
-                            </div>
-                            <div className={styles.formField}>
-                                <label>Listing Price</label>
-                                <input
-                                    type="number"
-                                    value={listingForm.listingPrice}
-                                    onChange={(event) => updateListingForm("listingPrice", event.target.value)}
-                                    placeholder="Price"
-                                />
-                            </div>
-                            <div className={styles.formField}>
-                                <label>Stock Buffer</label>
-                                <input
-                                    type="number"
-                                    value={listingForm.stockBuffer}
-                                    onChange={(event) => updateListingForm("stockBuffer", event.target.value)}
-                                    placeholder="Buffer"
-                                />
-                            </div>
-                            <div className={styles.formField}>
-                                <label>Fulfillment</label>
-                                <select value={listingForm.fulfillment} onChange={(event) => updateListingForm("fulfillment", event.target.value)}>
-                                    <option>Marketplace Fulfilled</option>
-                                    <option>Seller Fulfilled</option>
-                                    <option>Warehouse Pickup</option>
-                                </select>
-                            </div>
-                            <button type="button" className={styles.formSubmit} style={{ background: marketplace.color }}>
+                            <button
+                                type="button"
+                                className={styles.formSubmit}
+                                style={{ background: marketplace.color }}
+                                onClick={() => setShowListingForm(true)}
+                            >
                                 <Send size={16} />
-                                Create Listing
+                                Create Listing Form
                             </button>
-                        </form>
+                        </div>
 
                         <div className={styles.productTable}>
                             <div className={styles.tableHeader}>
@@ -285,6 +257,79 @@ export default function MarketplaceDashboard({ marketplace }) {
                     </div>
                 )}
             </section>
+
+            {showListingForm && (
+                <div className={styles.modalOverlay} onClick={() => setShowListingForm(false)}>
+                    <form className={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <div>
+                                <span>{marketplace.name} Listing Form</span>
+                                <h2>Create Marketplace Listing</h2>
+                            </div>
+                            <button type="button" onClick={() => setShowListingForm(false)}>Close</button>
+                        </div>
+
+                        <div className={styles.modalGrid}>
+                            <div className={styles.formField}>
+                                <label>Product</label>
+                                <select value={listingForm.sku} onChange={(event) => updateListingForm("sku", event.target.value)}>
+                                    {products.map((product) => (
+                                        <option key={product.sku} value={product.sku}>{product.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className={styles.formField}>
+                                <label>{marketplace.name} Category</label>
+                                <input
+                                    value={listingForm.marketplaceCategory}
+                                    onChange={(event) => updateListingForm("marketplaceCategory", event.target.value)}
+                                    placeholder="Marketplace category"
+                                />
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Listing Price</label>
+                                <input
+                                    type="number"
+                                    value={listingForm.listingPrice}
+                                    onChange={(event) => updateListingForm("listingPrice", event.target.value)}
+                                    placeholder="Price"
+                                />
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Stock Buffer</label>
+                                <input
+                                    type="number"
+                                    value={listingForm.stockBuffer}
+                                    onChange={(event) => updateListingForm("stockBuffer", event.target.value)}
+                                    placeholder="Buffer"
+                                />
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Fulfillment</label>
+                                <select value={listingForm.fulfillment} onChange={(event) => updateListingForm("fulfillment", event.target.value)}>
+                                    <option>Marketplace Fulfilled</option>
+                                    <option>Seller Fulfilled</option>
+                                    <option>Warehouse Pickup</option>
+                                </select>
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Listing Notes</label>
+                                <input placeholder="Optional launch note" />
+                            </div>
+                        </div>
+
+                        <div className={styles.modalFooter}>
+                            <button type="button" className={styles.secondaryButton} onClick={() => setShowListingForm(false)}>
+                                Cancel
+                            </button>
+                            <button type="button" className={styles.primaryButton} style={{ background: marketplace.color }} onClick={() => setShowListingForm(false)}>
+                                <Send size={16} />
+                                Save Listing Draft
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }
