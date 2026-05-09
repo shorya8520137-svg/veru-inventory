@@ -1,0 +1,371 @@
+.page {
+    background: #f8fafc;
+    color: #0f172a;
+    min-height: 100%;
+    padding: 24px;
+}
+
+.hero {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 24px;
+}
+
+.kicker {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hero h1 {
+    font-size: 28px;
+    line-height: 1.15;
+    margin: 6px 0 8px;
+}
+
+.hero p,
+.panelToolbar p,
+.setupCard p,
+.orderCard p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.heroActions {
+    display: flex;
+    gap: 12px;
+}
+
+.primaryButton,
+.secondaryButton {
+    align-items: center;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 800;
+    gap: 8px;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 16px;
+    white-space: nowrap;
+}
+
+.primaryButton {
+    border: none;
+    color: #ffffff;
+}
+
+.secondaryButton {
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    color: #334155;
+}
+
+.metricsGrid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 16px;
+}
+
+.metricCard {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+}
+
+.metricCard svg {
+    color: #2563eb;
+}
+
+.metricCard span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.metricCard strong {
+    font-size: 28px;
+}
+
+.workspace {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-top: 16px;
+    overflow: hidden;
+}
+
+.tabs {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+}
+
+.tabs button {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 10px 14px;
+}
+
+.tabs .activeTab {
+    background: #ffffff;
+    border-color: #dbe3ee;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.panel {
+    padding: 20px;
+}
+
+.panelToolbar {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.panelToolbar h2 {
+    font-size: 20px;
+    margin: 0 0 6px;
+}
+
+.searchBox {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #dbe3ee;
+    border-radius: 8px;
+    display: flex;
+    gap: 8px;
+    min-width: 320px;
+    padding: 0 12px;
+}
+
+.searchBox svg {
+    color: #94a3b8;
+}
+
+.searchBox input {
+    background: transparent;
+    border: 0;
+    color: #0f172a;
+    font-size: 14px;
+    height: 42px;
+    outline: none;
+    width: 100%;
+}
+
+.productTable {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tableHeader,
+.tableRow {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(220px, 1.5fr) 1fr 80px 110px 120px 70px;
+    padding: 14px 16px;
+}
+
+.tableHeader {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.tableRow {
+    align-items: center;
+    border-top: 1px solid #eef2f7;
+    color: #334155;
+    font-size: 14px;
+}
+
+.tableRow strong {
+    color: #0f172a;
+    display: block;
+}
+
+.tableRow small {
+    color: #64748b;
+    display: block;
+    margin-top: 4px;
+}
+
+.statusPill {
+    background: #eef2ff;
+    border-radius: 999px;
+    color: #3730a3;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 800;
+    justify-content: center;
+    padding: 6px 10px;
+    width: fit-content;
+}
+
+.switch input {
+    display: none;
+}
+
+.switch span {
+    background: #cbd5e1;
+    border-radius: 999px;
+    cursor: pointer;
+    display: block;
+    height: 24px;
+    position: relative;
+    width: 44px;
+}
+
+.switch span::after {
+    background: #ffffff;
+    border-radius: 50%;
+    content: "";
+    height: 18px;
+    left: 3px;
+    position: absolute;
+    top: 3px;
+    transition: transform 0.2s;
+    width: 18px;
+}
+
+.switch input:checked + span {
+    background: #2563eb;
+}
+
+.switch input:checked + span::after {
+    transform: translateX(20px);
+}
+
+.orderBoard,
+.setupGrid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.orderCard,
+.setupCard {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.orderTop,
+.orderMeta {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.orderTop span {
+    background: #dcfce7;
+    border-radius: 999px;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 5px 9px;
+}
+
+.orderCard h3,
+.setupCard h3 {
+    font-size: 15px;
+    margin: 14px 0 6px;
+}
+
+.orderMeta {
+    border-top: 1px solid #eef2f7;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 14px;
+    padding-top: 12px;
+}
+
+.orderMeta span {
+    align-items: center;
+    display: inline-flex;
+    gap: 5px;
+}
+
+.setupCard svg {
+    color: #2563eb;
+}
+
+@media (max-width: 1180px) {
+    .metricsGrid,
+    .orderBoard,
+    .setupGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tableHeader,
+    .tableRow {
+        grid-template-columns: minmax(220px, 1.5fr) 1fr 70px 100px 110px 60px;
+    }
+}
+
+@media (max-width: 760px) {
+    .page {
+        padding: 16px;
+    }
+
+    .hero,
+    .panelToolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .heroActions,
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .metricsGrid,
+    .orderBoard,
+    .setupGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .searchBox {
+        min-width: 0;
+    }
+
+    .productTable {
+        overflow-x: auto;
+    }
+
+    .tableHeader,
+    .tableRow {
+        min-width: 760px;
+    }
+}

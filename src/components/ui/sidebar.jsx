@@ -25,7 +25,8 @@ import {
     Star,
     Sparkles,
     Building2,
-    Clock
+    Clock,
+    ShoppingBag
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { motion, AnimatePresence } from "framer-motion";
@@ -306,6 +307,42 @@ const InventoryMenu = ({ onOpenOperation }) => {
                                 >
                                     <Box size={collapsed ? 16 : 16} />
                                     {!collapsed && <span>Website Products</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* AMAZON MARKETPLACE */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link
+                                    href="/amazon"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/amazon"), collapsed }))}
+                                >
+                                    <ShoppingBag size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Amazon</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* FLIPKART MARKETPLACE */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link
+                                    href="/flipkart"
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/flipkart"), collapsed }))}
+                                >
+                                    <ShoppingBag size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Flipkart</span>}
                                 </Link>
                             </motion.div>
                         </SidebarMenuItem>
