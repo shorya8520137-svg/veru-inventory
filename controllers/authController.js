@@ -437,7 +437,7 @@ exports.changePassword = async (req, res) => {
             // Update password
             const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
             
-            db.query(updateQuery, [hashedNewPassword, userId], (updateErr) => {
+            db.query(updateQuery, [hashedNewPassword, userId], async (updateErr) => {
                 if (updateErr) {
                     console.error('Password update error:', updateErr);
                     return res.status(500).json({
