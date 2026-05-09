@@ -240,19 +240,18 @@
 }
 
 .modulePills button,
-.eventCatalog button {
+.eventCatalog span {
     border: 1px solid #E2E8F0;
     border-radius: 999px;
     background: #F8FAFC;
     color: #334155;
-    cursor: pointer;
+    display: inline-flex;
     font-size: 12px;
     font-weight: 700;
     padding: 7px 10px;
 }
 
-.modulePills button:hover,
-.eventCatalog button:hover {
+.modulePills button:hover {
     border-color: #93C5FD;
     background: #EFF6FF;
     color: #1D4ED8;
@@ -400,6 +399,23 @@
 
 .filterToggle svg {
     color: #64748B;
+}
+
+.clearFiltersBtn {
+    align-self: flex-end;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #475569;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 16px;
+}
+
+.clearFiltersBtn:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
 }
 
 /* ================= TABLE ================= */

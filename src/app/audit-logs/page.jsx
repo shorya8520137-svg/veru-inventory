@@ -30,7 +30,7 @@ export default function AuditLogsPage() {
         resource: '',
         severity: '',
         status: '',
-        dateRange: '7d',
+        dateRange: '',
         search: ''
     });
     const [stats, setStats] = useState({
@@ -64,6 +64,18 @@ export default function AuditLogsPage() {
 
     const updateFilter = (key, value) => {
         setFilters((current) => ({ ...current, [key]: value }));
+        setCurrentPage(1);
+    };
+
+    const clearFilters = () => {
+        setFilters({
+            action: '',
+            resource: '',
+            severity: '',
+            status: '',
+            dateRange: '',
+            search: ''
+        });
         setCurrentPage(1);
     };
 
@@ -290,9 +302,9 @@ export default function AuditLogsPage() {
                                 <summary>{group.group}</summary>
                                 <div>
                                     {group.events.slice(0, 12).map((eventName) => (
-                                        <button key={eventName} onClick={() => updateFilter('search', eventName)}>
+                                        <span key={eventName}>
                                             {eventName}
-                                        </button>
+                                        </span>
                                     ))}
                                 </div>
                             </details>
@@ -379,6 +391,10 @@ export default function AuditLogsPage() {
                             <option value="30d">Last 30 Days</option>
                         </select>
                     </div>
+
+                    <button className={styles.clearFiltersBtn} onClick={clearFilters}>
+                        Clear
+                    </button>
                 </div>
             </div>
 
