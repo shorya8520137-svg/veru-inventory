@@ -47,6 +47,13 @@ export default function MarketplaceDashboard({ marketplace }) {
     const [activeTab, setActiveTab] = useState("listing");
     const [search, setSearch] = useState("");
     const [selectedProducts, setSelectedProducts] = useState(["HH-CRIB-101", "HH-CHAIR-310"]);
+    const [listingForm, setListingForm] = useState({
+        sku: "HH-CRIB-101",
+        marketplaceCategory: "Baby Furniture",
+        listingPrice: "18999",
+        stockBuffer: "5",
+        fulfillment: "Marketplace Fulfilled"
+    });
 
     const filteredProducts = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -68,6 +75,10 @@ export default function MarketplaceDashboard({ marketplace }) {
                 ? current.filter((item) => item !== sku)
                 : [...current, sku]
         );
+    };
+
+    const updateListingForm = (field, value) => {
+        setListingForm((current) => ({ ...current, [field]: value }));
     };
 
     return (
@@ -142,6 +153,55 @@ export default function MarketplaceDashboard({ marketplace }) {
                                 />
                             </div>
                         </div>
+
+                        <form className={styles.listingForm}>
+                            <div className={styles.formField}>
+                                <label>Product</label>
+                                <select value={listingForm.sku} onChange={(event) => updateListingForm("sku", event.target.value)}>
+                                    {products.map((product) => (
+                                        <option key={product.sku} value={product.sku}>{product.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className={styles.formField}>
+                                <label>{marketplace.name} Category</label>
+                                <input
+                                    value={listingForm.marketplaceCategory}
+                                    onChange={(event) => updateListingForm("marketplaceCategory", event.target.value)}
+                                    placeholder="Marketplace category"
+                                />
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Listing Price</label>
+                                <input
+                                    type="number"
+                                    value={listingForm.listingPrice}
+                                    onChange={(event) => updateListingForm("listingPrice", event.target.value)}
+                                    placeholder="Price"
+                                />
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Stock Buffer</label>
+                                <input
+                                    type="number"
+                                    value={listingForm.stockBuffer}
+                                    onChange={(event) => updateListingForm("stockBuffer", event.target.value)}
+                                    placeholder="Buffer"
+                                />
+                            </div>
+                            <div className={styles.formField}>
+                                <label>Fulfillment</label>
+                                <select value={listingForm.fulfillment} onChange={(event) => updateListingForm("fulfillment", event.target.value)}>
+                                    <option>Marketplace Fulfilled</option>
+                                    <option>Seller Fulfilled</option>
+                                    <option>Warehouse Pickup</option>
+                                </select>
+                            </div>
+                            <button type="button" className={styles.formSubmit} style={{ background: marketplace.color }}>
+                                <Send size={16} />
+                                Create Listing
+                            </button>
+                        </form>
 
                         <div className={styles.productTable}>
                             <div className={styles.tableHeader}>

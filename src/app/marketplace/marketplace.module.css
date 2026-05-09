@@ -1,8 +1,10 @@
 .page {
-    background: #f8fafc;
+    background: #ffffff;
     color: #0f172a;
     min-height: 100%;
     padding: 24px;
+    overflow-x: hidden;
+    width: 100%;
 }
 
 .hero {
@@ -108,6 +110,7 @@
     border-radius: 8px;
     margin-top: 16px;
     overflow: hidden;
+    max-width: 100%;
 }
 
 .tabs {
@@ -138,6 +141,7 @@
 
 .panel {
     padding: 20px;
+    overflow-x: hidden;
 }
 
 .panelToolbar {
@@ -182,13 +186,14 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
+    width: 100%;
 }
 
 .tableHeader,
 .tableRow {
     display: grid;
-    gap: 16px;
-    grid-template-columns: minmax(220px, 1.5fr) 1fr 80px 110px 120px 70px;
+    gap: 12px;
+    grid-template-columns: minmax(180px, 1.35fr) minmax(110px, 0.8fr) 64px 96px 104px 56px;
     padding: 14px 16px;
 }
 
@@ -265,6 +270,67 @@
     transform: translateX(20px);
 }
 
+.listingForm {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(180px, 1.4fr) minmax(150px, 1fr) 120px 110px minmax(150px, 1fr) auto;
+    margin-bottom: 18px;
+    padding: 16px;
+}
+
+.formField {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.formField label {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.formField input,
+.formField select {
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-radius: 8px;
+    color: #0f172a;
+    font-size: 14px;
+    height: 40px;
+    outline: none;
+    padding: 0 11px;
+    width: 100%;
+}
+
+.formField input:focus,
+.formField select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.formSubmit {
+    align-items: center;
+    align-self: end;
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 800;
+    gap: 8px;
+    height: 40px;
+    justify-content: center;
+    padding: 0 14px;
+    white-space: nowrap;
+}
+
 .orderBoard,
 .setupGrid {
     display: grid;
@@ -330,7 +396,15 @@
 
     .tableHeader,
     .tableRow {
-        grid-template-columns: minmax(220px, 1.5fr) 1fr 70px 100px 110px 60px;
+        grid-template-columns: minmax(170px, 1.25fr) minmax(100px, 0.8fr) 60px 90px 100px 54px;
+    }
+
+    .listingForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .formSubmit {
+        width: fit-content;
     }
 }
 
@@ -362,10 +436,20 @@
 
     .productTable {
         overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .productTable::-webkit-scrollbar {
+        display: none;
     }
 
     .tableHeader,
     .tableRow {
         min-width: 760px;
+    }
+
+    .listingForm {
+        grid-template-columns: 1fr;
     }
 }
