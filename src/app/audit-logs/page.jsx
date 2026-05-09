@@ -244,13 +244,6 @@ export default function AuditLogsPage() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <div className={styles.headerLeft}>
-                    <div className={styles.liveIndicator}>
-                        <span className={styles.liveDot}></span>
-                        <span className={styles.liveText}>LIVE ACTIVITY</span>
-                    </div>
-                    <h1 className={styles.title}>System Audit Logs</h1>
-                </div>
                 <div className={styles.headerRight}>
                     <label className={styles.autoRefreshToggle}>
                         <span>Auto-Refresh</span>
