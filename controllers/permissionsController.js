@@ -960,12 +960,6 @@ class PermissionsController {
             });
         });
     }
-                        }
-                    }
-                });
-            });
-        });
-    }
     
     // ================= SYSTEM STATS ================= //
     
