@@ -390,6 +390,10 @@ class ApiKeysController {
             const method = req.method;
             console.log(`✅ API Call: ${method} ${endpoint} - Key ID: ${keyData.id}`);
 
+            res.on('finish', () => {
+                self.logApiUsage(keyData.id, req, res.statusCode);
+            });
+
             // Add API key info to request
             req.apiKey = keyData;
             req.user = { id: keyData.user_id, email: keyData.email };
@@ -398,13 +402,25 @@ class ApiKeysController {
         });
     }
 
-    // Log detailed API usage (disabled to prevent table errors)
-    logApiUsage(apiKeyId, req) {
-        // DISABLED: Prevents "Table 'api_usage_logs' doesn't exist" errors
+    // Log detailed API usage for profile analytics.
+    logApiUsage(apiKeyId, req, statusCode = null) {
         const endpoint = req.originalUrl || req.url;
         const method = req.method;
+        const ipAddress = req.ip || req.connection?.remoteAddress || null;
+        const userAgent = req.headers['user-agent'] || null;
+
+        const query = `
+            INSERT INTO api_usage_logs (
+                api_key_id, endpoint, method, ip_address, user_agent, status_code
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        `;
+
+        db.query(query, [apiKeyId, endpoint, method, ipAddress, userAgent, statusCode], (err) => {
+            if (err) {
+                console.warn('API usage log skipped:', err.message);
+            }
+        });
         console.log(`✅ API Call: ${method} ${endpoint} - Key ID: ${apiKeyId}`);
-        // Database logging disabled - no table needed
     }
 
     // Get API usage statistics
@@ -460,7 +476,7 @@ class ApiKeysController {
         }
     }
 
-    // Get detailed usage analytics (disabled to prevent table errors)
+    // Get detailed usage analytics
     async getUsageAnalytics(req, res) {
         try {
             const userId = req.user?.id;
@@ -473,15 +489,6 @@ class ApiKeysController {
                 });
             }
 
-            // DISABLED: Advanced analytics to prevent "Table 'api_usage_logs' doesn't exist" errors
-            // Return basic API usage instead
-            console.log('Advanced analytics disabled - api_usage_logs table not available');
-            
-            // Fallback to basic API usage stats
-            return this.getApiUsage(req, res);
-            
-            // TODO: Uncomment below after running database fixes to create api_usage_logs table
-            /*
             // Get usage by endpoint (if logs table exists)
             const endpointQuery = `
                 SELECT 
@@ -516,7 +523,7 @@ class ApiKeysController {
             db.query(endpointQuery, [userId, days], (err, endpointStats) => {
                 if (err) {
                     console.error('Error fetching endpoint stats:', err);
-                    return this.getApiUsage(req, res);
+                    return ApiKeysController.prototype.getApiUsage(req, res);
                 }
 
                 db.query(dailyQuery, [userId, days], (err, dailyStats) => {
@@ -529,21 +536,16 @@ class ApiKeysController {
                         success: true,
                         data: {
                             endpoint_usage: endpointStats || [],
-                            daily_usage: dailyStats || [],
+                            daily_usage: (dailyStats || []).reverse(),
                             period_days: days
                         }
                     });
                 });
             });
-            */
 
         } catch (error) {
             console.error('Error fetching usage analytics:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch usage analytics',
-                error: error.message
-            });
+            return ApiKeysController.prototype.getApiUsage(req, res);
         }
     }
 }

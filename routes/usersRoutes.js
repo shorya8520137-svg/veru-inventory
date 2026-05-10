@@ -81,17 +81,25 @@ router.get('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'), 
 
 // PUT /api/users/profile - Update current user profile
 router.put('/profile', authenticateToken, upload.single('profile_image'), async (req, res) => {
+    let connection;
     try {
         const userId = req.user.id;
         const { name, email, phone, address } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name and email are required'
+            });
+        }
         
-        // Start transaction
-        await db.beginTransaction();
+        connection = await db.promise().getConnection();
+        await connection.beginTransaction();
         
         try {
             // Update user basic info
-            await db.execute(
-                'UPDATE users SET name = ?, email = ? WHERE id = ?',
+            await connection.execute(
+                'UPDATE users SET name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                 [name, email, userId]
             );
             
@@ -101,7 +109,7 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
                 profileImagePath = `/uploads/${req.file.filename}`;
                 
                 // Delete old profile image if exists
-                const [existingProfile] = await db.execute(
+                const [existingProfile] = await connection.execute(
                     'SELECT profile_image FROM user_profiles WHERE user_id = ?',
                     [userId]
                 );
@@ -115,7 +123,7 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
             }
             
             // Update or insert user profile
-            const [existingProfile] = await db.execute(
+            const [existingProfile] = await connection.execute(
                 'SELECT id FROM user_profiles WHERE user_id = ?',
                 [userId]
             );
@@ -132,23 +140,23 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
                 
                 updateValues.push(userId);
                 
-                await db.execute(
+                await connection.execute(
                     `UPDATE user_profiles SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`,
                     updateValues
                 );
             } else {
                 // Insert new profile
-                await db.execute(
+                await connection.execute(
                     'INSERT INTO user_profiles (user_id, profile_image, phone, address) VALUES (?, ?, ?, ?)',
                     [userId, profileImagePath, phone || null, address || null]
                 );
             }
             
             // Commit transaction
-            await db.commit();
+            await connection.commit();
             
             // Fetch updated user data
-            const [updatedUser] = await db.execute(`
+            const [updatedUser] = await connection.execute(`
                 SELECT 
                     u.id,
                     u.name,
@@ -172,7 +180,7 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
             });
             
         } catch (error) {
-            await db.rollback();
+            await connection.rollback();
             throw error;
         }
         
@@ -191,6 +199,10 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
             success: false,
             message: 'Failed to update profile'
         });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 });
 
