@@ -210,6 +210,8 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
 router.get('/profile', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
+        console.log('[Profile API] Fetching profile for user ID:', userId);
+        console.log('[Profile API] req.user:', req.user);
         
         const [user] = await db.execute(`
             SELECT 
@@ -229,13 +231,18 @@ router.get('/profile', authenticateToken, async (req, res) => {
             WHERE u.id = ?
         `, [userId]);
         
+        console.log('[Profile API] Query result:', user);
+        console.log('[Profile API] Number of users found:', user.length);
+        
         if (user.length === 0) {
+            console.log('[Profile API] ERROR: User not found for ID:', userId);
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
         }
         
+        console.log('[Profile API] SUCCESS: Returning user data:', user[0]);
         res.json({
             success: true,
             user: user[0]
