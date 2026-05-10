@@ -42,8 +42,11 @@ const upload = multer({
  * USER PROFILE ROUTES
  */
 
+console.log('📝 usersRoutes.js loaded');
+
 // GET /api/users - Get all users (admin only)
 router.get('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'), async (req, res) => {
+    console.log('[GET /api/users] Fetching all users');
     try {
         const query = `
             SELECT 
@@ -208,6 +211,8 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
 
 // GET /api/users/profile - Get current user profile
 router.get('/profile', authenticateToken, async (req, res) => {
+    console.log('[GET /api/users/profile] Route hit!');
+    console.log('[GET /api/users/profile] req.user:', req.user);
     try {
         const userId = req.user.id;
         console.log('[Profile API] Fetching profile for user ID:', userId);

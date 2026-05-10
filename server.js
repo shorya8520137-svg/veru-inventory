@@ -81,6 +81,7 @@ app.use("/api", require("./routes/protectedRoutes"));
 app.use('/api', require('./routes/permissionsRoutes'));
 
 // users routes (profile management)
+console.log('📝 Registering /api/users routes');
 app.use('/api/users', require('./routes/usersRoutes'));
 
 // ===============================

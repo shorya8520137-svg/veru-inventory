@@ -1,0 +1,3 @@
+@echo off
+echo Deploying fix NOW...
+ssh -i "C:\Users\singh\.ssh\insora.pem" ubuntu@13.62.99.152 "cd ~/veru-inventory && git pull origin main && pm2 restart all && sleep 3 && pm2 logs --lines 20"
