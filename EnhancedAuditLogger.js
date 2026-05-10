@@ -6,6 +6,7 @@
 
 const db = require('./db/connection');
 const IPGeolocationTracker = require('./IPGeolocationTracker');
+const dbPromise = db.promise();
 
 // Event severity levels
 const SEVERITY = {
@@ -254,7 +255,7 @@ class EnhancedAuditLogger {
             };
 
             // Insert into database
-            await db.query(
+            await dbPromise.query(
                 `INSERT INTO audit_logs SET ?`,
                 auditEntry
             );
@@ -286,7 +287,7 @@ class EnhancedAuditLogger {
 
             // Check for failed login attempts (brute force detection)
             if (eventType === 'USER_LOGIN_FAILED') {
-                const [failedAttempts] = await db.query(
+                const [failedAttempts] = await dbPromise.query(
                     `SELECT COUNT(*) as count FROM audit_logs 
                      WHERE event_type = 'USER_LOGIN_FAILED' 
                      AND ip_address = ? 
@@ -301,7 +302,7 @@ class EnhancedAuditLogger {
 
             // Check for suspicious activity (multiple IPs for same user)
             if (eventType === 'USER_LOGIN_SUCCESS' && auditEntry.user_id) {
-                const [uniqueIPs] = await db.query(
+                const [uniqueIPs] = await dbPromise.query(
                     `SELECT COUNT(DISTINCT ip_address) as count FROM audit_logs 
                      WHERE user_id = ? 
                      AND event_type = 'USER_LOGIN_SUCCESS'
@@ -329,7 +330,7 @@ class EnhancedAuditLogger {
             // For now, just log to console
             
             // Update last_triggered_at in audit_log_alerts table
-            await db.query(
+            await dbPromise.query(
                 `UPDATE audit_log_alerts 
                  SET last_triggered_at = NOW() 
                  WHERE alert_type = ? AND event_type = ?`,
@@ -347,7 +348,7 @@ class EnhancedAuditLogger {
         try {
             const today = new Date().toISOString().split('T')[0];
 
-            await db.query(
+            await dbPromise.query(
                 `INSERT INTO audit_log_stats 
                  (date, event_type, action, resource_type, count, success_count, failure_count, unique_users, unique_ips)
                  VALUES (?, ?, ?, ?, 1, ?, ?, 1, 1)
@@ -381,7 +382,7 @@ class EnhancedAuditLogger {
             const realIP = this.extractRealIP(req);
             const locationData = await this.geoTracker.getLocationData(realIP);
 
-            await db.query(
+            await dbPromise.query(
                 `INSERT INTO user_sessions 
                  (user_id, session_token, ip_address, user_agent, location_country, location_city, expires_at)
                  VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))`,
@@ -406,7 +407,7 @@ class EnhancedAuditLogger {
      */
     async endSession(sessionToken) {
         try {
-            await db.query(
+            await dbPromise.query(
                 `UPDATE user_sessions 
                  SET is_active = FALSE 
                  WHERE session_token = ?`,
@@ -425,7 +426,7 @@ class EnhancedAuditLogger {
     async forceLogoutUser(userId, adminUserId, req) {
         try {
             // End all active sessions for the user
-            await db.query(
+            await dbPromise.query(
                 `UPDATE user_sessions 
                  SET is_active = FALSE 
                  WHERE user_id = ? AND is_active = TRUE`,
@@ -453,7 +454,7 @@ class EnhancedAuditLogger {
     async disableUser(userId, adminUserId, reason, req) {
         try {
             // Update user status
-            await db.query(
+            await dbPromise.query(
                 `UPDATE users 
                  SET is_active = FALSE, disabled_at = NOW(), disabled_by = ?, disabled_reason = ?
                  WHERE id = ?`,
@@ -461,7 +462,7 @@ class EnhancedAuditLogger {
             );
 
             // End all active sessions
-            await db.query(
+            await dbPromise.query(
                 `UPDATE user_sessions 
                  SET is_active = FALSE 
                  WHERE user_id = ?`,
@@ -489,7 +490,7 @@ class EnhancedAuditLogger {
     async enableUser(userId, adminUserId, req) {
         try {
             // Update user status
-            await db.query(
+            await dbPromise.query(
                 `UPDATE users 
                  SET is_active = TRUE, disabled_at = NULL, disabled_by = NULL, disabled_reason = NULL
                  WHERE id = ?`,
