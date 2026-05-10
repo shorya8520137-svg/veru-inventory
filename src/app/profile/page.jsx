@@ -31,8 +31,6 @@ import {
 import styles from './profile.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
-const WALLET_TENANT_ID = process.env.NEXT_PUBLIC_WALLET_TENANT_ID || 'TENANT-001';
-
 const apiDocs = [
     {
         title: 'Authentication',
@@ -134,6 +132,14 @@ function imageUrl(path) {
     return `${API_BASE}${path}`;
 }
 
+function normalizeUser(data) {
+    const user = data.user || data.data || {};
+    return {
+        ...user,
+        profile_image: user.profile_image || user.avatar || ''
+    };
+}
+
 export default function ProfilePage() {
     const [activeTab, setActiveTab] = useState('profile');
     const [profile, setProfile] = useState(null);
@@ -175,20 +181,30 @@ export default function ProfilePage() {
     async function loadEverything() {
         setLoading(true);
         setError('');
-        try {
-            await Promise.all([loadProfile(), loadApiData(), loadWalletData()]);
-        } catch (err) {
-            setError(err.message || 'Failed to load profile workspace');
-        } finally {
-            setLoading(false);
+        const results = await Promise.allSettled([loadProfile(), loadApiData(), loadWalletData()]);
+        const failed = results.find((result) => result.status === 'rejected');
+        if (failed) {
+            setError(failed.reason?.message || 'Some profile data could not be loaded.');
         }
+        setLoading(false);
     }
 
     async function loadProfile() {
-        const data = await requestJson(`${API_BASE}/api/users/profile`, {
-            headers: authHeaders()
-        });
-        const user = data.user || {};
+        let data;
+        try {
+            data = await requestJson(`${API_BASE}/api/users/profile`, {
+                headers: authHeaders()
+            });
+        } catch (err) {
+            if (!String(err.message || '').includes('404')) {
+                throw err;
+            }
+            data = await requestJson(`${API_BASE}/api/profile`, {
+                headers: authHeaders()
+            });
+        }
+
+        const user = normalizeUser(data);
         setProfile(user);
         setProfileForm({
             name: user.name || '',
@@ -211,7 +227,7 @@ export default function ProfilePage() {
     }
 
     async function loadWalletData() {
-        const headers = authHeaders({ 'X-Tenant-ID': WALLET_TENANT_ID });
+        const headers = authHeaders();
         const [balanceData, historyData] = await Promise.all([
             requestJson(`${API_BASE}/api/logistics/wallet`, { headers }),
             requestJson(`${API_BASE}/api/logistics/wallet/history`, { headers })
@@ -243,13 +259,28 @@ export default function ProfilePage() {
                 formData.append('profile_image', profileImage);
             }
 
-            const data = await requestJson(`${API_BASE}/api/users/profile`, {
-                method: 'PUT',
-                headers: authHeaders(),
-                body: formData
-            });
+            let data;
+            try {
+                data = await requestJson(`${API_BASE}/api/users/profile`, {
+                    method: 'PUT',
+                    headers: authHeaders(),
+                    body: formData
+                });
+            } catch (err) {
+                if (!String(err.message || '').includes('404')) {
+                    throw err;
+                }
+                data = await requestJson(`${API_BASE}/api/profile`, {
+                    method: 'PUT',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        name: profileForm.name,
+                        email: profileForm.email
+                    })
+                });
+            }
 
-            const updatedUser = data.user || {};
+            const updatedUser = normalizeUser(data);
             setProfile(updatedUser);
             setImagePreview(imageUrl(updatedUser.profile_image));
             localStorage.setItem('user', JSON.stringify(updatedUser));
