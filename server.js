@@ -166,6 +166,9 @@ app.use('/api', tenantMiddleware);
 app.use("/api/dispatch", require("./routes/dispatchRoutes"));
 app.use("/api/dispatch-beta", require("./routes/dispatchRoutes")); // existing
 
+// 🔥 LOGISTICS ENGINE (MULTI-COURIER)
+app.use("/api/logistics", require("./src/logistics/routes/logistics.routes"));
+
 // 🔥 PRODUCT ROUTES (ADDED)
 app.use("/api/products", require("./routes/productRoutes"));
 

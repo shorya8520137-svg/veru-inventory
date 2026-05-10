@@ -1,0 +1,25 @@
+﻿
+> database-backup\complete_database.sql:304840:CREATE TABLE `user_profiles` (
+  database-backup\complete_database.sql:304841:  `id` int(11) NOT NULL AUTO_INCREMENT,
+  database-backup\complete_database.sql:304842:  `user_id` int(11) NOT NULL,
+  database-backup\complete_database.sql:304843:  `profile_image` varchar(255) DEFAULT NULL,
+  database-backup\complete_database.sql:304844:  `phone` varchar(20) DEFAULT NULL,
+  database-backup\complete_database.sql:304845:  `address` text DEFAULT NULL,
+  database-backup\complete_database.sql:304846:  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  database-backup\complete_database.sql:304847:  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  database-backup\complete_database.sql:304848:  PRIMARY KEY (`id`),
+  database-backup\complete_database.sql:304849:  KEY `fk_user_profiles_user` (`user_id`),
+  database-backup\complete_database.sql:304850:  CONSTRAINT `fk_user_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE 
+CASCADE
+  database-backup\complete_database.sql:304851:) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  database-backup\complete_database.sql:304852:/*!40101 SET character_set_client = @saved_cs_client */;
+  database-backup\complete_database.sql:304853:
+  database-backup\complete_database.sql:304854:--
+  database-backup\complete_database.sql:304855:-- Dumping data for table `user_profiles`
+  database-backup\complete_database.sql:304856:--
+  database-backup\complete_database.sql:304857:
+  database-backup\complete_database.sql:304858:SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+  database-backup\complete_database.sql:304859:LOCK TABLES `user_profiles` WRITE;
+  database-backup\complete_database.sql:304860:/*!40000 ALTER TABLE `user_profiles` DISABLE KEYS */;
+
+

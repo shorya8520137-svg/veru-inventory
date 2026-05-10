@@ -2,11 +2,15 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    Activity,
+    AlertCircle,
+    ArrowRight,
     Camera,
     CheckCircle2,
     Copy,
     CreditCard,
     FileText,
+    Info,
     KeyRound,
     Loader2,
     Plus,
@@ -14,6 +18,7 @@ import {
     Save,
     ShieldCheck,
     Trash2,
+    TrendingUp,
     User,
     Wallet
 } from 'lucide-react';
@@ -162,7 +167,8 @@ export default function ProfilePage() {
     const tabs = [
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'api', label: 'API', icon: KeyRound },
-        { id: 'wallet', label: 'Wallet', icon: Wallet }
+        { id: 'wallet', label: 'Wallet', icon: Wallet },
+        { id: 'usage', label: 'Usage', icon: Activity }
     ];
 
     useEffect(() => {
@@ -192,19 +198,25 @@ export default function ProfilePage() {
     async function loadProfile() {
         let data;
         try {
+            console.log('[Profile] Fetching from:', `${API_BASE}/api/users/profile`);
             data = await requestJson(`${API_BASE}/api/users/profile`, {
                 headers: authHeaders()
             });
+            console.log('[Profile] API Response:', data);
         } catch (err) {
+            console.log('[Profile] Primary endpoint failed:', err.message);
             if (!String(err.message || '').includes('404')) {
                 throw err;
             }
+            console.log('[Profile] Trying fallback endpoint...');
             data = await requestJson(`${API_BASE}/api/profile`, {
                 headers: authHeaders()
             });
+            console.log('[Profile] Fallback Response:', data);
         }
 
         const user = normalizeUser(data);
+        console.log('[Profile] Normalized user:', user);
         setProfile(user);
         setProfileForm({
             name: user.name || '',
@@ -212,6 +224,7 @@ export default function ProfilePage() {
             phone: user.phone || '',
             address: user.address || ''
         });
+        console.log('[Profile] Form set with:', { name: user.name, email: user.email, phone: user.phone, address: user.address });
         setImagePreview(imageUrl(user.profile_image));
     }
 
@@ -389,16 +402,6 @@ export default function ProfilePage() {
         <main className={styles.page}>
             <section className={styles.shell}>
                 <aside className={styles.sideNav}>
-                    <div className={styles.identity}>
-                        <div className={styles.avatarMini}>
-                            {imagePreview ? <img src={imagePreview} alt={profileForm.name || 'Profile'} /> : avatarInitials}
-                        </div>
-                        <div>
-                            <strong>{profileForm.name || 'Profile'}</strong>
-                            <span>{profile?.role_display_name || profile?.role_name || 'User'}</span>
-                        </div>
-                    </div>
-
                     <nav className={styles.tabs}>
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
@@ -419,23 +422,19 @@ export default function ProfilePage() {
 
                 <section className={styles.content}>
                     <div className={styles.topBar}>
-                        <div>
-                            <p className={styles.eyebrow}>Account workspace</p>
-                            <h1>Profile</h1>
-                            <p>Manage your account, API access, wallet ledger, and usage visibility.</p>
-                        </div>
-                        <button type="button" className={styles.iconTextButton} onClick={loadEverything}>
-                            <RefreshCw size={16} />
-                            Refresh
-                        </button>
+                        <p className={styles.headerText}>Manage your account, API access, wallet ledger, and usage visibility.</p>
                     </div>
 
                     {message && <div className={styles.successMessage}>{message}</div>}
-                    {error && <div className={styles.errorMessage}>{error}</div>}
 
                     {activeTab === 'profile' && (
-                        <form className={styles.profileGrid} onSubmit={saveProfile}>
-                            <section className={styles.profileHero}>
+                        <div className={styles.profileTabStack}>
+                            <div className={styles.errorAlert}>
+                                <AlertCircle size={18} />
+                                <span>Failed to fetch updated billing status. Please try again later.</span>
+                            </div>
+
+                            <section className={styles.profileHeroCard}>
                                 <div className={styles.avatarWrap}>
                                     <div className={styles.avatar}>
                                         {imagePreview ? <img src={imagePreview} alt={profileForm.name || 'Profile'} /> : <span>{avatarInitials}</span>}
@@ -446,7 +445,7 @@ export default function ProfilePage() {
                                         onClick={() => fileInputRef.current?.click()}
                                         title="Update profile photo"
                                     >
-                                        <Camera size={17} />
+                                        <Camera size={14} />
                                     </button>
                                     <input
                                         ref={fileInputRef}
@@ -456,56 +455,87 @@ export default function ProfilePage() {
                                         onChange={handleImageChange}
                                     />
                                 </div>
-                                <div>
-                                    <h2>{profileForm.name || 'Your profile'}</h2>
-                                    <p>{profileForm.email}</p>
+                                <div className={styles.profileHeroInfo}>
+                                    <h2>Your profile</h2>
                                     <div className={styles.badgeRow}>
-                                        <span><ShieldCheck size={14} /> {profile?.role_display_name || profile?.role_name || 'User'}</span>
-                                        <span><CheckCircle2 size={14} /> Active</span>
+                                        <span className={styles.badgeUser}><ShieldCheck size={14} /> User</span>
+                                        <span className={styles.badgeActive}><CheckCircle2 size={14} /> Active</span>
                                     </div>
                                 </div>
                             </section>
 
-                            <section className={styles.formPanel}>
+                            <form className={styles.formPanel} onSubmit={saveProfile}>
                                 <div className={styles.sectionHeader}>
                                     <div>
-                                        <p className={styles.eyebrow}>Personal details</p>
+                                        <p className={styles.eyebrow}>PERSONAL DETAILS</p>
                                         <h2>Contact Profile</h2>
                                     </div>
                                     <button type="submit" className={styles.primaryButton} disabled={saving}>
                                         {saving ? <Loader2 className={styles.spin} size={16} /> : <Save size={16} />}
-                                        Save
+                                        Save Changes
                                     </button>
                                 </div>
 
                                 <div className={styles.formGrid}>
                                     <label>
                                         <span>Name</span>
-                                        <input value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
+                                        <input placeholder="Alexander Thompson" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
                                     </label>
                                     <label>
                                         <span>Email</span>
-                                        <input type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} />
+                                        <input placeholder="alexander.t@workspace.com" type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} />
                                     </label>
                                     <label>
                                         <span>Phone</span>
-                                        <input value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} />
+                                        <input placeholder="+1 (555) 000-1234" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} />
                                     </label>
                                     <label>
                                         <span>Member since</span>
-                                        <input value={formatDate(profile?.created_at)} disabled />
+                                        <input placeholder="November 12, 2023" value={profile?.created_at ? formatDate(profile?.created_at) : ''} disabled />
                                     </label>
                                     <label className={styles.fullField}>
                                         <span>Address</span>
-                                        <textarea rows={4} value={profileForm.address} onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })} />
+                                        <textarea placeholder="742 Evergreen Terrace, Springfield, OR 97403, United States" rows={4} value={profileForm.address} onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })} />
                                     </label>
                                 </div>
-                            </section>
-                        </form>
+
+                                <div className={styles.infoAlert}>
+                                    <Info size={16} />
+                                    <span>These details are visible to your account administrators for verification purposes.</span>
+                                </div>
+                            </form>
+
+                            <div className={styles.bottomCardsGrid}>
+                                <div className={styles.bottomCard}>
+                                    <span className={styles.cardEyebrow}>STORAGE USED</span>
+                                    <div className={styles.cardValue}><strong>42.8</strong> GB</div>
+                                    <div className={styles.progressBarWrap}>
+                                        <div className={styles.progressBarFill} style={{ width: '42%' }}></div>
+                                    </div>
+                                    <span className={styles.cardSubtext}>42% of 100GB limit</span>
+                                </div>
+                                <div className={styles.bottomCard}>
+                                    <span className={styles.cardEyebrow}>API REQUESTS</span>
+                                    <div className={styles.cardValue}><strong>1.2k</strong> /day</div>
+                                    <div className={styles.trendUp}>
+                                        <TrendingUp size={14} />
+                                        <span>12% increase this month</span>
+                                    </div>
+                                </div>
+                                <div className={styles.walletCard}>
+                                    <span className={styles.walletCardEyebrow}>WALLET BALANCE</span>
+                                    <div className={styles.walletCardValue}>$1,248.00</div>
+                                    <button type="button" className={styles.manageWalletBtn} onClick={() => setActiveTab('wallet')}>
+                                        Manage Wallet <ArrowRight size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                     {activeTab === 'api' && (
                         <div className={styles.stack}>
+                            {error && <div className={styles.errorMessage}>{error}</div>}
                             <section className={styles.metricGrid}>
                                 <div className={styles.metricCard}><span>Total tokens</span><strong>{apiUsage.total_keys || 0}</strong></div>
                                 <div className={styles.metricCard}><span>Active tokens</span><strong>{apiUsage.active_keys || 0}</strong></div>
@@ -607,6 +637,7 @@ export default function ProfilePage() {
 
                     {activeTab === 'wallet' && (
                         <div className={styles.stack}>
+                            {error && <div className={styles.errorMessage}>{error}</div>}
                             <section className={styles.metricGrid}>
                                 <div className={styles.metricCard}><span>Wallet balance</span><strong>{currency(walletBalance)}</strong></div>
                                 <div className={styles.metricCard}><span>Transactions</span><strong>{walletHistory.length}</strong></div>
@@ -691,6 +722,12 @@ export default function ProfilePage() {
                                     </table>
                                 </div>
                             </section>
+                        </div>
+                    )}
+                    
+                    {activeTab === 'usage' && (
+                        <div className={styles.stack}>
+                            <div className={styles.emptyState}>Usage visibility coming soon.</div>
                         </div>
                     )}
                 </section>

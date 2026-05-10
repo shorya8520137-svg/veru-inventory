@@ -1,12 +1,10 @@
 .page {
     background: #ffffff;
     color: #0f172a;
-    height: 100%;
+    min-height: calc(100vh - 64px);
     display: flex;
     flex-direction: column;
-    padding: 24px 24px 0 24px;
-    overflow: hidden;
-    width: 100%;
+    padding: 24px;
 }
 
 .hero {
@@ -112,13 +110,11 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     margin-top: 16px;
     margin-bottom: 24px;
-    overflow: hidden;
     max-width: 100%;
 }
 
@@ -153,9 +149,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0;
     padding: 20px;
-    overflow: hidden;
 }
 
 .panelToolbar {
@@ -198,11 +192,8 @@
 }
 
 .productTable {
-    flex: 1;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    overflow-y: auto;
-    overflow-x: hidden;
     width: 100%;
 }
 
@@ -267,15 +258,16 @@
     width: 44px;
 }
 
-.switch span::after {
+.switch span::before {
     background: #ffffff;
     border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     content: "";
     height: 18px;
-    left: 3px;
+    left: 2px;
     position: absolute;
-    top: 3px;
-    transition: transform 0.2s;
+    top: 2px;
+    transition: 0.2s;
     width: 18px;
 }
 
@@ -283,11 +275,48 @@
     background: #2563eb;
 }
 
-.switch input:checked + span::after {
-    transform: translateX(20px);
+.switch input:checked + span::before {
+    transform: translateX(16px);
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0 0 0;
+    margin-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.pagination span {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.pagination button {
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-radius: 6px;
+    color: #334155;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .listingActionBar {
+    flex-shrink: 0;
     align-items: center;
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -449,12 +478,9 @@
 }
 
 .orderBoard {
-    flex: 1;
     display: grid;
     gap: 14px;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    overflow-y: auto;
-    align-content: start;
     padding-bottom: 20px;
 }
 

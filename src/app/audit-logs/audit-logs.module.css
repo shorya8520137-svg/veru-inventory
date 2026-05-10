@@ -2,18 +2,11 @@
 
 .container {
     min-height: 100vh;
-    max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
     background: #FFFFFF;
     padding: 20px 0 32px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.container::-webkit-scrollbar {
-    display: none;
 }
 
 /* ================= HEADER ================= */

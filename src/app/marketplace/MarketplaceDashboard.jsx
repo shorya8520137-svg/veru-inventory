@@ -19,7 +19,15 @@ const products = [
     { sku: "HH-CRIB-101", name: "Convertible Baby Crib", stock: 42, price: 18999, status: "Ready", category: "Nursery" },
     { sku: "HH-STROL-220", name: "Compact Travel Stroller", stock: 18, price: 12999, status: "Draft", category: "Travel" },
     { sku: "HH-MAT-084", name: "Organic Baby Mattress", stock: 35, price: 5499, status: "Needs Images", category: "Sleep" },
-    { sku: "HH-CHAIR-310", name: "Feeding High Chair", stock: 26, price: 7499, status: "Ready", category: "Feeding" }
+    { sku: "HH-CHAIR-310", name: "Feeding High Chair", stock: 26, price: 7499, status: "Ready", category: "Feeding" },
+    { sku: "HH-MON-405", name: "Smart Baby Monitor", stock: 12, price: 8999, status: "Ready", category: "Electronics" },
+    { sku: "HH-BATH-150", name: "Infant Bath Tub", stock: 55, price: 1499, status: "Draft", category: "Bath" },
+    { sku: "HH-TOY-890", name: "Educational Play Mat", stock: 104, price: 2999, status: "Ready", category: "Toys" },
+    { sku: "HH-BAG-234", name: "Premium Diaper Bag", stock: 48, price: 3499, status: "Needs Images", category: "Travel" },
+    { sku: "HH-BOT-111", name: "Anti-Colic Bottle Set", stock: 89, price: 1299, status: "Ready", category: "Feeding" },
+    { sku: "HH-CAR-500", name: "Convertible Car Seat", stock: 15, price: 24999, status: "Ready", category: "Travel" },
+    { sku: "HH-SWIN-300", name: "Automatic Baby Swing", stock: 22, price: 11999, status: "Draft", category: "Nursery" },
+    { sku: "HH-CLO-050", name: "Organic Cotton Onesie", stock: 150, price: 899, status: "Ready", category: "Clothing" }
 ];
 
 const orders = [
@@ -45,6 +53,7 @@ function formatCurrency(value) {
 
 export default function MarketplaceDashboard({ marketplace }) {
     const [activeTab, setActiveTab] = useState("listing");
+    const [currentPage, setCurrentPage] = useState(1);
     const [search, setSearch] = useState("");
     const [showListingForm, setShowListingForm] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState(["HH-CRIB-101", "HH-CHAIR-310"]);
@@ -58,13 +67,23 @@ export default function MarketplaceDashboard({ marketplace }) {
 
     const filteredProducts = useMemo(() => {
         const query = search.trim().toLowerCase();
-        if (!query) return products;
-        return products.filter((product) =>
-            [product.name, product.sku, product.category, product.status].some((field) =>
-                field.toLowerCase().includes(query)
-            )
-        );
+        let result = products;
+        if (query) {
+            result = products.filter((product) =>
+                [product.name, product.sku, product.category, product.status].some((field) =>
+                    field.toLowerCase().includes(query)
+                )
+            );
+        }
+        return result;
     }, [search]);
+
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    // Reset page on search
+    useMemo(() => setCurrentPage(1), [search]);
 
     const listedCount = selectedProducts.length;
     const readyCount = products.filter((product) => product.status === "Ready").length;
@@ -184,7 +203,7 @@ export default function MarketplaceDashboard({ marketplace }) {
                                 <span>Status</span>
                                 <span>List</span>
                             </div>
-                            {filteredProducts.map((product) => (
+                            {paginatedProducts.map((product) => (
                                 <div key={product.sku} className={styles.tableRow}>
                                     <div>
                                         <strong>{product.name}</strong>
@@ -205,6 +224,24 @@ export default function MarketplaceDashboard({ marketplace }) {
                                 </div>
                             ))}
                         </div>
+                        
+                        {totalPages > 1 && (
+                            <div className={styles.pagination}>
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </button>
+                                <span>Page {currentPage} of {totalPages}</span>
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 

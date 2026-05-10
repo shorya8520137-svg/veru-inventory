@@ -24,6 +24,7 @@ export default function OrderPage() {
   const [products, setProducts] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSug, setShowSug]   = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const sugRef = useRef(null);
 
   const [form, setForm] = useState({
@@ -78,37 +79,28 @@ export default function OrderPage() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/api/dispatch/create`, {
+      const res = await fetch(`${API}/api/logistics/dispatch`, {
         method:'POST',
-        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token()}` },
+        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token()}`, 'X-Tenant-ID': 'TENANT-001' },
         body: JSON.stringify({
-          selectedWarehouse: form.warehouse,
-          orderRef:          form.orderRef || `ORD-${Date.now()}`,
-          customerName:      form.customer,
-          customer_phone:    form.customerPhone,
-          customer_email:    form.customerEmail,
-          customer_address:  form.customerAddress,
-          customer_city:     form.customerCity,
-          customer_state:    form.customerState,
-          customer_pincode:  form.customerPincode,
-          awbNumber:         form.orderRef || `AWB-${Date.now()}`,
-          selectedLogistics: form.logistics,
-          selectedPaymentMode: payment,
-          parcelType:        'Forward',
-          invoiceAmount:     form.unitPrice,
+          order_id:          form.orderRef || `ORD-${Date.now()}`,
+          courier:           form.logistics || undefined,
+          customer_name:     form.customer,
+          phone:             form.customerPhone,
+          address:           form.customerAddress,
+          city:              form.customerCity,
+          state:             form.customerState,
+          pincode:           form.customerPincode,
           weight:            form.deadWeight,
           dimensions:        { length:form.l, width:form.b, height:form.h },
-          remarks:           form.remarks,
-          products: [{
-            name: `${form.productName} | | ${form.barcode}`,
-            qty,
-          }],
+          payment_mode:      payment,
+          amount:            form.unitPrice * qty
         }),
       });
       const data = await res.json();
       if (data.success) {
         setOrders(prev => [{
-          id:          data.dispatch_id,
+          id:          data.shipment_id,
           customer:    form.customer,
           phone:       form.customerPhone,
           city:        form.customerCity,
@@ -117,18 +109,54 @@ export default function OrderPage() {
           status:      'Created',
           value:       `₹${(Number(form.unitPrice)*qty).toFixed(2)}`,
           date:        new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
-          shiprocket:  data.shiprocket_order_id || '—',
+          shiprocket:  data.awb || data.courier || '—',
         }, ...prev]);
         setView('table');
       } else {
-        alert('Error: ' + (data.message || 'Failed'));
+        alert('Error: ' + (data.error || 'Failed to dispatch via courier engine'));
       }
     } catch(e) { alert('Network error: ' + e.message); }
     finally { setSubmitting(false); }
   };
 
   return (
-    <div style={{ background:'#F1F5F9', fontFamily:'Inter,sans-serif', padding:'16px 24px' }}>
+    <div style={{ background:'#F1F5F9', fontFamily:'Inter,sans-serif', padding:'16px 24px', minHeight:'100vh' }}>
+
+      {!isFormOpen ? (
+        <div 
+          onClick={() => setIsFormOpen(true)}
+          style={{
+            background: '#fff',
+            borderRadius: 12,
+            padding: '12px 20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            border: '1px solid #E5E7EB',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 12,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <img src="https://res.cloudinary.com/df3l7ppo6/image/upload/v1778343035/shiprocket_iuhzwl.jpg" alt="Shiprocket" style={{ width: 140, objectFit: 'contain' }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>Shiprocket Integration</div>
+            <div style={{ fontSize: 11, color: '#64748B' }}>Click to open dispatch form</div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <button 
+            onClick={() => setIsFormOpen(false)}
+            style={{ marginBottom: 16, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 16px', color: '#374151', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Close Form
+          </button>
 
       {/* TABS */}
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12, flexWrap:'wrap' }}>
@@ -156,7 +184,7 @@ export default function OrderPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span style={{ fontSize:14, fontWeight:700, color:'#0F172A' }}>Pickup Warehouse</span>
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
                 <div>
                   <label style={lbl}>SELECT WAREHOUSE</label>
                   <select style={{ ...inp, cursor:'pointer' }} value={form.warehouse} onChange={e=>set('warehouse',e.target.value)}>
@@ -164,6 +192,17 @@ export default function OrderPage() {
                     {warehouses.map((w,i)=>(
                       <option key={i} value={w.warehouse_code||w.code||w}>{w.Warehouse_name||w.name||w.warehouse_code||w}</option>
                     ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>DELIVERY PARTNER</label>
+                  <select style={{ ...inp, cursor:'pointer' }} value={form.logistics} onChange={e=>set('logistics',e.target.value)}>
+                    <option value="">AI Routing (Auto-Select Best)</option>
+                    <option value="shiprocket">Shiprocket</option>
+                    <option value="delhivery">Delhivery</option>
+                    <option value="bluedart">BlueDart</option>
+                    <option value="dtdc">DTDC</option>
+                    <option value="xpressbees">XpressBees</option>
                   </select>
                 </div>
                 <div>
@@ -327,7 +366,6 @@ export default function OrderPage() {
             </div>
           </div>
         </div>
-
       ) : (
         /* TABLE VIEW */
         <div style={{ background:'#fff', borderRadius:20, boxShadow:'0 2px 12px rgba(0,0,0,0.06)', border:'1px solid #F1F5F9', overflow:'hidden' }}>
@@ -372,6 +410,8 @@ export default function OrderPage() {
             </div>
           )}
         </div>
+      )}
+      </div>
       )}
 
       {/* AUTO-SAVE */}

@@ -26,7 +26,8 @@ import {
     Sparkles,
     Building2,
     Clock,
-    ShoppingBag
+    ShoppingBag,
+    Wallet
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { motion, AnimatePresence } from "framer-motion";
@@ -95,7 +96,8 @@ const Sidebar = ({ children }) => {
             initial={false}
             animate={{ width: collapsed ? 60 : 220 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="hidden md:flex flex-col border-r border-slate-200 bg-white relative shrink-0 z-30 shadow-sm"
+            className="hidden md:flex flex-col border-r border-slate-200 bg-white shrink-0 z-30 shadow-sm"
+            style={{ position: 'sticky', top: '64px', height: 'calc(100vh - 64px)' }}
         >
              {/* Collapse Toggle Button */}
             <motion.button
@@ -266,7 +268,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-white overflow-hidden">
+        <div className="flex flex-col h-full bg-white overflow-hidden">
             {/* No Logo Section - Completely Removed */}
 
             <SidebarContent style={{ paddingTop: '16px' }}>
@@ -760,7 +762,22 @@ const InventoryMenu = ({ onOpenOperation }) => {
                     </SidebarMenuItem>
 
                     {/* TICKET MANAGEMENT - REMOVED */}
-                    {/* PROFILE - REMOVED */}
+                    
+                    {/* WALLET */}
+                    <SidebarMenuItem>
+                        <motion.div
+                            whileHover={{ scale: 1.02, x: 2 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <Link 
+                                href="/wallet" 
+                                className={cn(sidebarMenuButtonVariants({ active: pathname === "/wallet", collapsed }))}
+                            >
+                                <Wallet size={collapsed ? 16 : 16} />
+                                {!collapsed && <span>Wallet</span>}
+                            </Link>
+                        </motion.div>
+                    </SidebarMenuItem>
 
                     {/* ACCESS CONTROL - DISABLED - Code removed for cleaner build */}
 

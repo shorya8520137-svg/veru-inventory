@@ -96,7 +96,7 @@ export default function ClientLayout({ children }) {
     const isInventoryGPTPage = pathname === "/inventorygpt";
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', backgroundColor: '#ffffff' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100vw', backgroundColor: '#ffffff' }}>
             {/* TOP NAVIGATION BAR - Full Width Above Everything */}
             {!isInventoryGPTPage && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
@@ -108,7 +108,7 @@ export default function ClientLayout({ children }) {
             <div style={{ display: 'flex', flex: 1, paddingTop: isInventoryGPTPage ? 0 : '64px' }}>
                 <SidebarProvider>
                     {/* SIDEBAR - Starts below top navbar */}
-                    <Sidebar className="shrink-0 border-r border-slate-200 bg-white" style={{ backgroundColor: '#ffffff' }}>
+                    <Sidebar>
                         <InventoryMenu 
                             onOpenOperation={(tab) => {
                                 setOperationTab(tab);
@@ -118,12 +118,10 @@ export default function ClientLayout({ children }) {
                     </Sidebar>
 
                     {/* MAIN CONTENT */}
-                    <div className="flex-1 min-w-0 h-full flex flex-col">
-                        <main className="flex-1 min-w-0 overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
-                            <div className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar">
-                                <div className="p-0">
-                                    {children}
-                                </div>
+                    <div className="flex-1 min-w-0 flex flex-col">
+                        <main className="flex-1 min-w-0 relative" style={{ backgroundColor: '#ffffff' }}>
+                            <div className="p-0">
+                                {children}
                             </div>
                         </main>
                     </div>

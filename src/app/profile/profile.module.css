@@ -1,20 +1,19 @@
 .page {
     min-height: calc(100vh - 64px);
-    background: #f7f9fc;
+    background: #ffffff;
     color: #111827;
-    padding: 24px;
+    padding: 0;
 }
 
 .shell {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
-    gap: 24px;
-    max-width: 1480px;
-    margin: 0 auto;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 0;
+    max-width: none;
+    margin: 0;
+    min-height: calc(100vh - 64px);
 }
 
-.sideNav,
-.content,
 .panel,
 .formPanel,
 .profileHero,
@@ -28,11 +27,12 @@
 }
 
 .sideNav {
-    border-radius: 8px;
-    padding: 18px;
-    height: fit-content;
     position: sticky;
-    top: 88px;
+    top: 64px;
+    height: calc(100vh - 64px);
+    padding: 24px 16px;
+    border-right: 1px solid #e5e7eb;
+    background: #ffffff;
 }
 
 .identity {
@@ -79,49 +79,50 @@
 
 .tabs {
     display: grid;
-    gap: 8px;
-    margin-top: 18px;
+    gap: 4px;
 }
 
 .tabButton {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
     border: 0;
     background: transparent;
-    color: #475569;
-    padding: 11px 12px;
+    color: #64748b;
+    padding: 10px 16px;
     border-radius: 8px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     text-align: left;
     transition: background 0.2s, color 0.2s;
 }
 
 .tabButton:hover {
-    background: #f1f5f9;
+    background: #f8fafc;
     color: #0f172a;
 }
 
 .activeTab {
-    background: #eaf2ff;
-    color: #1d4ed8;
+    background: #e2e8f0;
+    color: #2563eb;
+    font-weight: 700;
 }
 
 .content {
-    border-radius: 8px;
-    padding: 24px;
     min-width: 0;
+    padding: 24px 32px;
 }
 
 .topBar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
+}
+
+.headerText {
+    color: #475569;
+    font-size: 14px;
+    margin: 0;
 }
 
 .topBar h1,
@@ -662,4 +663,173 @@
     .endpointRow small {
         text-align: left;
     }
+}
+
+/* Profile specific styles */
+.profileTabStack {
+    display: grid;
+    gap: 20px;
+}
+
+.errorAlert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.profileHeroCard {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.profileHeroInfo h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #111827;
+}
+
+.badgeUser {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badgeActive {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.infoAlert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    margin: 24px -24px -24px;
+    padding: 16px 24px;
+    color: #64748b;
+    font-size: 13px;
+    border-radius: 0 0 8px 8px;
+}
+
+.bottomCardsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.bottomCard {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.walletCard {
+    background: #0066ff;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.cardEyebrow {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.walletCardEyebrow {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    opacity: 0.9;
+    margin-bottom: 12px;
+}
+
+.cardValue {
+    font-size: 24px;
+    color: #111827;
+}
+
+.cardValue strong {
+    font-weight: 800;
+}
+
+.walletCardValue {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 16px;
+}
+
+.progressBarWrap {
+    background: #e2e8f0;
+    height: 6px;
+    border-radius: 3px;
+    margin: 12px 0 8px;
+    overflow: hidden;
+}
+
+.progressBarFill {
+    background: #2563eb;
+    height: 100%;
+}
+
+.cardSubtext {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.trendUp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 12px;
+}
+
+.manageWalletBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    margin-top: auto;
 }
