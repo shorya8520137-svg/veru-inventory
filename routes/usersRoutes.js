@@ -66,7 +66,7 @@ router.get('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'), 
             ORDER BY u.created_at DESC
         `;
         
-        const [users] = await db.execute(query);
+        const [users] = await db.promise().execute(query);
         
         res.json({
             success: true,
@@ -197,7 +197,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
         console.log('[Profile API] Fetching profile for user ID:', userId);
         console.log('[Profile API] req.user:', req.user);
         
-        const [user] = await db.execute(`
+        const [user] = await db.promise().execute(`
             SELECT 
                 u.id,
                 u.name,
@@ -246,7 +246,7 @@ router.post('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'),
         const { name, email, password, role_id, is_active = true } = req.body;
         
         // Check if user already exists
-        const [existingUser] = await db.execute(
+        const [existingUser] = await db.promise().execute(
             'SELECT id FROM users WHERE email = ?',
             [email]
         );
@@ -263,7 +263,7 @@ router.post('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'),
         const hashedPassword = await bcrypt.hash(password, 10);
         
         // Insert user
-        const [result] = await db.execute(
+        const [result] = await db.promise().execute(
             'INSERT INTO users (name, email, password, role_id, is_active) VALUES (?, ?, ?, ?, ?)',
             [name, email, hashedPassword, role_id, is_active]
         );
@@ -290,7 +290,7 @@ router.put('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'
         const { name, email, password, role_id, is_active } = req.body;
         
         // Check if user exists
-        const [existingUser] = await db.execute(
+        const [existingUser] = await db.promise().execute(
             'SELECT id FROM users WHERE id = ?',
             [userId]
         );
@@ -316,7 +316,7 @@ router.put('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'
         
         updateValues.push(userId);
         
-        await db.execute(
+        await db.promise().execute(
             `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
             updateValues
         );
@@ -341,7 +341,7 @@ router.delete('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEME
         const userId = req.params.id;
         
         // Check if user exists
-        const [existingUser] = await db.execute(
+        const [existingUser] = await db.promise().execute(
             'SELECT id FROM users WHERE id = ?',
             [userId]
         );
@@ -362,11 +362,11 @@ router.delete('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEME
         }
         
         // Start transaction
-        await db.beginTransaction();
+        await db.promise().beginTransaction();
         
         try {
             // Delete user image
-            const [existingUser] = await db.execute(
+            const [existingUser] = await db.promise().execute(
                 'SELECT avatar FROM users WHERE id = ?',
                 [userId]
             );
@@ -382,9 +382,9 @@ router.delete('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEME
                 }
             }
             
-            await db.execute('DELETE FROM users WHERE id = ?', [userId]);
+            await db.promise().execute('DELETE FROM users WHERE id = ?', [userId]);
             
-            await db.commit();
+            await db.promise().commit();
             
             res.json({
                 success: true,
@@ -392,7 +392,7 @@ router.delete('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEME
             });
             
         } catch (error) {
-            await db.rollback();
+            await db.promise().rollback();
             throw error;
         }
         
