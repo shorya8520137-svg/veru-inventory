@@ -9,7 +9,7 @@ const db = require('../db/connection');
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, '../uploads');
+        const uploadDir = path.join(__dirname, '../uploads/avatars');
         // Create uploads directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
     filename: function (req, file, cb) {
         // Generate unique filename
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        cb(null, 'avatar-' + (req.user ? req.user.id : 'unknown') + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
 
@@ -58,12 +58,11 @@ router.get('/', authenticateToken, requirePermission('SYSTEM_USER_MANAGEMENT'), 
                 u.created_at,
                 r.name as role_name,
                 r.display_name as role_display_name,
-                up.profile_image,
-                up.phone,
-                up.address
+                u.avatar as profile_image,
+                u.mobile as phone,
+                '' as address
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
-            LEFT JOIN user_profiles up ON u.id = up.user_id
             ORDER BY u.created_at DESC
         `;
         
@@ -100,60 +99,41 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
         await connection.beginTransaction();
         
         try {
-            // Update user basic info
-            await connection.execute(
-                'UPDATE users SET name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                [name, email, userId]
-            );
+            const updateFields = ['name = ?', 'email = ?', 'mobile = ?'];
+            const updateValues = [name, email, phone || null];
             
             // Handle profile image upload
             let profileImagePath = null;
             if (req.file) {
-                profileImagePath = `/uploads/${req.file.filename}`;
+                profileImagePath = `/uploads/avatars/${req.file.filename}`;
                 
                 // Delete old profile image if exists
-                const [existingProfile] = await connection.execute(
-                    'SELECT profile_image FROM user_profiles WHERE user_id = ?',
+                const [existingUser] = await connection.execute(
+                    'SELECT avatar FROM users WHERE id = ?',
                     [userId]
                 );
                 
-                if (existingProfile.length > 0 && existingProfile[0].profile_image) {
-                    const oldImagePath = path.join(__dirname, '..', existingProfile[0].profile_image);
+                if (existingUser.length > 0 && existingUser[0].avatar) {
+                    const oldImagePath = path.join(__dirname, '..', existingUser[0].avatar);
                     if (fs.existsSync(oldImagePath)) {
-                        fs.unlinkSync(oldImagePath);
+                        try {
+                            fs.unlinkSync(oldImagePath);
+                        } catch (e) {
+                            console.error('Failed to delete old avatar:', e);
+                        }
                     }
                 }
+                
+                updateFields.push('avatar = ?');
+                updateValues.push(profileImagePath);
             }
             
-            // Update or insert user profile
-            const [existingProfile] = await connection.execute(
-                'SELECT id FROM user_profiles WHERE user_id = ?',
-                [userId]
+            updateValues.push(userId);
+            
+            await connection.execute(
+                `UPDATE users SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                updateValues
             );
-            
-            if (existingProfile.length > 0) {
-                // Update existing profile
-                const updateFields = ['phone = ?', 'address = ?'];
-                const updateValues = [phone || null, address || null];
-                
-                if (profileImagePath) {
-                    updateFields.push('profile_image = ?');
-                    updateValues.push(profileImagePath);
-                }
-                
-                updateValues.push(userId);
-                
-                await connection.execute(
-                    `UPDATE user_profiles SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`,
-                    updateValues
-                );
-            } else {
-                // Insert new profile
-                await connection.execute(
-                    'INSERT INTO user_profiles (user_id, profile_image, phone, address) VALUES (?, ?, ?, ?)',
-                    [userId, profileImagePath, phone || null, address || null]
-                );
-            }
             
             // Commit transaction
             await connection.commit();
@@ -167,12 +147,11 @@ router.put('/profile', authenticateToken, upload.single('profile_image'), async 
                     u.is_active,
                     r.name as role_name,
                     r.display_name as role_display_name,
-                    up.profile_image,
-                    up.phone,
-                    up.address
+                    u.avatar as profile_image,
+                    u.mobile as phone,
+                    '' as address
                 FROM users u
                 LEFT JOIN roles r ON u.role_id = r.id
-                LEFT JOIN user_profiles up ON u.id = up.user_id
                 WHERE u.id = ?
             `, [userId]);
             
@@ -227,12 +206,11 @@ router.get('/profile', authenticateToken, async (req, res) => {
                 u.created_at,
                 r.name as role_name,
                 r.display_name as role_display_name,
-                up.profile_image,
-                up.phone,
-                up.address
+                u.avatar as profile_image,
+                u.mobile as phone,
+                '' as address
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
-            LEFT JOIN user_profiles up ON u.id = up.user_id
             WHERE u.id = ?
         `, [userId]);
         
@@ -387,20 +365,23 @@ router.delete('/:id', authenticateToken, requirePermission('SYSTEM_USER_MANAGEME
         await db.beginTransaction();
         
         try {
-            // Delete user profile and image
-            const [profile] = await db.execute(
-                'SELECT profile_image FROM user_profiles WHERE user_id = ?',
+            // Delete user image
+            const [existingUser] = await db.execute(
+                'SELECT avatar FROM users WHERE id = ?',
                 [userId]
             );
             
-            if (profile.length > 0 && profile[0].profile_image) {
-                const imagePath = path.join(__dirname, '..', profile[0].profile_image);
+            if (existingUser.length > 0 && existingUser[0].avatar) {
+                const imagePath = path.join(__dirname, '..', existingUser[0].avatar);
                 if (fs.existsSync(imagePath)) {
-                    fs.unlinkSync(imagePath);
+                    try {
+                        fs.unlinkSync(imagePath);
+                    } catch (e) {
+                        console.error('Failed to delete avatar:', e);
+                    }
                 }
             }
             
-            await db.execute('DELETE FROM user_profiles WHERE user_id = ?', [userId]);
             await db.execute('DELETE FROM users WHERE id = ?', [userId]);
             
             await db.commit();

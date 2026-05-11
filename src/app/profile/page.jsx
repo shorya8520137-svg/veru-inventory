@@ -197,6 +197,29 @@ export default function ProfilePage() {
 
     async function loadProfile() {
         let data;
+        
+        // First, try to get user from localStorage as fallback
+        const localUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (localUser) {
+            try {
+                const parsedUser = JSON.parse(localUser);
+                console.log('[Profile] Found user in localStorage:', parsedUser);
+                // Set this immediately so user sees their data
+                const user = normalizeUser({ data: parsedUser });
+                setProfile(user);
+                setProfileForm({
+                    name: user.name || parsedUser.name || '',
+                    email: user.email || parsedUser.email || '',
+                    phone: user.phone || '',
+                    address: user.address || ''
+                });
+                setImagePreview(imageUrl(user.profile_image || parsedUser.avatar));
+            } catch (e) {
+                console.error('[Profile] Failed to parse localStorage user:', e);
+            }
+        }
+        
+        // Then try to fetch fresh data from API
         try {
             console.log('[Profile] Fetching from:', `${API_BASE}/api/users/profile`);
             data = await requestJson(`${API_BASE}/api/users/profile`, {
@@ -209,10 +232,20 @@ export default function ProfilePage() {
                 throw err;
             }
             console.log('[Profile] Trying fallback endpoint...');
-            data = await requestJson(`${API_BASE}/api/profile`, {
-                headers: authHeaders()
-            });
-            console.log('[Profile] Fallback Response:', data);
+            try {
+                data = await requestJson(`${API_BASE}/api/profile`, {
+                    headers: authHeaders()
+                });
+                console.log('[Profile] Fallback Response:', data);
+            } catch (fallbackErr) {
+                console.log('[Profile] Fallback also failed:', fallbackErr.message);
+                // If both APIs fail, just use localStorage data
+                if (localUser) {
+                    console.log('[Profile] Using localStorage data only');
+                    return;
+                }
+                throw fallbackErr;
+            }
         }
 
         const user = normalizeUser(data);
