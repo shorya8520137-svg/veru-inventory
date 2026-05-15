@@ -6,6 +6,38 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+
+function getAvatarUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    return `${API_BASE}${path}`;
+}
+
+// Convert raw role slug → human-readable label
+function getRoleLabel(user) {
+    if (!user) return 'User';
+    // Prefer explicit display name fields if backend sends them
+    if (user.role_display_name) return user.role_display_name;
+    if (user.role_label) return user.role_label;
+
+    const raw = (user.role_name || user.role || '').toString().toLowerCase().trim();
+    const map = {
+        super_admin:        'Super Admin',
+        admin:              'Administrator',
+        administrator:      'Administrator',
+        warehouse_manager:  'Warehouse Manager',
+        'warehouse manager':  'Warehouse Manager',
+        manager:            'Manager',
+        staff:              'Staff',
+        viewer:             'Viewer',
+        accountant:         'Accountant',
+        dispatch:           'Dispatch',
+        dispatcher:         'Dispatcher',
+    };
+    return map[raw] || raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'User';
+}
+
 // Global navigation items - ONLY actual existing pages from sidebar
 const NAVIGATION_ITEMS = [
     // Products
@@ -424,16 +456,28 @@ export default function TopNavBar({ onTransferStock }) {
                         justifyContent: 'center',
                         color: '#fff',
                         fontSize: '14px',
-                        fontWeight: '600'
+                        fontWeight: '600',
+                        overflow: 'hidden',
+                        flexShrink: 0
                     }}>
-                        {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                        {getAvatarUrl(user?.profile_image || user?.avatar) ? (
+                            <img
+                                src={getAvatarUrl(user?.profile_image || user?.avatar)}
+                                alt={user?.name || 'User'}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                            />
+                        ) : null}
+                        <span style={{ display: getAvatarUrl(user?.profile_image || user?.avatar) ? 'none' : 'flex' }}>
+                            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                            {user?.name || "System Administrator"}
+                            {user?.name || 'User'}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                            ADMINISTRATOR
+                        <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {getRoleLabel(user)}
                         </div>
                     </div>
                 </div>

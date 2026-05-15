@@ -11,7 +11,7 @@ app.use(cors({
     origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-InventoryGPT-Token"],
     preflightContinue: false,
     optionsSuccessStatus: 204
 }));
@@ -94,6 +94,11 @@ app.use('/api/v1/website', apiWebsiteRoutes);
 // Mount API website routes at /api/website for frontend compatibility
 // Authentication is handled by the global middleware below
 app.use('/api/website', apiWebsiteRoutes);
+
+// InventoryGPT token management and external data-feed APIs.
+// Mounted before the global JWT middleware because feed endpoints use
+// InventoryGPT bearer tokens instead of staff JWTs.
+app.use('/api/inventorygpt', require('./routes/inventoryGptRoutes'));
 
 // ===============================
 // PROTECTED ROUTES (JWT REQUIRED)

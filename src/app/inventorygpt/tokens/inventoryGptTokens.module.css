@@ -1,0 +1,502 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    gap: 20px;
+}
+
+.titleSection h1 {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0 0 5px 0;
+}
+
+.titleSection p {
+    color: #7f8c8d;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.createBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.createBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.alert {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease;
+}
+
+.alert.error {
+    background-color: #fee;
+    color: #c33;
+    border-left: 4px solid #c33;
+}
+
+.alert.success {
+    background-color: #efe;
+    color: #3c3;
+    border-left: 4px solid #3c3;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.loading,
+.empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.emptyIcon {
+    font-size: 4rem;
+    margin-bottom: 15px;
+}
+
+.empty p {
+    font-size: 1.3rem;
+    color: #2c3e50;
+    margin: 10px 0;
+}
+
+.empty small {
+    color: #95a5a6;
+}
+
+.tokensGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.tokenCard {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 1px solid #e1e8ed;
+}
+
+.tokenCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 12px;
+}
+
+.cardHeader h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.prefix {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    margin: 5px 0 0 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge.active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.badge.revoked {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.description {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 15px 0;
+    padding: 12px 0;
+    border-top: 1px solid #ecf0f1;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat .label {
+    display: block;
+    color: #95a5a6;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+
+.stat .value {
+    display: block;
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.lastUsed {
+    color: #95a5a6;
+    font-size: 0.85rem;
+    margin: 10px 0;
+}
+
+.revokeBtn {
+    width: 100%;
+    padding: 10px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.revokeBtn:hover:not(:disabled) {
+    background: #c0392b;
+    transform: translateY(-1px);
+}
+
+.revokeBtn:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modalContent {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+.tokenModal {
+    max-width: 600px;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.modalHeader h2 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.3s ease;
+}
+
+.closeBtn:hover {
+    color: #2c3e50;
+}
+
+.modalBody {
+    padding: 20px;
+}
+
+.formGroup {
+    margin-bottom: 15px;
+}
+
+.formGroup label {
+    display: block;
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.formGroup input,
+.formGroup textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.apiEndpoints {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 15px 0;
+}
+
+.apiEndpoints h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.apiEndpoints ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.apiEndpoints li {
+    padding: 6px 0;
+    color: #7f8c8d;
+    font-size: 0.85rem;
+}
+
+.apiEndpoints code {
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.modalFooter {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 15px 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.cancelBtn,
+.submitBtn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.cancelBtn {
+    background: #ecf0f1;
+    color: #2c3e50;
+}
+
+.cancelBtn:hover {
+    background: #bdc3c7;
+}
+
+.submitBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.submitBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Token Display */
+.tokenDisplay {
+    padding: 20px;
+}
+
+.warning {
+    background: #fffbea;
+    border: 1px solid #ffe082;
+    color: #d97706;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.tokenBox {
+    background: #f8f9fa;
+    border: 2px solid #667eea;
+    border-radius: 6px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-family: 'Courier New', monospace;
+}
+
+.tokenBox code {
+    flex: 1;
+    color: #2c3e50;
+    word-break: break-all;
+    font-size: 0.85rem;
+}
+
+.copyBtn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.3s ease;
+}
+
+.copyBtn:hover {
+    background: #764ba2;
+}
+
+.usage {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.usage h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.usage pre {
+    margin: 0;
+    overflow-x: auto;
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #2c3e50;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .titleSection h1 {
+        font-size: 1.5rem;
+    }
+
+    .tokensGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats {
+        grid-template-columns: 1fr;
+    }
+
+    .formRow {
+        grid-template-columns: 1fr;
+    }
+
+    .modalContent {
+        max-width: 95%;
+    }
+}

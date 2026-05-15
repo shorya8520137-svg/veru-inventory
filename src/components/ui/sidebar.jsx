@@ -27,7 +27,8 @@ import {
     Building2,
     Clock,
     ShoppingBag,
-    Wallet
+    Wallet,
+    BookOpen
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { motion, AnimatePresence } from "framer-motion";
@@ -745,6 +746,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </SidebarMenuItem>
                     )}
 
+                    {/* API DOCUMENTATION */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/api-docs" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/api-docs"), collapsed }))}
+                                >
+                                    <BookOpen size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>API Documentation</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
                     {/* SECURITY SETTINGS */}
                     <SidebarMenuItem>
                         <motion.div
@@ -763,22 +782,8 @@ const InventoryMenu = ({ onOpenOperation }) => {
 
                     {/* TICKET MANAGEMENT - REMOVED */}
                     
-                    {/* WALLET */}
-                    <SidebarMenuItem>
-                        <motion.div
-                            whileHover={{ scale: 1.02, x: 2 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <Link 
-                                href="/wallet" 
-                                className={cn(sidebarMenuButtonVariants({ active: pathname === "/wallet", collapsed }))}
-                            >
-                                <Wallet size={collapsed ? 16 : 16} />
-                                {!collapsed && <span>Wallet</span>}
-                            </Link>
-                        </motion.div>
-                    </SidebarMenuItem>
-
+                    {/* WALLET - REMOVED PER USER REQUEST */}
+                    
                     {/* ACCESS CONTROL - DISABLED - Code removed for cleaner build */}
 
                 </SidebarMenu>

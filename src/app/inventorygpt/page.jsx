@@ -1,6 +1,8 @@
 ﻿'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User } from 'lucide-react';
+import { Send, Loader2, Bot, User, Key } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function InventoryGPTPage() {
   const [messages, setMessages] = useState([]);
@@ -8,6 +10,7 @@ export default function InventoryGPTPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const pathname = usePathname();
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function InventoryGPTPage() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-black">
+    <div className="flex-1 flex flex-col bg-black">
       {messages.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="w-full max-w-3xl">
