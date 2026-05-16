@@ -282,7 +282,21 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
   if (barcode && /timeline|ledger|movement|in and out/.test(lower)) {
     const whParam = wh ? `?warehouse=${encodeURIComponent(wh)}&limit=20` : '?limit=20';
     const tl = await apiGet(`/api/timeline/${encodeURIComponent(barcode)}${whParam}`, authToken);
-    if (tl.error) return { answer: userFacingError('Timeline for this product') };
+    
+    console.log('🔍 Timeline API Response:', {
+      hasError: !!tl.error,
+      hasData: !!tl.data,
+      dataKeys: tl.data ? Object.keys(tl.data) : [],
+      hasTimeline: Array.isArray(tl.data?.timeline),
+      timelineLength: tl.data?.timeline?.length,
+      hasDataArray: Array.isArray(tl.data?.data),
+      dataArrayLength: tl.data?.data?.length
+    });
+    
+    if (tl.error) {
+      console.error('❌ Timeline API Error:', tl.error);
+      return { answer: userFacingError('Timeline for this product') };
+    }
     
     // FIX: Check data.timeline FIRST (correct response structure from API)
     const events = Array.isArray(tl.data?.timeline)
@@ -293,6 +307,8 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
           ? tl.data
           : [];
           
+    console.log(' Extracted events:', events.length);
+    
     if (!events.length) {
       return { answer: `No timeline events for **${barcode}**${wh ? ` at ${wh}` : ''}.` };
     }
