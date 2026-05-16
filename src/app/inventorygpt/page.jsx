@@ -204,11 +204,11 @@ function CategoryGrid({ categories, onCategoryClick }) {
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
     >
       {categories.map((cat, i) => {
-        const catName = typeof cat === 'string' ? cat : cat.category || cat.name || cat.category_name || '';
-        const count = cat.count || cat.total_products || cat.product_count || 0;
+        const catName = cat.name || cat.category || cat.category_name || cat.slug || '';
+        const count = cat.count || cat.product_count || cat.total_products || 0;
         return (
           <motion.div
-            key={catName}
+            key={`${catName}-${i}`}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06, duration: 0.35 }}
@@ -248,15 +248,20 @@ function ProductCard({ product, index = 0, onAskAI }) {
 
   if (!product) return null;
 
-  const title = product.product_name || product.name || product.title || product.sku || 'Unknown';
+  const title = product.product_name || product.name || product.title || 'Unknown Product';
   const sku = product.sku || product.barcode || product.sku_id || '';
-  const stock = product.stock || product.quantity || product.qty || 0;
-  const price = product.price || product.selling_price || product.unit_price || 0;
+  const stock = parseInt(product.stock || product.quantity || product.qty || 0, 10);
+  const price = parseFloat(product.price || product.selling_price || product.unit_price || 0);
   const warehouse = product.warehouse || product.warehouse_code || product.location || '';
   const description = product.description || product.long_description || product.details || '';
-  const badges = product.badges || [];
+  
+  // Build unique badges array
+  const badges = [];
   if (stock === 0) badges.push('Out of Stock');
-  if (stock > 0 && stock < 10) badges.push('Low Stock');
+  else if (stock > 0 && stock < 10) badges.push('Low Stock');
+  if (product.is_bestseller || product.bestseller) badges.push('Best Seller');
+  if (product.is_trending || product.trending) badges.push('Trending');
+  if (product.is_premium || product.premium) badges.push('Premium');
 
   const badgeColors = {
     'Best Seller': 'bg-emerald-100 text-emerald-700',
@@ -277,38 +282,38 @@ function ProductCard({ product, index = 0, onAskAI }) {
       >
         {/* FRONT SIDE */}
         <div
-          className="absolute inset-0 backface-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:border-violet-300 hover:shadow-lg"
+          className="absolute inset-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:border-violet-300 hover:shadow-lg"
           style={{ backfaceVisibility: 'hidden' }}
           onClick={() => setFlipped(!flipped)}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h4 className="truncate text-sm font-semibold text-slate-900">{title}</h4>
+              <h4 className="text-sm font-semibold text-slate-900 line-clamp-2 leading-tight">{title}</h4>
               {sku && <p className="mt-1 text-xs text-slate-500">SKU: {sku}</p>}
             </div>
-            {stock > 0 ? (
-              <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                {stock}
-              </span>
-            ) : (
-              <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
-                0
-              </span>
-            )}
+            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${stock === 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {stock}
+            </span>
           </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {badges.slice(0, 3).map((b) => (
-              <span key={b} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeColors[b] || 'bg-slate-100 text-slate-600'}`}>
-                {b}
-              </span>
-            ))}
-          </div>
+          
+          {/* Badges */}
+          {badges.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {badges.slice(0, 2).map((b) => (
+                <span key={b} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeColors[b] || 'bg-slate-100 text-slate-600'}`}>
+                  {b}
+                </span>
+              ))}
+            </div>
+          )}
+          
           {warehouse && (
             <p className="mt-2 text-xs text-slate-500">📍 {warehouse}</p>
           )}
           {price > 0 && (
-            <p className="mt-1 text-sm font-bold text-slate-900">${price}</p>
+            <p className="mt-1 text-base font-bold text-slate-900">${price.toFixed(2)}</p>
           )}
+          
           <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-violet-600">
             <Eye className="h-3.5 w-3.5" />
             <span>Click for details</span>
@@ -317,28 +322,30 @@ function ProductCard({ product, index = 0, onAskAI }) {
 
         {/* BACK SIDE */}
         <div
-          className="absolute inset-0 backface-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm"
+          className="absolute inset-0 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
-          <h4 className="text-sm font-semibold text-slate-900">Product Details</h4>
+          <h4 className="text-sm font-semibold text-slate-900 mb-2">Product Details</h4>
           {description ? (
-            <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-3">
+            <p className="text-xs leading-relaxed text-slate-600 line-clamp-4 mb-3">
               {description}
             </p>
           ) : (
-            <p className="mt-2 text-xs text-slate-400">No description available</p>
+            <p className="text-xs text-slate-400 mb-3">No description available</p>
           )}
-          <div className="mt-3 space-y-1 text-xs text-slate-600">
+          
+          <div className="space-y-1 text-xs text-slate-600 mb-3">
             {sku && <p><span className="font-medium">SKU:</span> {sku}</p>}
             {warehouse && <p><span className="font-medium">Warehouse:</span> {warehouse}</p>}
             <p><span className="font-medium">Stock:</span> {stock} units</p>
-            {price > 0 && <p><span className="font-medium">Price:</span> ${price}</p>}
+            {price > 0 && <p><span className="font-medium">Price:</span> ${price.toFixed(2)}</p>}
           </div>
-          <div className="mt-3 flex gap-2">
+          
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setShowNestedChat(!showNestedChat); }}
-              className="flex items-center gap-1.5 rounded-lg bg-violet-100 px-2.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-200"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-violet-100 px-2.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-200"
             >
               <MessageCircle className="h-3.5 w-3.5" />
               Ask AI
@@ -346,12 +353,12 @@ function ProductCard({ product, index = 0, onAskAI }) {
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setFlipped(false); }}
-              className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
             >
-              <ChevronRight className="h-3.5 w-3.5" />
               Back
             </button>
           </div>
+          
           {showNestedChat && <NestedChat product={product} />}
         </div>
       </motion.div>
@@ -595,9 +602,12 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
     if (!showProductMatrix || !intent?.category) return products;
     const cat = intent.category.toLowerCase();
     return products.filter((p) => {
-      const pCat = (p.category || p.product_category || p.type || p.category_name || '').toLowerCase();
+      // Check multiple possible category fields
+      const pCat = (p.category || p.product_category || p.type || p.category_name || p.category_id || '').toString().toLowerCase();
       const pName = (p.product_name || p.name || p.title || '').toLowerCase();
-      return pCat.includes(cat) || pName.includes(cat);
+      const pSku = (p.sku || p.barcode || '').toLowerCase();
+      // Match by category name OR product name containing the category
+      return pCat.includes(cat) || pName.includes(cat) || pSku.includes(cat);
     });
   }, [products, showProductMatrix, intent?.category]);
 
@@ -896,7 +906,7 @@ export default function InventoryGPTPage() {
       const allProducts = [];
       if (productsRes.ok) {
         const pdata = await productsRes.json().catch(() => ({}));
-        const list = pdata?.data?.products ?? pdata?.products ?? [];
+        const list = pdata?.data?.products ?? pdata?.products ?? pdata?.data ?? [];
         if (Array.isArray(list)) allProducts.push(...list.map(p => ({ ...p, source: 'regular' })));
       }
       if (websiteProductsRes.ok) {
@@ -910,15 +920,30 @@ export default function InventoryGPTPage() {
       const allCategories = [];
       if (categoriesRes.ok) {
         const cdata = await categoriesRes.json().catch(() => ({}));
-        const clist = Array.isArray(cdata?.data) ? cdata.data : cdata?.categories ?? [];
-        if (Array.isArray(clist)) allCategories.push(...clist.map(c => ({ ...c, source: 'regular' })));
+        const clist = cdata?.data ?? cdata?.categories ?? [];
+        if (Array.isArray(clist)) {
+          allCategories.push(...clist.map(c => ({
+            name: c.name || c.display_name || c.category || '',
+            count: c.count || c.product_count || 0,
+            source: 'regular',
+            ...c
+          })));
+        }
       }
       if (websiteCategoriesRes.ok) {
         const wcdata = await websiteCategoriesRes.json().catch(() => ({}));
-        const wclist = wcdata?.data?.categories ?? wcdata?.categories ?? wcdata?.data ?? [];
-        if (Array.isArray(wclist)) allCategories.push(...wclist.map(c => ({ ...c, source: 'website' })));
+        const wclist = wcdata?.data ?? wcdata?.categories ?? [];
+        if (Array.isArray(wclist)) {
+          allCategories.push(...wclist.map(c => ({
+            name: c.name || c.slug || c.category || '',
+            count: c.product_count || c.count || 0,
+            source: 'website',
+            ...c
+          })));
+        }
       }
       if (allCategories.length) setCategories(allCategories);
+      console.log('Loaded categories:', allCategories.length, 'Products:', allProducts.length);
     } catch (error) {
       console.error('Failed to load brain context:', error);
     } finally {
