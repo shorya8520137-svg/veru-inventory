@@ -42,6 +42,7 @@ const WELCOME_TYPE_MS = 18;
 
 const QUICK_EXAMPLES = [
   { label: 'Show categories', prompt: 'show categories' },
+  { label: 'Website categories', prompt: 'show website categories' },
   { label: 'BLR_WH stock', prompt: 'show stock of BLR_WH' },
   { label: 'Analyze dead stock', prompt: 'Analyze dead stock at BLR_WH' },
   { label: 'Website orders', prompt: 'show website orders' }
@@ -473,6 +474,7 @@ function ProductMatrix({ products, title, onAskAI }) {
 // ==================== INTENT DETECTION ====================
 function detectIntent(text) {
   const t = text.toLowerCase();
+  if (/show.*website.*categor(y|ies)/.test(t) || /website.*categor(y|ies)/.test(t)) return { type: 'website_categories', raw: text };
   if (/show.*categor(y|ies)/.test(t)) return { type: 'categories', raw: text };
   if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
     const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
@@ -582,7 +584,7 @@ function WelcomePanel({ brain, onPickExample }) {
   );
 }
 
-function AssistantMessage({ message, isStreaming = false, onHelpful, categories, products, onCategoryClick }) {
+function AssistantMessage({ message, isStreaming = false, onHelpful, categories, websiteCategories, products, onCategoryClick }) {
   const [copied, setCopied] = useState(false);
   const [helpful, setHelpful] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -595,6 +597,7 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
   // Detect intent and render visual components
   const intent = detectIntent(message.userPrompt || '');
   const showCategoryGrid = intent?.type === 'categories' && Array.isArray(categories) && categories.length > 0;
+  const showWebsiteCategoryGrid = intent?.type === 'website_categories' && Array.isArray(websiteCategories) && websiteCategories.length > 0;
   const showProductMatrix = intent?.type === 'products' && Array.isArray(products) && products.length > 0;
 
   // Filter products by category if needed
@@ -635,9 +638,12 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
         <Info className="h-4 w-4" strokeWidth={2.5} />
       </span>
       <div className="min-w-0 flex-1 space-y-4">
-        {/* Category Grid ONLY - no markdown text */}
+        {/* Regular Category Grid */}
         {showCategoryGrid ? (
           <CategoryGrid categories={categories} onCategoryClick={onCategoryClick} />
+        ) : showWebsiteCategoryGrid ? (
+          /* Website Category Grid */
+          <CategoryGrid categories={websiteCategories} onCategoryClick={onCategoryClick} />
         ) : showProductMatrix ? (
           /* Product Matrix ONLY - no markdown text */
           <ProductMatrix products={filteredProducts} title={`${intent?.category ? `${intent.category} Products` : 'Products'}`} onAskAI={() => {}} />
@@ -744,6 +750,7 @@ export default function InventoryGPTPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [websiteCategories, setWebsiteCategories] = useState([]);
   const [brain, setBrain] = useState(null);
   const [brainLoading, setBrainLoading] = useState(true);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -916,13 +923,13 @@ export default function InventoryGPTPage() {
       }
       if (allProducts.length) setProducts(allProducts);
       
-      // Merge categories from both sources
-      const allCategories = [];
+      // Store categories separately
+      const regularCats = [];
       if (categoriesRes.ok) {
         const cdata = await categoriesRes.json().catch(() => ({}));
         const clist = cdata?.data ?? cdata?.categories ?? [];
         if (Array.isArray(clist)) {
-          allCategories.push(...clist.map(c => ({
+          regularCats.push(...clist.map(c => ({
             name: c.name || c.display_name || c.category || '',
             count: c.count || c.product_count || 0,
             source: 'regular',
@@ -930,11 +937,14 @@ export default function InventoryGPTPage() {
           })));
         }
       }
+      if (regularCats.length) setCategories(regularCats);
+      
+      const webCats = [];
       if (websiteCategoriesRes.ok) {
         const wcdata = await websiteCategoriesRes.json().catch(() => ({}));
         const wclist = wcdata?.data ?? wcdata?.categories ?? [];
         if (Array.isArray(wclist)) {
-          allCategories.push(...wclist.map(c => ({
+          webCats.push(...wclist.map(c => ({
             name: c.name || c.slug || c.category || '',
             count: c.product_count || c.count || 0,
             source: 'website',
@@ -942,8 +952,9 @@ export default function InventoryGPTPage() {
           })));
         }
       }
-      if (allCategories.length) setCategories(allCategories);
-      console.log('Loaded categories:', allCategories.length, 'Products:', allProducts.length);
+      if (webCats.length) setWebsiteCategories(webCats);
+      
+      console.log('Loaded regular categories:', regularCats.length, 'Website categories:', webCats.length, 'Products:', allProducts.length);
     } catch (error) {
       console.error('Failed to load brain context:', error);
     } finally {
@@ -1231,6 +1242,7 @@ export default function InventoryGPTPage() {
                         message={message}
                         isStreaming={Boolean(message.isStreaming)}
                         categories={categories}
+                        websiteCategories={websiteCategories}
                         products={products}
                         onCategoryClick={(cat) => {
                           sendMessage(`show me all products of ${cat}`);

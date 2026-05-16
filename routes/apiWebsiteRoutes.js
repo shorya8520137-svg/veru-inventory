@@ -42,6 +42,7 @@ router.use(conditionalAuth);
 // Website Products API Routes (GET = public, others = JWT or API key required)
 router.get('/products', websiteProductController.getProducts);
 router.get('/products/featured', websiteProductController.getFeaturedProducts);
+router.get('/products/categories', websiteProductController.getCategories); // MUST be before /:id
 router.get('/products/:id', websiteProductController.getProduct);
 router.post('/products', websiteProductController.createProduct);
 router.put('/products/:id', websiteProductController.updateProduct);
