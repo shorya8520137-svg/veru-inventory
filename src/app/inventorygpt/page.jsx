@@ -15,7 +15,18 @@ import {
   Check,
   ChevronDown,
   Sparkles,
-  Info
+  Info,
+  Grid3X3,
+  Package,
+  TrendingUp,
+  AlertTriangle,
+  Star,
+  Eye,
+  Zap,
+  MessageCircle,
+  ChevronRight,
+  ArrowRight,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import MarkdownBody from './MarkdownBody';
@@ -23,15 +34,17 @@ import MarkdownBody from './MarkdownBody';
 const STORAGE_KEY = 'inventorygpt_chat_sessions_v1';
 const AGENT_NAME = 'InsoraOpps';
 const BRAND_PURPLE = '#5850EC';
-const CHAT_COLUMN = 'mx-auto w-full max-w-3xl min-w-0 px-6';
+const CHAT_COLUMN = 'mx-auto w-full max-w-5xl min-w-0 px-6';
 const READ_MORE_CHAR_LIMIT = 1600;
 const TYPING_WORD_MS = 24;
 const TYPING_CHAR_MS = 14;
 const WELCOME_TYPE_MS = 18;
 
 const QUICK_EXAMPLES = [
-  { label: 'Analyze dead stock at BLR_WH', prompt: 'Analyze dead stock at BLR_WH' },
-  { label: 'Price of barcode 296113196998', prompt: 'Price of barcode 296113196998' }
+  { label: 'Show categories', prompt: 'show categories' },
+  { label: 'BLR_WH stock', prompt: 'show stock of BLR_WH' },
+  { label: 'Analyze dead stock', prompt: 'Analyze dead stock at BLR_WH' },
+  { label: 'Website orders', prompt: 'show website orders' }
 ];
 
 function isGreetingOnly(text) {
@@ -180,6 +193,292 @@ function userRoleLabel(user) {
   );
 }
 
+// ==================== CATEGORY GRID ====================
+function CategoryGrid({ categories, onCategoryClick }) {
+  if (!Array.isArray(categories) || categories.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+    >
+      {categories.map((cat, i) => {
+        const catName = typeof cat === 'string' ? cat : cat.category || cat.name || cat.category_name || '';
+        const count = cat.count || cat.total_products || cat.product_count || 0;
+        return (
+          <motion.div
+            key={catName}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.35 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onCategoryClick?.(catName)}
+            className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-all hover:border-violet-300 hover:shadow-lg hover:shadow-violet-100/50"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition-colors group-hover:bg-violet-200">
+                <Grid3X3 className="h-6 w-6" />
+              </div>
+              {count > 0 && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                  {count} products
+                </span>
+              )}
+            </div>
+            <h3 className="mt-3 text-base font-semibold capitalize text-slate-900">
+              {catName}
+            </h3>
+            <div className="mt-3 flex items-center gap-1.5 text-sm font-medium text-violet-600 transition-colors group-hover:text-violet-700">
+              <span>View Products</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
+// ==================== PRODUCT CARD (FLIP) ====================
+function ProductCard({ product, index = 0, onAskAI }) {
+  const [flipped, setFlipped] = useState(false);
+  const [showNestedChat, setShowNestedChat] = useState(false);
+
+  if (!product) return null;
+
+  const title = product.product_name || product.name || product.title || product.sku || 'Unknown';
+  const sku = product.sku || product.barcode || product.sku_id || '';
+  const stock = product.stock || product.quantity || product.qty || 0;
+  const price = product.price || product.selling_price || product.unit_price || 0;
+  const warehouse = product.warehouse || product.warehouse_code || product.location || '';
+  const description = product.description || product.long_description || product.details || '';
+  const badges = product.badges || [];
+  if (stock === 0) badges.push('Out of Stock');
+  if (stock > 0 && stock < 10) badges.push('Low Stock');
+
+  const badgeColors = {
+    'Best Seller': 'bg-emerald-100 text-emerald-700',
+    'Low Stock': 'bg-amber-100 text-amber-700',
+    'Premium': 'bg-violet-100 text-violet-700',
+    'Trending': 'bg-blue-100 text-blue-700',
+    'Out of Stock': 'bg-red-100 text-red-700'
+  };
+
+  return (
+    <div className="relative" style={{ perspective: '1000px' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        className="relative h-full w-full transition-transform duration-500"
+        style={{ transformStyle: 'preserve-3d', transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)' }}
+      >
+        {/* FRONT SIDE */}
+        <div
+          className="absolute inset-0 backface-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:border-violet-300 hover:shadow-lg"
+          style={{ backfaceVisibility: 'hidden' }}
+          onClick={() => setFlipped(!flipped)}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h4 className="truncate text-sm font-semibold text-slate-900">{title}</h4>
+              {sku && <p className="mt-1 text-xs text-slate-500">SKU: {sku}</p>}
+            </div>
+            {stock > 0 ? (
+              <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                {stock}
+              </span>
+            ) : (
+              <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
+                0
+              </span>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {badges.slice(0, 3).map((b) => (
+              <span key={b} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeColors[b] || 'bg-slate-100 text-slate-600'}`}>
+                {b}
+              </span>
+            ))}
+          </div>
+          {warehouse && (
+            <p className="mt-2 text-xs text-slate-500">📍 {warehouse}</p>
+          )}
+          {price > 0 && (
+            <p className="mt-1 text-sm font-bold text-slate-900">${price}</p>
+          )}
+          <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-violet-600">
+            <Eye className="h-3.5 w-3.5" />
+            <span>Click for details</span>
+          </div>
+        </div>
+
+        {/* BACK SIDE */}
+        <div
+          className="absolute inset-0 backface-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm"
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
+          <h4 className="text-sm font-semibold text-slate-900">Product Details</h4>
+          {description ? (
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-3">
+              {description}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-slate-400">No description available</p>
+          )}
+          <div className="mt-3 space-y-1 text-xs text-slate-600">
+            {sku && <p><span className="font-medium">SKU:</span> {sku}</p>}
+            {warehouse && <p><span className="font-medium">Warehouse:</span> {warehouse}</p>}
+            <p><span className="font-medium">Stock:</span> {stock} units</p>
+            {price > 0 && <p><span className="font-medium">Price:</span> ${price}</p>}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowNestedChat(!showNestedChat); }}
+              className="flex items-center gap-1.5 rounded-lg bg-violet-100 px-2.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-200"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              Ask AI
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setFlipped(false); }}
+              className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+              Back
+            </button>
+          </div>
+          {showNestedChat && <NestedChat product={product} />}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ==================== NESTED AI CHAT ====================
+function NestedChat({ product }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: 'user', content: input.trim() };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const productContext = `Product: ${product.product_name || product.name || product.title}, SKU: ${product.sku || product.barcode || ''}, Stock: ${product.stock || product.quantity || 0}, Warehouse: ${product.warehouse || ''}, Price: ${product.price || 0}`;
+      const response = await fetch('/api/inventorygpt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: `${userMsg.content}\n\n[Context: ${productContext}]`,
+          conversationHistory: messages.slice(-3).map((m) => ({ role: m.role, content: m.content }))
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.answer) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
+      }
+    } catch (error) {
+      console.error('Nested chat error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-3 rounded-xl border border-violet-200 bg-white p-3"
+    >
+      <div className="max-h-48 space-y-2 overflow-y-auto">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${m.role === 'user' ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700'}`}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex items-center gap-1 text-xs text-slate-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Thinking...</span>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="Ask about this product..."
+          className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-violet-300 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={loading || !input.trim()}
+          className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+        >
+          <Send className="h-3 w-3" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ==================== PRODUCT MATRIX ====================
+function ProductMatrix({ products, title, onAskAI }) {
+  if (!Array.isArray(products) || products.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
+      {title && (
+        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {products.slice(0, 9).map((product, i) => (
+          <ProductCard key={i} product={product} index={i} onAskAI={onAskAI} />
+        ))}
+      </div>
+      {products.length > 9 && (
+        <p className="text-center text-sm text-slate-500">
+          Showing 9 of {products.length} products. Ask for more details!
+        </p>
+      )}
+    </motion.div>
+  );
+}
+
+// ==================== INTENT DETECTION ====================
+function detectIntent(text) {
+  const t = text.toLowerCase();
+  if (/show.*categor(y|ies)/.test(t)) return { type: 'categories', raw: text };
+  if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
+    const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
+    if (match) return { type: 'products', category: match[1].trim(), raw: text };
+    return { type: 'products', raw: text };
+  }
+  if (/show.*stock|warehouse.*stock|stock.*warehouse|inventory/.test(t)) return { type: 'stock', raw: text };
+  if (/dead\s*stock|slow\s*moving|excess/.test(t)) return { type: 'dead_stock', raw: text };
+  if (/transfer|movement/.test(t)) return { type: 'transfers', raw: text };
+  if (/how\s*(many|much).*warehouse|how\s*(many|much).*store|total\s*(warehouse|store)/.test(t)) return { type: 'warehouse_count', raw: text };
+  return null;
+}
+
 function InsoraLogo() {
   return (
     <div className="flex items-center gap-2.5 px-1">
@@ -276,7 +575,7 @@ function WelcomePanel({ brain, onPickExample }) {
   );
 }
 
-function AssistantMessage({ message, isStreaming = false, onHelpful }) {
+function AssistantMessage({ message, isStreaming = false, onHelpful, categories, products, onCategoryClick }) {
   const [copied, setCopied] = useState(false);
   const [helpful, setHelpful] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -285,6 +584,22 @@ function AssistantMessage({ message, isStreaming = false, onHelpful }) {
   const isLong = fullContent.length > READ_MORE_CHAR_LIMIT && !isStreaming;
   const displayContent =
     isLong && !expanded ? `${fullContent.slice(0, READ_MORE_CHAR_LIMIT)}…` : fullContent;
+
+  // Detect intent and render visual components
+  const intent = detectIntent(message.userPrompt || '');
+  const showCategoryGrid = intent?.type === 'categories' && Array.isArray(categories) && categories.length > 0;
+  const showProductMatrix = intent?.type === 'products' && Array.isArray(products) && products.length > 0;
+
+  // Filter products by category if needed
+  const filteredProducts = useMemo(() => {
+    if (!showProductMatrix || !intent?.category) return products;
+    const cat = intent.category.toLowerCase();
+    return products.filter((p) => {
+      const pCat = (p.category || p.product_category || p.type || '').toLowerCase();
+      const pName = (p.product_name || p.name || p.title || '').toLowerCase();
+      return pCat.includes(cat) || pName.includes(cat);
+    });
+  }, [products, showProductMatrix, intent?.category]);
 
   async function copyText() {
     try {
@@ -309,14 +624,33 @@ function AssistantMessage({ message, isStreaming = false, onHelpful }) {
       >
         <Info className="h-4 w-4" strokeWidth={2.5} />
       </span>
-      <div className="min-w-0 flex-1">
-        {message.error ? (
-          <p className="text-sm text-red-600">{displayContent}</p>
-        ) : (
-          <div className="text-[15px] leading-7 text-slate-700">
-            <MarkdownBody content={displayContent} />
-            {isStreaming ? <StreamingCursor /> : null}
-          </div>
+      <div className="min-w-0 flex-1 space-y-4">
+        {/* Category Grid */}
+        {showCategoryGrid && (
+          <>
+            <p className="text-[15px] leading-7 text-slate-700">{displayContent}</p>
+            <CategoryGrid categories={categories} onCategoryClick={onCategoryClick} />
+          </>
+        )}
+        {/* Product Matrix */}
+        {showProductMatrix && (
+          <>
+            <p className="text-[15px] leading-7 text-slate-700">{displayContent}</p>
+            <ProductMatrix products={filteredProducts} title={`${intent?.category || ''} Products`.trim() || 'Products'} onAskAI={() => {}} />
+          </>
+        )}
+        {/* Regular text response */}
+        {!showCategoryGrid && !showProductMatrix && (
+          <>
+            {message.error ? (
+              <p className="text-sm text-red-600">{displayContent}</p>
+            ) : (
+              <div className="text-[15px] leading-7 text-slate-700">
+                <MarkdownBody content={displayContent} />
+                {isStreaming ? <StreamingCursor /> : null}
+              </div>
+            )}
+          </>
         )}
         {isLong && !expanded ? (
           <button
@@ -337,7 +671,7 @@ function AssistantMessage({ message, isStreaming = false, onHelpful }) {
             Show less
           </button>
         ) : null}
-        {!isStreaming && fullContent ? (
+        {!isStreaming && fullContent && !showCategoryGrid && !showProductMatrix ? (
           <div className="mt-3 flex items-center gap-4">
             <button
               type="button"
@@ -642,18 +976,20 @@ export default function InventoryGPTPage() {
           error: false,
           fromAgent: AGENT_NAME,
           exportTsv: data.exportTsv || null,
-          exportFilename: data.exportFilename || null
+          exportFilename: data.exportFilename || null,
+          userPrompt: trimmed // Track user prompt for intent detection
         });
       } else {
         appendAssistantWithTyping(
           sessionIdForRequest,
           sanitizeForUser(data.fallback || data.error || 'Something went wrong.'),
-          { error: true }
+          { error: true, userPrompt: trimmed }
         );
       }
     } catch {
       appendAssistantWithTyping(sessionIdForRequest, 'Connection error. Try again.', {
-        error: true
+        error: true,
+        userPrompt: trimmed
       });
     } finally {
       setIsLoading(false);
@@ -855,6 +1191,11 @@ export default function InventoryGPTPage() {
                         key={`${message.timestamp}-${index}`}
                         message={message}
                         isStreaming={Boolean(message.isStreaming)}
+                        categories={categories}
+                        products={products}
+                        onCategoryClick={(cat) => {
+                          sendMessage(`show me all products of ${cat}`);
+                        }}
                       />
                     );
                   }
