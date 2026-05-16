@@ -272,17 +272,24 @@ function ProductCard({ product, index = 0, onAskAI }) {
           <img
             src={image}
             alt={title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-opacity duration-300"
+            style={{ opacity: 0 }}
             loading="lazy"
+            onLoad={(e) => {
+              e.target.style.opacity = '1';
+            }}
             onError={(e) => {
-              e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-size=%2218%22%3ENo Image%3C/text%3E%3C/svg%3E';
+              e.target.style.display = 'none';
+              const placeholder = e.target.nextElementSibling;
+              if (placeholder) placeholder.style.display = 'flex';
             }}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-400">
-            <Package className="h-12 w-12" />
-          </div>
-        )}
+        ) : null}
+        
+        {/* Placeholder when no image or image fails */}
+        <div className={`w-full h-full flex items-center justify-center text-slate-400 ${image ? 'absolute inset-0' : ''}`} style={{ display: image ? 'none' : 'flex' }}>
+          <Package className="h-12 w-12" />
+        </div>
         
         {/* Stock Badge */}
         <div className="absolute top-3 right-3">
@@ -314,10 +321,10 @@ function ProductCard({ product, index = 0, onAskAI }) {
         {/* Price */}
         <div className="flex items-baseline gap-2 mt-1">
           {price > 0 && (
-            <span className="text-xl font-bold text-slate-900">${price.toFixed(2)}</span>
+            <span className="text-xl font-bold text-slate-900">₹{price.toFixed(2)}</span>
           )}
           {secondaryPrice > 0 && secondaryPrice > price && (
-            <span className="text-sm text-slate-400 line-through">${secondaryPrice.toFixed(2)}</span>
+            <span className="text-sm text-slate-400 line-through">₹{secondaryPrice.toFixed(2)}</span>
           )}
         </div>
         

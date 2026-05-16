@@ -104,18 +104,10 @@ export async function tryInsoraOppsDataAnswer(question, authToken) {
 
   // --- CATEGORIES ---
   if (/categor(y|ies)/.test(lower)) {
-    const catRes = await apiGet('/api/website/categories', authToken);
-    if (catRes.error) return { answer: safeUserError(catRes.error, 'Categories') };
-    const list = pickItems(catRes.data);
-    if (!list.length) return { answer: 'No categories found in the website catalog.' };
-    const lines = list.slice(0, 20).map((c, i) => {
-      const name = c.name || c.category_name || c.title || `Category ${i + 1}`;
-      return `- **${name}**`;
-    });
+    // Return empty answer - frontend will show visual category grid
     return {
-      answer: `**Website categories** (${list.length}):\n\n${lines.join('\n')}${
-        list.length > 20 ? `\n\n_…and ${list.length - 20} more._` : ''
-      }`
+      answer: `I found the categories for you. Here they are:`,
+      triggerVisual: true
     };
   }
 
