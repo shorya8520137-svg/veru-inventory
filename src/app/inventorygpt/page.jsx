@@ -595,7 +595,7 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
     if (!showProductMatrix || !intent?.category) return products;
     const cat = intent.category.toLowerCase();
     return products.filter((p) => {
-      const pCat = (p.category || p.product_category || p.type || '').toLowerCase();
+      const pCat = (p.category || p.product_category || p.type || p.category_name || '').toLowerCase();
       const pName = (p.product_name || p.name || p.title || '').toLowerCase();
       return pCat.includes(cat) || pName.includes(cat);
     });
@@ -625,22 +625,14 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
         <Info className="h-4 w-4" strokeWidth={2.5} />
       </span>
       <div className="min-w-0 flex-1 space-y-4">
-        {/* Category Grid */}
-        {showCategoryGrid && (
-          <>
-            <p className="text-[15px] leading-7 text-slate-700">{displayContent}</p>
-            <CategoryGrid categories={categories} onCategoryClick={onCategoryClick} />
-          </>
-        )}
-        {/* Product Matrix */}
-        {showProductMatrix && (
-          <>
-            <p className="text-[15px] leading-7 text-slate-700">{displayContent}</p>
-            <ProductMatrix products={filteredProducts} title={`${intent?.category || ''} Products`.trim() || 'Products'} onAskAI={() => {}} />
-          </>
-        )}
-        {/* Regular text response */}
-        {!showCategoryGrid && !showProductMatrix && (
+        {/* Category Grid ONLY - no markdown text */}
+        {showCategoryGrid ? (
+          <CategoryGrid categories={categories} onCategoryClick={onCategoryClick} />
+        ) : showProductMatrix ? (
+          /* Product Matrix ONLY - no markdown text */
+          <ProductMatrix products={filteredProducts} title={`${intent?.category ? `${intent.category} Products` : 'Products'}`} onAskAI={() => {}} />
+        ) : (
+          /* Regular text response */
           <>
             {message.error ? (
               <p className="text-sm text-red-600">{displayContent}</p>
@@ -650,61 +642,61 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
                 {isStreaming ? <StreamingCursor /> : null}
               </div>
             )}
-          </>
-        )}
-        {isLong && !expanded ? (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="mt-2 text-sm font-medium hover:opacity-80"
-            style={{ color: BRAND_PURPLE }}
-          >
-            Read more
-          </button>
-        ) : null}
-        {isLong && expanded ? (
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="mt-2 text-sm font-medium text-slate-500 hover:text-slate-700"
-          >
-            Show less
-          </button>
-        ) : null}
-        {!isStreaming && fullContent && !showCategoryGrid && !showProductMatrix ? (
-          <div className="mt-3 flex items-center gap-4">
-            <button
-              type="button"
-              onClick={copyText}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-600"
-            >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setHelpful(true);
-                onHelpful?.();
-              }}
-              className={`inline-flex items-center gap-1.5 text-xs transition ${
-                helpful ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <ThumbsUp className="h-3.5 w-3.5" />
-              Helpful
-            </button>
-            {message.exportTsv ? (
+            {isLong && !expanded ? (
               <button
                 type="button"
-                onClick={() => navigator.clipboard.writeText(message.exportTsv)}
-                className="text-xs text-slate-400 hover:text-slate-600"
+                onClick={() => setExpanded(true)}
+                className="mt-2 text-sm font-medium hover:opacity-80"
+                style={{ color: BRAND_PURPLE }}
               >
-                Copy table
+                Read more
               </button>
             ) : null}
-          </div>
-        ) : null}
+            {isLong && expanded ? (
+              <button
+                type="button"
+                onClick={() => setExpanded(false)}
+                className="mt-2 text-sm font-medium text-slate-500 hover:text-slate-700"
+              >
+                Show less
+              </button>
+            ) : null}
+            {!isStreaming && fullContent ? (
+              <div className="mt-3 flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={copyText}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-600"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHelpful(true);
+                    onHelpful?.();
+                  }}
+                  className={`inline-flex items-center gap-1.5 text-xs transition ${
+                    helpful ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                  Helpful
+                </button>
+                {message.exportTsv ? (
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(message.exportTsv)}
+                    className="text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    Copy table
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
     </motion.div>
   );
@@ -891,20 +883,42 @@ export default function InventoryGPTPage() {
       }
       const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
       const h = catalogAuthHeaders();
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetch(`${apiBase}/api/products?limit=100`, { headers: h }),
-        fetch(`${apiBase}/api/products/categories/all`, { headers: h })
+      
+      // Fetch REGULAR products AND website products
+      const [productsRes, categoriesRes, websiteProductsRes, websiteCategoriesRes] = await Promise.all([
+        fetch(`${apiBase}/api/products?limit=100`, { headers: h }).catch(() => ({ ok: false })),
+        fetch(`${apiBase}/api/products/categories/all`, { headers: h }).catch(() => ({ ok: false })),
+        fetch(`${apiBase}/api/website/products?limit=100`, { headers: h }).catch(() => ({ ok: false })),
+        fetch(`${apiBase}/api/website/products/categories`, { headers: h }).catch(() => ({ ok: false }))
       ]);
+      
+      // Merge products from both sources
+      const allProducts = [];
       if (productsRes.ok) {
-        const pdata = await productsRes.json();
+        const pdata = await productsRes.json().catch(() => ({}));
         const list = pdata?.data?.products ?? pdata?.products ?? [];
-        if (Array.isArray(list) && list.length) setProducts(list);
+        if (Array.isArray(list)) allProducts.push(...list.map(p => ({ ...p, source: 'regular' })));
       }
+      if (websiteProductsRes.ok) {
+        const wdata = await websiteProductsRes.json().catch(() => ({}));
+        const wlist = wdata?.data?.products ?? wdata?.products ?? wdata?.data ?? [];
+        if (Array.isArray(wlist)) allProducts.push(...wlist.map(p => ({ ...p, source: 'website' })));
+      }
+      if (allProducts.length) setProducts(allProducts);
+      
+      // Merge categories from both sources
+      const allCategories = [];
       if (categoriesRes.ok) {
-        const cdata = await categoriesRes.json();
-        const list = Array.isArray(cdata?.data) ? cdata.data : cdata?.categories ?? [];
-        if (list.length) setCategories(list);
+        const cdata = await categoriesRes.json().catch(() => ({}));
+        const clist = Array.isArray(cdata?.data) ? cdata.data : cdata?.categories ?? [];
+        if (Array.isArray(clist)) allCategories.push(...clist.map(c => ({ ...c, source: 'regular' })));
       }
+      if (websiteCategoriesRes.ok) {
+        const wcdata = await websiteCategoriesRes.json().catch(() => ({}));
+        const wclist = wcdata?.data?.categories ?? wcdata?.categories ?? wcdata?.data ?? [];
+        if (Array.isArray(wclist)) allCategories.push(...wclist.map(c => ({ ...c, source: 'website' })));
+      }
+      if (allCategories.length) setCategories(allCategories);
     } catch (error) {
       console.error('Failed to load brain context:', error);
     } finally {
