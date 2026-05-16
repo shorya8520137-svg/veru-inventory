@@ -264,7 +264,8 @@ function ProductCard({ product, index = 0, onAskAI }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-violet-300 transition-all duration-200 hover:-translate-y-1"
+      whileHover={{ y: -8, scale: 1.02 }}
+      className="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-violet-400 transition-all duration-300 cursor-pointer"
     >
       {/* Product Image */}
       <div className="relative w-full h-48 bg-slate-100 overflow-hidden">
@@ -476,8 +477,13 @@ function ProductMatrix({ products, title, onAskAI }) {
 // ==================== INTENT DETECTION ====================
 function detectIntent(text) {
   const t = text.toLowerCase();
-  if (/show.*website.*categor(y|ies)/.test(t) || /website.*categor(y|ies)/.test(t)) return { type: 'website_categories', raw: text };
-  if (/show.*categor(y|ies)/.test(t)) return { type: 'categories', raw: text };
+  
+  // Check website categories FIRST (before regular categories)
+  if (/show.*all.*categor.*website|show.*website.*categor|website.*categor|all.*categor.*website/.test(t)) {
+    return { type: 'website_categories', raw: text };
+  }
+  if (/show.*categor|categor/.test(t)) return { type: 'categories', raw: text };
+  
   if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
     const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
     if (match) return { type: 'products', category: match[1].trim(), raw: text };
