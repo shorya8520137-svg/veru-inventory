@@ -71,7 +71,7 @@ exports.getProductTimeline = (req, res) => {
             wd.actual_weight,
             wd.status as dispatch_status,
             -- Include return details for RETURN entries
-            r.processed_by as return_processed_by,
+            COALESCE(r.processed_by, (SELECT processed_by FROM returns_main WHERE id = r.id LIMIT 1)) as return_processed_by,
             r.condition as return_condition,
             r.return_reason,
             r.notes as return_notes,
