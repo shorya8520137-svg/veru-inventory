@@ -65,15 +65,34 @@ function pickItems(payload) {
   return [];
 }
 
-export async function tryInsoraOppsDataAnswer(question, authToken) {
+export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = null) {
   const q = String(question || '').trim();
   const lower = q.toLowerCase();
   if (!q) return null;
 
+  // Extract context for memory tracking
+  const contextData = {
+    warehouse: extractWarehouse(q),
+    barcode: extractBarcode(q),
+    timestamp: new Date().toISOString()
+  };
+
+  // Detect category from question
+  if (/categor/.test(lower)) {
+    contextData.category = 'categories';
+  }
+  if (/product/.test(lower)) {
+    contextData.product = 'products';
+  }
+  if (/damage/.test(lower)) {
+    contextData.product = 'damaged_products';
+  }
+
   if (!authToken && /stock|warehouse|timeline|website|barcode|price|category|transfer|order|dead/i.test(lower)) {
     return {
       answer:
-        'Please sign in so I can read **live warehouse stock**, **timeline**, **transfers**, **orders**, and **website products** from your account.'
+        'Please sign in so I can read **live warehouse stock**, **timeline**, **transfers**, **orders**, and **website products** from your account.',
+      context: contextData
     };
   }
 
@@ -264,24 +283,31 @@ export async function tryInsoraOppsDataAnswer(question, authToken) {
     const whParam = wh ? `?warehouse=${encodeURIComponent(wh)}&limit=20` : '?limit=20';
     const tl = await apiGet(`/api/timeline/${encodeURIComponent(barcode)}${whParam}`, authToken);
     if (tl.error) return { answer: userFacingError('Timeline for this product') };
-    const events = Array.isArray(tl.data?.data)
-      ? tl.data.data
-      : Array.isArray(tl.data?.timeline)
-        ? tl.data.timeline
+    
+    // FIX: Check data.timeline FIRST (correct response structure from API)
+    const events = Array.isArray(tl.data?.timeline)
+      ? tl.data.timeline
+      : Array.isArray(tl.data?.data)
+        ? tl.data.data
         : Array.isArray(tl.data)
           ? tl.data
           : [];
+          
     if (!events.length) {
       return { answer: `No timeline events for **${barcode}**${wh ? ` at ${wh}` : ''}.` };
     }
+    
     const lines = events.slice(0, 10).map((e) => {
       const type = e.type || e.movement_type || e.event_type || 'event';
       const qty = e.quantity ?? e.qty ?? e.delta ?? '—';
-      const when = e.created_at || e.date || e.timestamp || '';
-      return `- **${type}** · qty **${qty}**${when ? ` · ${when}` : ''}`;
+      const when = e.timestamp || e.created_at || e.date || e.event_time || '';
+      const direction = e.direction === 'IN' ? '+' : e.direction === 'OUT' ? '-' : '';
+      return `- **${type}** · ${direction}${qty}${when ? ` · ${new Date(when).toLocaleString()}` : ''}`;
     });
+    
     return {
-      answer: `**Timeline** for \`${barcode}\`:\n\n${lines.join('\n')}`
+      answer: `**Timeline** for \`${barcode}\` (${events.length} events):\n\n${lines.join('\n')}${events.length > 10 ? `\n\n_…and ${events.length - 10} more._` : ''}`,
+      context: contextData
     };
   }
 
