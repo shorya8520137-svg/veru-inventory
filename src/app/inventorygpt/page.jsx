@@ -242,9 +242,8 @@ function CategoryGrid({ categories, onCategoryClick }) {
   );
 }
 
-// ==================== PRODUCT CARD (FLIP) ====================
+// ==================== PRODUCT CARD ====================
 function ProductCard({ product, index = 0, onAskAI }) {
-  const [flipped, setFlipped] = useState(false);
   const [showNestedChat, setShowNestedChat] = useState(false);
 
   if (!product) return null;
@@ -253,117 +252,110 @@ function ProductCard({ product, index = 0, onAskAI }) {
   const sku = product.sku || product.barcode || product.sku_id || '';
   const stock = parseInt(product.stock || product.quantity || product.qty || 0, 10);
   const price = parseFloat(product.price || product.selling_price || product.unit_price || 0);
+  const secondaryPrice = parseFloat(product.secondary_price || product.compare_price || product.mrp || 0);
+  const image = product.image || product.image_url || product.product_image || product.thumbnail || '';
   const warehouse = product.warehouse || product.warehouse_code || product.location || '';
-  const description = product.description || product.long_description || product.details || '';
   
-  // Build unique badges array
-  const badges = [];
-  if (stock === 0) badges.push('Out of Stock');
-  else if (stock > 0 && stock < 10) badges.push('Low Stock');
-  if (product.is_bestseller || product.bestseller) badges.push('Best Seller');
-  if (product.is_trending || product.trending) badges.push('Trending');
-  if (product.is_premium || product.premium) badges.push('Premium');
-
-  const badgeColors = {
-    'Best Seller': 'bg-emerald-100 text-emerald-700',
-    'Low Stock': 'bg-amber-100 text-amber-700',
-    'Premium': 'bg-violet-100 text-violet-700',
-    'Trending': 'bg-blue-100 text-blue-700',
-    'Out of Stock': 'bg-red-100 text-red-700'
-  };
+  const isInStock = stock > 0;
+  const isLowStock = stock > 0 && stock < 10;
 
   return (
-    <div className="relative" style={{ perspective: '1000px' }}>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.05 }}
-        className="relative h-full w-full transition-transform duration-500"
-        style={{ transformStyle: 'preserve-3d', transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)' }}
-      >
-        {/* FRONT SIDE */}
-        <div
-          className="absolute inset-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:border-violet-300 hover:shadow-lg"
-          style={{ backfaceVisibility: 'hidden' }}
-          onClick={() => setFlipped(!flipped)}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-slate-900 line-clamp-2 leading-tight">{title}</h4>
-              {sku && <p className="mt-1 text-xs text-slate-500">SKU: {sku}</p>}
-            </div>
-            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${stock === 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-              {stock}
-            </span>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-violet-300 transition-all duration-200 hover:-translate-y-1"
+    >
+      {/* Product Image */}
+      <div className="relative w-full h-48 bg-slate-100 overflow-hidden">
+        {image ? (
+          <img
+            src={image}
+            alt={title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-size=%2218%22%3ENo Image%3C/text%3E%3C/svg%3E';
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-400">
+            <Package className="h-12 w-12" />
           </div>
-          
-          {/* Badges */}
-          {badges.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {badges.slice(0, 2).map((b) => (
-                <span key={b} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeColors[b] || 'bg-slate-100 text-slate-600'}`}>
-                  {b}
-                </span>
-              ))}
-            </div>
-          )}
-          
-          {warehouse && (
-            <p className="mt-2 text-xs text-slate-500">📍 {warehouse}</p>
-          )}
-          {price > 0 && (
-            <p className="mt-1 text-base font-bold text-slate-900">${price.toFixed(2)}</p>
-          )}
-          
-          <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-violet-600">
-            <Eye className="h-3.5 w-3.5" />
-            <span>Click for details</span>
-          </div>
+        )}
+        
+        {/* Stock Badge */}
+        <div className="absolute top-3 right-3">
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+            isInStock ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+          }`}>
+            {isInStock ? `${stock} in stock` : 'Out of Stock'}
+          </span>
         </div>
+      </div>
 
-        {/* BACK SIDE */}
-        <div
-          className="absolute inset-0 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm"
-          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-        >
-          <h4 className="text-sm font-semibold text-slate-900 mb-2">Product Details</h4>
-          {description ? (
-            <p className="text-xs leading-relaxed text-slate-600 line-clamp-4 mb-3">
-              {description}
-            </p>
-          ) : (
-            <p className="text-xs text-slate-400 mb-3">No description available</p>
+      {/* Product Content */}
+      <div className="p-4 flex flex-col gap-2.5">
+        {/* Title */}
+        <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 leading-tight min-h-[2.8rem]">
+          {title}
+        </h3>
+        
+        {/* SKU */}
+        {sku && (
+          <p className="text-xs text-slate-500">SKU: {sku}</p>
+        )}
+        
+        {/* Warehouse */}
+        {warehouse && (
+          <p className="text-xs text-slate-500">📍 {warehouse}</p>
+        )}
+        
+        {/* Price */}
+        <div className="flex items-baseline gap-2 mt-1">
+          {price > 0 && (
+            <span className="text-xl font-bold text-slate-900">${price.toFixed(2)}</span>
           )}
-          
-          <div className="space-y-1 text-xs text-slate-600 mb-3">
-            {sku && <p><span className="font-medium">SKU:</span> {sku}</p>}
-            {warehouse && <p><span className="font-medium">Warehouse:</span> {warehouse}</p>}
-            <p><span className="font-medium">Stock:</span> {stock} units</p>
-            {price > 0 && <p><span className="font-medium">Price:</span> ${price.toFixed(2)}</p>}
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowNestedChat(!showNestedChat); }}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-violet-100 px-2.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-200"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Ask AI
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setFlipped(false); }}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
-            >
-              Back
-            </button>
-          </div>
-          
-          {showNestedChat && <NestedChat product={product} />}
+          {secondaryPrice > 0 && secondaryPrice > price && (
+            <span className="text-sm text-slate-400 line-through">${secondaryPrice.toFixed(2)}</span>
+          )}
         </div>
-      </motion.div>
-    </div>
+        
+        {/* Badges */}
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {isLowStock && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
+              Low Stock
+            </span>
+          )}
+          {product.is_bestseller && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
+              Best Seller
+            </span>
+          )}
+          {product.is_trending && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
+              Trending
+            </span>
+          )}
+        </div>
+        
+        {/* Action Button */}
+        <div className="mt-auto pt-3">
+          <button
+            type="button"
+            onClick={() => setShowNestedChat(!showNestedChat)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Ask AI
+          </button>
+        </div>
+        
+        {/* Nested Chat */}
+        {showNestedChat && <NestedChat product={product} />}
+      </div>
+    </motion.div>
   );
 }
 
@@ -457,13 +449,16 @@ function ProductMatrix({ products, title, onAskAI }) {
       {title && (
         <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
       )}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      
+      {/* CSS Grid: 3 cols desktop, 2 tablet, 1 mobile */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {products.slice(0, 9).map((product, i) => (
-          <ProductCard key={i} product={product} index={i} onAskAI={onAskAI} />
+          <ProductCard key={`${product.id || product.sku || `prod-${i}`}`} product={product} index={i} onAskAI={onAskAI} />
         ))}
       </div>
+      
       {products.length > 9 && (
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-slate-500 mt-4">
           Showing 9 of {products.length} products. Ask for more details!
         </p>
       )}
