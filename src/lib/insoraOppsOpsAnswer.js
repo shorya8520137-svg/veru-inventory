@@ -189,6 +189,34 @@ export async function tryInsoraOppsDataAnswer(question, authToken) {
     };
   }
 
+  // --- DAMAGE PRODUCTS ---
+  if (/damage|damaged/.test(lower) && /product/.test(lower)) {
+    const dmg = await apiGet('/api/damage-recovery?limit=20', authToken);
+    if (dmg.error) return { answer: safeUserError(dmg.error, 'Damage recovery') };
+    const list = pickItems(dmg.data);
+    if (!list.length) return { answer: 'No damaged products found in the system.' };
+    const lines = list.slice(0, 12).map((d) => {
+      const name = d.product_name || d.barcode || 'Product';
+      const qty = d.quantity ?? d.qty ?? 0;
+      const status = d.status || d.recovery_status || 'Pending';
+      return `- **${name}** — ${qty} units damaged — **${status}**`;
+    });
+    return {
+      answer: `**Damaged products** (${list.length}):\n\n${lines.join('\n')}${
+        list.length > 12 ? `\n\n_…and ${list.length - 12} more._` : ''
+      }`
+    };
+  }
+
+  // --- WAREHOUSE INVENTORY (smart detection) ---
+  if (/product.*of.*\w+_wh|\w+_wh.*product|inventory.*of.*\w+_wh|\w+_wh.*inventory/.test(lower)) {
+    const whMatch = lower.match(/\b([A-Z]{2,6}_WH)\b/i);
+    if (whMatch) {
+      const wh = whMatch[1].toUpperCase();
+      // Fall through to stock handler
+    }
+  }
+
   // --- DEAD STOCK ---
   if (/dead\s*stock/.test(lower) || /slow\s*moving/.test(lower) || /old\s*stock/.test(lower)) {
     const inv = await apiGet('/api/inventory?stockFilter=high-stock&sortBy=stock&sortOrder=desc&limit=20', authToken);
