@@ -478,17 +478,18 @@ function ProductMatrix({ products, title, onAskAI }) {
 function detectIntent(text) {
   const t = text.toLowerCase();
   
+  // Check for barcode/SKU lookup FIRST (10+ digit numbers)
+  const barcodeMatch = t.match(/\b(\d{10,})\b/);
+  if (barcodeMatch || /which.*categor|belong.*categor|product.*categor|this product/.test(t)) {
+    console.log('🔍 Intent detected: product_lookup', { barcode: barcodeMatch?.[1], text: text });
+    return { type: 'product_lookup', barcode: barcodeMatch?.[1] || null, raw: text };
+  }
+  
   // Check website categories FIRST (before regular categories)
   if (/show.*all.*categor.*website|show.*website.*categor|website.*categor|all.*categor.*website/.test(t)) {
     return { type: 'website_categories', raw: text };
   }
   if (/show.*categor|categor/.test(t)) return { type: 'categories', raw: text };
-  
-  // Check for barcode/SKU lookup (10+ digit numbers)
-  const barcodeMatch = t.match(/\b(\d{10,})\b/);
-  if (barcodeMatch || /which.*categor|belong.*categor|product.*categor/.test(t)) {
-    return { type: 'product_lookup', barcode: barcodeMatch?.[1] || null, raw: text };
-  }
   
   if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
     const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
