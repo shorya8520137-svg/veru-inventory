@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -16,7 +16,7 @@ export default function SimpleLoginPage() {
         setDebugInfo("Form submitted! Starting login process...");
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             setDebugInfo(`API Base: ${apiBase}`);
 
             const requestBody = { email, password };
@@ -37,22 +37,22 @@ export default function SimpleLoginPage() {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                setDebugInfo("✅ Login successful! Redirecting...");
+                setDebugInfo("âœ… Login successful! Redirecting...");
                 window.location.href = "/products";
             } else {
                 setError(data.message || "Invalid credentials");
-                setDebugInfo(`❌ Login failed: ${data.message}`);
+                setDebugInfo(`âŒ Login failed: ${data.message}`);
             }
         } catch (error) {
             setError("Login failed. Please try again.");
-            setDebugInfo(`❌ Network error: ${error.message}`);
+            setDebugInfo(`âŒ Network error: ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
 
     const testButtonClick = () => {
-        setDebugInfo("✅ Button click detected! JavaScript is working!");
+        setDebugInfo("âœ… Button click detected! JavaScript is working!");
         console.log("Button clicked - JavaScript is working!");
     };
 
@@ -122,7 +122,7 @@ export default function SimpleLoginPage() {
                         marginBottom: '1rem'
                     }}
                 >
-                    🧪 Test JavaScript Click
+                    ðŸ§ª Test JavaScript Click
                 </button>
 
                 <form onSubmit={handleSubmit}>

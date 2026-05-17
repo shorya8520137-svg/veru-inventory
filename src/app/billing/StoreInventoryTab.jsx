@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Search, Package, AlertTriangle, TrendingDown, RefreshCw, Clock, BarChart3, Activity, TrendingUp } from "lucide-react";
 import ProductLedger from "../inventory/ProductLedger";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
 const PAGE_SIZE = 20;
 
 export default function StoreInventoryTab() {
@@ -111,7 +111,7 @@ export default function StoreInventoryTab() {
     };
 
     return (
-        <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'#F8FAFC', overflow:'hidden' }}>
+        <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'#ffffff', overflow:'hidden' }}>
             {/* Stats Cards */}
             <div style={{ padding:'20px 24px', background:'#fff', borderBottom:'1px solid #E5E7EB', flexShrink:0 }}>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:20 }}>
@@ -152,7 +152,7 @@ export default function StoreInventoryTab() {
                             </div>
                             <div style={{ fontSize:12, color:'#6B7280', fontWeight:600 }}>Total Value</div>
                         </div>
-                        <div style={{ fontSize:28, fontWeight:700, color:'#059669' }}>₹{stats.totalValue.toLocaleString()}</div>
+                        <div style={{ fontSize:28, fontWeight:700, color:'#059669' }}>â‚¹{stats.totalValue.toLocaleString()}</div>
                     </div>
                 </div>
 
@@ -262,7 +262,7 @@ export default function StoreInventoryTab() {
                                                 borderRadius:6,
                                                 display:'inline-block'
                                             }}>
-                                                {item.store_name || item.store_code || item.location || '—'}
+                                                {item.store_name || item.store_code || item.location || 'â€”'}
                                             </span>
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'center' }}>
@@ -275,10 +275,10 @@ export default function StoreInventoryTab() {
                                             </span>
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'right' }}>
-                                            <div style={{ fontSize:14, fontWeight:600, color:'#111827' }}>₹{parseFloat(item.price || 0).toFixed(2)}</div>
+                                            <div style={{ fontSize:14, fontWeight:600, color:'#111827' }}>â‚¹{parseFloat(item.price || 0).toFixed(2)}</div>
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'right' }}>
-                                            <div style={{ fontSize:15, fontWeight:700, color:'#1E40AF' }}>₹{(item.stock * (item.price || 0)).toFixed(2)}</div>
+                                            <div style={{ fontSize:15, fontWeight:700, color:'#1E40AF' }}>â‚¹{(item.stock * (item.price || 0)).toFixed(2)}</div>
                                         </td>
                                         <td style={{ padding:'14px 24px', textAlign:'center' }}>
                                             <span style={{ display:'inline-block', padding:'4px 10px', borderRadius:6, background:status.bg, color:status.color, fontSize:11, fontWeight:700 }}>
@@ -428,7 +428,7 @@ export default function StoreInventoryTab() {
                                     fontSize:20,
                                     color:'#6B7280'
                                 }}>
-                                ×
+                                Ã—
                             </button>
                         </div>
                         

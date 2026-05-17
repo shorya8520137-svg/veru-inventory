@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 import {useState,useEffect,useRef} from 'react';
 import {useParams,useRouter} from 'next/navigation';
 
-const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.giftgala.in';
+const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.insora.in';
 
 const Avatar=({name,size=36})=>{
   const initials=(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -17,7 +17,7 @@ const ProgressBar=({value,color='#22C55E'})=>(
   </div>
 );
 
-/* ── Disposition Modal ── */
+/* â”€â”€ Disposition Modal â”€â”€ */
 function DispositionModal({onClose,onSubmit}){
   const [form,setForm]=useState({inquiry_type:'',description:'',resolution:'',highlighted:''});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
@@ -128,7 +128,7 @@ export default function ChatPage(){
     finally{setLoading(false);}
   };
 
-  // SLA timer — check every second if support hasn't replied in 60s
+  // SLA timer â€” check every second if support hasn't replied in 60s
   useEffect(()=>{
     slaTimerRef.current=setInterval(()=>{
       const lastSupport=lastSupportReplyRef.current;
@@ -148,7 +148,7 @@ export default function ChatPage(){
     const msgToSend=newMessage;
     setNewMessage('');
     try{
-      console.log('%c[WEBHOOK] 🚀 Sending message to backend...', 'color:#7C3AED;font-weight:bold;font-size:13px');
+      console.log('%c[WEBHOOK] ðŸš€ Sending message to backend...', 'color:#7C3AED;font-weight:bold;font-size:13px');
       console.log('%c[WEBHOOK] Payload:', 'color:#6B7280', { message:msgToSend, sender_type:'support', language:convLanguage||aiLanguage||'en' });
       setWebhookStatus('firing');
 
@@ -165,7 +165,7 @@ export default function ChatPage(){
       const data=await res.json();
 
       if(data.success){
-        console.log('%c[WEBHOOK] ✅ n8n triggered successfully!', 'color:#22C55E;font-weight:bold;font-size:13px');
+        console.log('%c[WEBHOOK] âœ… n8n triggered successfully!', 'color:#22C55E;font-weight:bold;font-size:13px');
         console.log('%c[WEBHOOK] Response:', 'color:#6B7280', data);
         setWebhookStatus('ok');
         setTimeout(()=>setWebhookStatus(null),3000);
@@ -173,12 +173,12 @@ export default function ChatPage(){
         setSlaAlert(false);setSlaSeconds(0);
         await fetchMessages();
       } else {
-        console.log('%c[WEBHOOK] ❌ Backend error', 'color:#EF4444;font-weight:bold', data);
+        console.log('%c[WEBHOOK] âŒ Backend error', 'color:#EF4444;font-weight:bold', data);
         setWebhookStatus('error');
         setTimeout(()=>setWebhookStatus(null),3000);
       }
     }catch(e){
-      console.log('%c[WEBHOOK] ❌ Network error', 'color:#EF4444;font-weight:bold', e.message);
+      console.log('%c[WEBHOOK] âŒ Network error', 'color:#EF4444;font-weight:bold', e.message);
       setWebhookStatus('error');
       setTimeout(()=>setWebhookStatus(null),3000);
     }
@@ -190,7 +190,7 @@ export default function ChatPage(){
 
   const handleMarkResolved=()=>setShowDisposition(true);
 
-  // ── AI Agent ──
+  // â”€â”€ AI Agent â”€â”€
   const callAIAgent=async(phase,language,userMsg,isAiMode=false)=>{
     setAiLoading(true);
     try{
@@ -224,12 +224,12 @@ export default function ChatPage(){
       time:m.created_at
     }));
     if(aiMessages.filter(m=>m.type!=='main_chat').length===0){
-      // first open — show main chat + language selection
+      // first open â€” show main chat + language selection
       const resp=await callAIAgent('init','','');
       const aiOnly=resp?[{role:'assistant',type:resp.type,data:resp}]:[];
       setAiMessages([...mainChatMsgs,...aiOnly]);
     } else {
-      // already has AI messages — just refresh main chat portion
+      // already has AI messages â€” just refresh main chat portion
       setAiMessages(prev=>[...mainChatMsgs,...prev.filter(m=>m.type!=='main_chat')]);
     }
   };
@@ -237,8 +237,8 @@ export default function ChatPage(){
   const handleLanguageSelect=async(lang)=>{
     setAiLanguage(lang);
     setShowAIAgent(true);
-    console.log(`%c[WEBHOOK] 🌐 Language selected: ${lang}`, 'color:#2563EB;font-weight:bold;font-size:13px');
-    setAiMessages(prev=>[...prev,{role:'user',content:`Selected: ${lang==='en'?'English':lang==='hi'?'हिंदी':lang==='ta'?'தமிழ்':'తెలుగు'}`}]);
+    console.log(`%c[WEBHOOK] ðŸŒ Language selected: ${lang}`, 'color:#2563EB;font-weight:bold;font-size:13px');
+    setAiMessages(prev=>[...prev,{role:'user',content:`Selected: ${lang==='en'?'English':lang==='hi'?'à¤¹à¤¿à¤‚à¤¦à¥€':lang==='ta'?'à®¤à®®à®¿à®´à¯':'à°¤à±†à°²à±à°—à±'}`}]);
     setAiPhase('language_selected');
     // Phase 2: show invoking
     const invoking=await callAIAgent('language_selected',lang,'');
@@ -290,7 +290,7 @@ export default function ChatPage(){
 
   useEffect(()=>{aiEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMessages]);
 
-  // ── Transfer to AI ──
+  // â”€â”€ Transfer to AI â”€â”€
   const transferToAI=async()=>{
     setAiMode(true);
     setShowAIAgent(true);
@@ -304,7 +304,7 @@ export default function ChatPage(){
 
   const disableAI=()=>setAiMode(false);
 
-  // ── Translate & send to main chat (POST JSON, handle plain text response) ──
+  // â”€â”€ Translate & send to main chat (POST JSON, handle plain text response) â”€â”€
   const translateAndSend=async(text)=>{
     const lang=convLanguage||aiLanguage||'en';
     if(!lang||lang==='en'){
@@ -318,7 +318,7 @@ export default function ChatPage(){
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({type:'message',message:text,language:lang,source:'admin'})
       });
-      // n8n returns PLAIN TEXT — do NOT JSON.parse
+      // n8n returns PLAIN TEXT â€” do NOT JSON.parse
       const raw=await res.text();
       const translated=(typeof raw==='string'&&raw.trim()&&raw.trim()!=='""')?raw.trim():text;
       await postToMainChat(translated);
@@ -383,14 +383,14 @@ export default function ChatPage(){
 
       {showDisposition&&<DispositionModal onClose={()=>setShowDisposition(false)} onSubmit={handleDispositionSubmit}/>}
 
-      {/* ══ LEFT: Chat Panel ══ */}
+      {/* â•â• LEFT: Chat Panel â•â• */}
       <div style={{flex:1,display:'flex',flexDirection:'column',background:'#fff',borderRight:'1px solid #E5E7EB',minWidth:0,overflow:'hidden'}}>
 
         {/* SLA Alert Banner */}
         {slaAlert&&(
           <div style={{background:'#FEF2F2',borderBottom:'2px solid #EF4444',padding:'10px 20px',display:'flex',alignItems:'center',gap:10,flexShrink:0,animation:'pulse 1.5s ease-in-out infinite'}}>
             <span style={{width:10,height:10,borderRadius:'50%',background:'#EF4444',display:'inline-block',flexShrink:0}}/>
-            <span style={{fontSize:13,fontWeight:700,color:'#DC2626'}}>⚠ SLA BREACH — No support reply for {fmtSla(slaSeconds)}. Respond immediately!</span>
+            <span style={{fontSize:13,fontWeight:700,color:'#DC2626'}}>âš  SLA BREACH â€” No support reply for {fmtSla(slaSeconds)}. Respond immediately!</span>
             <span style={{marginLeft:'auto',fontSize:12,color:'#EF4444',fontWeight:600,background:'#FEE2E2',padding:'3px 10px',borderRadius:20}}>CRITICAL</span>
           </div>
         )}
@@ -403,19 +403,19 @@ export default function ChatPage(){
             </button>
             <span style={{width:8,height:8,borderRadius:'50%',background:slaAlert?'#EF4444':'#22C55E',display:'inline-block',flexShrink:0}}/>
             <span style={{fontSize:13,fontWeight:600,color:slaAlert?'#DC2626':'#111827',whiteSpace:'nowrap'}}>
-              {slaAlert?'⚠ Response Overdue':'Active Conversation'}
+              {slaAlert?'âš  Response Overdue':'Active Conversation'}
             </span>
             {/* Webhook status indicator */}
-            {webhookStatus==='firing'&&<span style={{fontSize:11,fontWeight:600,color:'#7C3AED',background:'#F5F3FF',padding:'2px 8px',borderRadius:20,marginLeft:8,animation:'pulse 1s infinite'}}>⚡ n8n firing...</span>}
-            {webhookStatus==='ok'&&<span style={{fontSize:11,fontWeight:600,color:'#16A34A',background:'#F0FDF4',padding:'2px 8px',borderRadius:20,marginLeft:8}}>✅ n8n OK</span>}
-            {webhookStatus==='error'&&<span style={{fontSize:11,fontWeight:600,color:'#DC2626',background:'#FEF2F2',padding:'2px 8px',borderRadius:20,marginLeft:8}}>❌ n8n Error</span>}
+            {webhookStatus==='firing'&&<span style={{fontSize:11,fontWeight:600,color:'#7C3AED',background:'#F5F3FF',padding:'2px 8px',borderRadius:20,marginLeft:8,animation:'pulse 1s infinite'}}>âš¡ n8n firing...</span>}
+            {webhookStatus==='ok'&&<span style={{fontSize:11,fontWeight:600,color:'#16A34A',background:'#F0FDF4',padding:'2px 8px',borderRadius:20,marginLeft:8}}>âœ… n8n OK</span>}
+            {webhookStatus==='error'&&<span style={{fontSize:11,fontWeight:600,color:'#DC2626',background:'#FEF2F2',padding:'2px 8px',borderRadius:20,marginLeft:8}}>âŒ n8n Error</span>}
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
             <button style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'#2563EB',cursor:'pointer',padding:'7px 10px',borderRadius:8,whiteSpace:'nowrap'}}>Assign to Me</button>
             {aiMode?(
-              <button onClick={disableAI} style={{background:'#22C55E',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>✓ AI Active</button>
+              <button onClick={disableAI} style={{background:'#22C55E',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>âœ“ AI Active</button>
             ):(
-              <button onClick={transferToAI} style={{background:'linear-gradient(135deg,#7C3AED,#6D28D9)',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap',boxShadow:'0 4px 12px rgba(109,40,217,0.3)'}}>⚡ Transfer to AI</button>
+              <button onClick={transferToAI} style={{background:'linear-gradient(135deg,#7C3AED,#6D28D9)',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap',boxShadow:'0 4px 12px rgba(109,40,217,0.3)'}}>âš¡ Transfer to AI</button>
             )}
             <button onClick={()=>setShowDisposition(true)} style={{background:'#EF4444',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>End Chat</button>
             <button onClick={handleMarkResolved} style={{background:'#1E3A5F',color:'#fff',border:'none',borderRadius:10,padding:'7px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>Mark Resolved</button>
@@ -446,7 +446,7 @@ export default function ChatPage(){
                         </div>
                         <div style={{position:'relative',maxWidth:'72%'}}>
                           <div style={{background:'#fff',border:'1px solid #E5E7EB',borderRadius:16,padding:'14px 18px',boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
-                            {/* Unicode-safe rendering — supports Tamil, Telugu, Hindi */}
+                            {/* Unicode-safe rendering â€” supports Tamil, Telugu, Hindi */}
                             <p style={{fontSize:13,color:'#374151',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif',unicodeBidi:'plaintext'}}>{msg.message}</p>
                           </div>
                           <div style={{position:'absolute',right:-14,top:12,width:28,height:28,borderRadius:'50%',background:'#EFF6FF',border:'1px solid #DBEAFE',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -455,7 +455,7 @@ export default function ChatPage(){
                         </div>
                         {/* Language buttons after every bot message */}
                         <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
-                          {[{label:'🇬🇧 English',value:'en'},{label:'🇮🇳 हिंदी',value:'hi'},{label:'🇮🇳 தமிழ்',value:'ta'},{label:'🇮🇳 తెలుగు',value:'te'}].map(lang=>(
+                          {[{label:'ðŸ‡¬ðŸ‡§ English',value:'en'},{label:'ðŸ‡®ðŸ‡³ à¤¹à¤¿à¤‚à¤¦à¥€',value:'hi'},{label:'ðŸ‡®ðŸ‡³ à®¤à®®à®¿à®´à¯',value:'ta'},{label:'ðŸ‡®ðŸ‡³ à°¤à±†à°²à±à°—à±',value:'te'}].map(lang=>(
                             <button key={lang.value} onClick={()=>handleLanguageSelect(lang.value)} style={{padding:'8px 16px',borderRadius:20,border:`1.5px solid ${aiLanguage===lang.value?'#22C55E':'#7C3AED'}`,background:aiLanguage===lang.value?'#22C55E':'#fff',color:aiLanguage===lang.value?'#fff':'#7C3AED',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all 0.15s'}}>
                               {lang.label}
                             </button>
@@ -468,11 +468,11 @@ export default function ChatPage(){
                           <span style={{fontSize:12,color:'#6B7280',fontWeight:500}}>{msg.sender_name||'Support Agent'}</span>
                           <span style={{fontSize:11,color:'#9CA3AF'}}>{formatTime(msg.created_at)}</span>
                         </div>
-                        {/* Original English — what admin typed */}
+                        {/* Original English â€” what admin typed */}
                         <div style={{maxWidth:'72%',background:'linear-gradient(135deg,#2563EB,#1D4ED8)',borderRadius:16,padding:'14px 18px',boxShadow:'0 4px 12px rgba(37,99,235,0.25)'}}>
                           <p style={{fontSize:13,color:'#fff',lineHeight:1.6,margin:0,fontFamily:'system-ui,-apple-system,sans-serif'}}>{msg.message_original||msg.message}</p>
                         </div>
-                        {/* Translated — what customer received */}
+                        {/* Translated â€” what customer received */}
                         {msg.message && msg.message_original && msg.message !== msg.message_original && (
                           <div style={{maxWidth:'72%',background:'#EFF6FF',borderRadius:10,padding:'8px 14px',border:'1px solid #BFDBFE'}}>
                             <div style={{fontSize:10,fontWeight:700,color:'#93C5FD',letterSpacing:'0.06em',marginBottom:3}}>SENT TO CUSTOMER</div>
@@ -481,9 +481,9 @@ export default function ChatPage(){
                         )}
                       </div>
                     ):(
-                      /* Customer message — check for [EN] reference messages */
+                      /* Customer message â€” check for [EN] reference messages */
                       msg.message?.startsWith('[EN]')?(
-                        /* [EN] admin-reference message — show subtle in admin panel */
+                        /* [EN] admin-reference message â€” show subtle in admin panel */
                         <div style={{display:'flex',justifyContent:'flex-end',marginBottom:4}}>
                           <span style={{fontSize:11,color:'#9CA3AF',background:'#F9FAFB',border:'1px solid #F1F5F9',borderRadius:8,padding:'3px 10px',fontStyle:'italic'}}>
                             {msg.message}
@@ -536,7 +536,7 @@ export default function ChatPage(){
         <div style={{padding:'10px 20px 16px',background:'#fff',flexShrink:0}}>
           {translating&&<div style={{fontSize:11,color:'#7C3AED',marginBottom:6,display:'flex',alignItems:'center',gap:6}}><span style={{width:8,height:8,borderRadius:'50%',background:'#7C3AED',display:'inline-block',animation:'pulse 1s infinite'}}/>Translating...</div>}
           <div style={{display:'flex',alignItems:'flex-end',gap:12,background:slaAlert?'#FFF5F5':'#F9FAFB',borderRadius:14,border:`1.5px solid ${slaAlert?'#FCA5A5':'#E5E7EB'}`,padding:'12px 16px',transition:'all 0.3s'}}>
-            <textarea value={newMessage} onChange={e=>setNewMessage(e.target.value)} onKeyDown={handleKey} placeholder={slaAlert?"⚠ Customer waiting — type your response now...":"Type your response or use '/' for macros..."} rows={2} disabled={sending||translating} style={{flex:1,background:'none',border:'none',outline:'none',resize:'none',fontSize:13,color:'#374151',fontFamily:'system-ui,-apple-system,sans-serif',lineHeight:1.6}}/>
+            <textarea value={newMessage} onChange={e=>setNewMessage(e.target.value)} onKeyDown={handleKey} placeholder={slaAlert?"âš  Customer waiting â€” type your response now...":"Type your response or use '/' for macros..."} rows={2} disabled={sending||translating} style={{flex:1,background:'none',border:'none',outline:'none',resize:'none',fontSize:13,color:'#374151',fontFamily:'system-ui,-apple-system,sans-serif',lineHeight:1.6}}/>
             <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
               <button style={{background:'none',border:'none',cursor:'pointer',color:'#9CA3AF',padding:4,display:'flex',alignItems:'center'}}>
                 <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'><path d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/></svg>
@@ -549,7 +549,7 @@ export default function ChatPage(){
         </div>
       </div>
 
-      {/* ══ RIGHT: AI Insights Panel ══ */}
+      {/* â•â• RIGHT: AI Insights Panel â•â• */}
       <div className='custom-scrollbar' style={{width:320,flexShrink:0,overflowY:'auto',padding:'20px',display:'flex',flexDirection:'column',gap:14,background:'#F6F8FB'}}>
         <div style={{background:'#fff',borderRadius:16,border:'1px solid #E5E7EB',padding:'20px',boxShadow:'0 2px 12px rgba(0,0,0,0.04)'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
@@ -601,7 +601,7 @@ export default function ChatPage(){
         </div>
       </div>
 
-      {/* ══ AI Agent Panel (slide-in overlay) ══ */}
+      {/* â•â• AI Agent Panel (slide-in overlay) â•â• */}
       {showAIAgent&&(
         <div style={{position:'absolute',top:0,right:0,width:380,height:'100%',background:'#fff',borderLeft:'1px solid #E5E7EB',boxShadow:'-8px 0 32px rgba(0,0,0,0.12)',display:'flex',flexDirection:'column',zIndex:100}}>
           {/* Header */}
@@ -612,17 +612,17 @@ export default function ChatPage(){
               </div>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>AI Support Agent</div>
-                <div style={{fontSize:11,color:'rgba(255,255,255,0.7)'}}>{aiMode?'🟢 AI Takeover Active — auto-posting to chat':'Responses auto-post to main chat'}</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,0.7)'}}>{aiMode?'ðŸŸ¢ AI Takeover Active â€” auto-posting to chat':'Responses auto-post to main chat'}</div>
               </div>
             </div>
-            <button onClick={()=>setShowAIAgent(false)} style={{background:'rgba(255,255,255,0.15)',border:'none',borderRadius:8,width:28,height:28,cursor:'pointer',color:'#fff',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+            <button onClick={()=>setShowAIAgent(false)} style={{background:'rgba(255,255,255,0.15)',border:'none',borderRadius:8,width:28,height:28,cursor:'pointer',color:'#fff',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>âœ•</button>
           </div>
 
           {/* Messages */}
           <div className='custom-scrollbar' style={{flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12}}>
             {aiMessages.map((msg,i)=>{
 
-              /* ── main chat message mirrored in AI panel ── */
+              /* â”€â”€ main chat message mirrored in AI panel â”€â”€ */
               if(msg.type==='main_chat'){
                 const isCustomer=msg.role==='user';
                 return(
@@ -631,7 +631,7 @@ export default function ChatPage(){
                       {(msg.sender||'?')[0].toUpperCase()}
                     </div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:10,color:'#9CA3AF',marginBottom:2}}>{msg.sender} • {msg.time?new Date(msg.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):''}</div>
+                      <div style={{fontSize:10,color:'#9CA3AF',marginBottom:2}}>{msg.sender} â€¢ {msg.time?new Date(msg.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):''}</div>
                       <div style={{background:isCustomer?'#F3F4F6':'#EFF6FF',borderRadius:10,padding:'8px 12px',fontSize:12,color:'#374151',lineHeight:1.5,border:`1px solid ${isCustomer?'#E5E7EB':'#DBEAFE'}`}}>
                         {msg.content}
                       </div>

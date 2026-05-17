@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { ShoppingBag, Clock, CreditCard, DollarSign, Filter, Plus, MoreVertical } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
 export default function WebsiteOrders() {
     const [orders, setOrders] = useState([]);
@@ -24,8 +24,8 @@ export default function WebsiteOrders() {
             setLoading(true);
             const token = localStorage.getItem('token');
             
-            console.log('🔍 Fetching orders from:', `${API_BASE}/api/website/orders`);
-            console.log('🔑 Token exists:', !!token);
+            console.log('ðŸ” Fetching orders from:', `${API_BASE}/api/website/orders`);
+            console.log('ðŸ”‘ Token exists:', !!token);
             
             // Fetch orders from the correct API endpoint
             const ordersResponse = await fetch(`${API_BASE}/api/website/orders`, {
@@ -35,14 +35,14 @@ export default function WebsiteOrders() {
                 }
             });
             
-            console.log('📊 Response status:', ordersResponse.status);
-            console.log('📊 Response ok:', ordersResponse.ok);
+            console.log('ðŸ“Š Response status:', ordersResponse.status);
+            console.log('ðŸ“Š Response ok:', ordersResponse.ok);
             
             if (ordersResponse.ok) {
                 const ordersData = await ordersResponse.json();
-                console.log('📦 Full API response:', ordersData);
-                console.log('📦 ordersData.success:', ordersData.success);
-                console.log('📦 ordersData.data:', ordersData.data);
+                console.log('ðŸ“¦ Full API response:', ordersData);
+                console.log('ðŸ“¦ ordersData.success:', ordersData.success);
+                console.log('ðŸ“¦ ordersData.data:', ordersData.data);
                 
                 if (ordersData.success) {
                     // Handle different response structures
@@ -50,40 +50,40 @@ export default function WebsiteOrders() {
                     
                     if (ordersData.data && Array.isArray(ordersData.data.orders)) {
                         ordersList = ordersData.data.orders;
-                        console.log('✅ Found orders in data.orders:', ordersList.length);
+                        console.log('âœ… Found orders in data.orders:', ordersList.length);
                     } else if (Array.isArray(ordersData.orders)) {
                         ordersList = ordersData.orders;
-                        console.log('✅ Found orders in orders:', ordersList.length);
+                        console.log('âœ… Found orders in orders:', ordersList.length);
                     } else if (Array.isArray(ordersData.data)) {
                         ordersList = ordersData.data;
-                        console.log('✅ Found orders in data:', ordersList.length);
+                        console.log('âœ… Found orders in data:', ordersList.length);
                     } else {
-                        console.log('❌ Could not find orders array in response');
+                        console.log('âŒ Could not find orders array in response');
                         console.log('Response structure:', Object.keys(ordersData));
                     }
                     
-                    console.log('📋 Processed orders list:', ordersList);
+                    console.log('ðŸ“‹ Processed orders list:', ordersList);
                     if (ordersList.length > 0) {
-                        console.log('📋 First order sample:', ordersList[0]);
+                        console.log('ðŸ“‹ First order sample:', ordersList[0]);
                     }
                     
                     setOrders(ordersList);
                     calculateStats(ordersList);
                 } else {
-                    console.error('❌ API returned success: false');
+                    console.error('âŒ API returned success: false');
                     console.error('Error message:', ordersData.message);
                     setOrders([]);
                     calculateStats([]);
                 }
             } else {
                 const errorText = await ordersResponse.text();
-                console.error('❌ Failed to fetch orders:', ordersResponse.status);
+                console.error('âŒ Failed to fetch orders:', ordersResponse.status);
                 console.error('Error response:', errorText);
                 setOrders([]);
                 calculateStats([]);
             }
         } catch (error) {
-            console.error('❌ Exception in fetchOrders:', error);
+            console.error('âŒ Exception in fetchOrders:', error);
             setOrders([]);
             calculateStats([]);
         } finally {
@@ -166,7 +166,7 @@ export default function WebsiteOrders() {
                                 REVENUE
                             </p>
                             <p className="text-3xl font-bold text-gray-900">
-                                ₹{(stats.revenue / 1000).toFixed(1)}k
+                                â‚¹{(stats.revenue / 1000).toFixed(1)}k
                             </p>
                         </div>
                         <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
@@ -263,7 +263,7 @@ export default function WebsiteOrders() {
                                                     className="w-full h-full object-cover"
                                                 />
                                             ) : (
-                                                <span className="text-2xl">📦</span>
+                                                <span className="text-2xl">ðŸ“¦</span>
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -298,7 +298,7 @@ export default function WebsiteOrders() {
                                     {/* Amount */}
                                     <div className="col-span-1">
                                         <p className="text-sm font-bold text-gray-900 mb-1">
-                                            ₹{parseFloat(order.total_amount || 0).toFixed(2)}
+                                            â‚¹{parseFloat(order.total_amount || 0).toFixed(2)}
                                         </p>
                                         <p className="text-xs text-gray-400">
                                             INR
@@ -310,7 +310,7 @@ export default function WebsiteOrders() {
                                         <div className="flex items-center gap-2 mb-2">
                                             <CreditCard className="w-3.5 h-3.5 text-gray-400" />
                                             <p className="text-xs text-gray-600">
-                                                {order.payment_method || 'card'} ••••
+                                                {order.payment_method || 'card'} â€¢â€¢â€¢â€¢
                                             </p>
                                         </div>
                                         <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold uppercase ${
@@ -376,7 +376,7 @@ export default function WebsiteOrders() {
                         </p>
                         <div className="flex items-center gap-2">
                             <button className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-                                ‹
+                                â€¹
                             </button>
                             <button className="w-8 h-8 flex items-center justify-center bg-gray-900 text-white rounded-lg font-medium">
                                 1
@@ -388,7 +388,7 @@ export default function WebsiteOrders() {
                                 3
                             </button>
                             <button className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-                                ›
+                                â€º
                             </button>
                         </div>
                     </div>

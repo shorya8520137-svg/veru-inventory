@@ -1,4 +1,4 @@
-/* ================= MODERN LIGHT THEME LOGIN PAGE 2026 ================= */
+﻿/* ================= MODERN LIGHT THEME LOGIN PAGE 2026 ================= */
 
 .container {
     min-height: 100vh;
@@ -9,6 +9,16 @@
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
     padding: 20px;
     position: relative;
+}
+
+.loginShell {
+    width: min(1060px, 100%);
+    display: grid;
+    grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+    position: relative;
+    z-index: 2;
 }
 
 /* ================= BACKGROUND ELEMENTS ================= */
@@ -71,6 +81,112 @@
     animation: slideUp 0.6s ease-out;
     position: relative;
     z-index: 2;
+}
+
+.homeLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    margin-bottom: 18px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.servicePanel {
+    border-radius: 16px;
+    padding: 34px;
+    background:
+        linear-gradient(145deg, rgba(5, 13, 25, 0.94), rgba(2, 6, 14, 0.98)),
+        radial-gradient(circle at 80% 20%, rgba(0, 217, 255, 0.22), transparent 35%);
+    border: 1px solid rgba(115, 238, 255, 0.18);
+    color: #eefcff;
+    box-shadow: 0 20px 60px rgba(2, 6, 23, 0.26);
+    position: relative;
+    overflow: hidden;
+}
+
+.servicePanel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(90deg, rgba(111, 235, 255, 0.08) 0 1px, transparent 1px 80px),
+        linear-gradient(120deg, transparent, rgba(97, 237, 255, 0.1), transparent);
+    animation: serviceScan 7s linear infinite;
+}
+
+.servicePanel > * {
+    position: relative;
+    z-index: 1;
+}
+
+.panelEyebrow {
+    margin: 0 0 12px;
+    color: #75f7ff;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+.servicePanel h2 {
+    margin: 0;
+    max-width: 520px;
+    color: #ffffff;
+    font-size: clamp(30px, 4vw, 54px);
+    line-height: 1;
+}
+
+.servicePanel p:not(.panelEyebrow) {
+    max-width: 570px;
+    margin: 20px 0 0;
+    color: #b7ccd5;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.serviceList {
+    display: grid;
+    gap: 10px;
+    margin-top: 28px;
+}
+
+.serviceList span {
+    border-top: 1px solid rgba(127, 237, 255, 0.18);
+    padding-top: 10px;
+    color: #e8fbff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.domainLink {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+    padding: 0 16px;
+    border-radius: 8px;
+    color: #001014;
+    background: linear-gradient(135deg, #ffffff, #73f7ff);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+@keyframes serviceScan {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 160px 80px;
+    }
 }
 
 @keyframes slideUp {
@@ -507,11 +623,19 @@
         align-items: flex-start;
         padding-top: 40px;
     }
+
+    .loginShell {
+        grid-template-columns: 1fr;
+    }
     
     .loginCard {
         max-width: 100%;
         padding: 24px;
         border-radius: 12px;
+    }
+
+    .servicePanel {
+        padding: 24px;
     }
     
     .title {
@@ -540,6 +664,10 @@
     }
     
     .loginCard {
+        padding: 20px;
+    }
+
+    .servicePanel {
         padding: 20px;
     }
     

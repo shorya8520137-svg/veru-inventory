@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
 export default function OrdersNew() {
     const [orders, setOrders] = useState([]);
@@ -14,8 +14,8 @@ export default function OrdersNew() {
                 const token = localStorage.getItem('token');
                 const apiUrl = `${API_BASE}/api/website/orders?page=1&limit=20`;
                 
-                console.log('🚀 NEW PAGE - Fetching from:', apiUrl);
-                console.log('🔑 Token exists:', !!token);
+                console.log('ðŸš€ NEW PAGE - Fetching from:', apiUrl);
+                console.log('ðŸ”‘ Token exists:', !!token);
                 
                 const response = await fetch(apiUrl, {
                     headers: {
@@ -25,14 +25,14 @@ export default function OrdersNew() {
                 });
 
                 const data = await response.json();
-                console.log('📦 API Response:', data);
+                console.log('ðŸ“¦ API Response:', data);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${data.message}`);
                 }
 
                 const ordersData = data.data?.orders || data.orders || [];
-                console.log('📋 Orders loaded:', ordersData.length);
+                console.log('ðŸ“‹ Orders loaded:', ordersData.length);
                 
                 // Debug each order
                 ordersData.forEach((order, index) => {
@@ -47,7 +47,7 @@ export default function OrdersNew() {
 
                 setOrders(ordersData);
             } catch (err) {
-                console.error('❌ Error:', err);
+                console.error('âŒ Error:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -62,7 +62,7 @@ export default function OrdersNew() {
 
     return (
         <div style={{padding: '20px', fontFamily: 'Arial, sans-serif'}}>
-            <h1>🛍️ Website Orders - NEW PAGE (No Cache)</h1>
+            <h1>ðŸ›ï¸ Website Orders - NEW PAGE (No Cache)</h1>
             <p>This is a fresh page to bypass Vercel caching issues.</p>
             
             <div style={{marginBottom: '20px'}}>
@@ -103,7 +103,7 @@ export default function OrdersNew() {
             </table>
 
             <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px'}}>
-                <h3>🔍 Debug Info:</h3>
+                <h3>ðŸ” Debug Info:</h3>
                 <p><strong>API Base:</strong> {API_BASE}</p>
                 <p><strong>Orders Count:</strong> {orders.length}</p>
                 <p><strong>Orders with Products:</strong> {orders.filter(o => o.products && o.products.length > 0).length}</p>

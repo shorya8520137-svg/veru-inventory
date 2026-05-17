@@ -186,7 +186,7 @@ const WebsiteProductsPage = () => {
     const labelStyle = { fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:6 };
 
     return (
-        <div onClick={()=>setOpenMenuId(null)} style={{background:'#F6F8FB',fontFamily:'Inter,sans-serif',display:'flex',flexDirection:'column'}}>
+        <div onClick={()=>setOpenMenuId(null)} style={{background:'#ffffff',fontFamily:'Inter,sans-serif',display:'flex',flexDirection:'column'}}>
             {error&&<div style={{position:'fixed',top:20,right:20,zIndex:9999,background:'#FEF2F2',color:'#991B1B',padding:'12px 20px',borderRadius:12,fontSize:13,boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}>{error}</div>}
             {success&&<div style={{position:'fixed',top:20,right:20,zIndex:9999,background:'#F0FDF4',color:'#166534',padding:'12px 20px',borderRadius:12,fontSize:13,boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}>{success}</div>}
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:16,flexShrink:0,padding:'28px 32px 0 32px'}}>
@@ -211,7 +211,7 @@ const WebsiteProductsPage = () => {
                     <div style={{fontSize:28,fontWeight:700,color:'#111827'}}>{fulfillmentRate}%</div>
                 </div>
             </div>
-            <div style={{flexShrink:0,background:'#F6F8FB',padding:'12px 32px',marginBottom:8,display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #E5E7EB'}}>
+            <div style={{flexShrink:0,background:'#ffffff',padding:'12px 32px',marginBottom:8,display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #E5E7EB'}}>
                 <div style={{display:'flex',gap:10}}>
                     <button onClick={()=>setShowCategoryModal(true)} style={{display:'flex',alignItems:'center',gap:8,padding:'9px 18px',borderRadius:10,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:13,fontWeight:500,color:'#374151',cursor:'pointer'}}>Manage Categories</button>
                     <button onClick={()=>setShowBulkUploadModal(true)} style={{display:'flex',alignItems:'center',gap:8,padding:'9px 18px',borderRadius:10,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:13,fontWeight:500,color:'#374151',cursor:'pointer'}}>Bulk Upload</button>

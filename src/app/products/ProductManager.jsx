@@ -364,7 +364,7 @@ const ProductManager = () => {
         } catch { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['product_name,product_variant,barcode,description,category_id,price,cost_price,weight,dimensions'], { type: 'text/csv' })); a.download = 'products_template.csv'; a.click(); showNotification('CSV template downloaded!'); }
     };
     return (
-        <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"24px 24px 0 24px",display:"flex",flexDirection:"column",minHeight:0}}>
+        <div style={{height:"100%",background:"#ffffff",fontFamily:"Inter,sans-serif",padding:"12px 0 0",display:"flex",flexDirection:"column",minHeight:0,width:"100%",boxSizing:"border-box"}}>
             
             {/* Custom CSS for dropdown options */}
             <style jsx>{`

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import styles from './inventoryGptTokens.module.css';
@@ -21,7 +21,7 @@ const InventoryGptTokensPage = () => {
         expires_in_days: 90
     });
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
     
     // Clear alerts after 5 seconds
     useEffect(() => {
@@ -168,14 +168,14 @@ const InventoryGptTokensPage = () => {
         <div className={styles.container}>
             <div className={styles.header}>
                 <div className={styles.titleSection}>
-                    <h1>🔐 InventoryGPT API Tokens</h1>
+                    <h1>ðŸ” InventoryGPT API Tokens</h1>
                     <p>Generate and manage API tokens for InventoryGPT data feed</p>
                 </div>
                 <button 
                     className={styles.createBtn}
                     onClick={() => setShowCreateModal(true)}
                 >
-                    ➕ Generate New Token
+                    âž• Generate New Token
                 </button>
             </div>
 
@@ -194,7 +194,7 @@ const InventoryGptTokensPage = () => {
                 <div className={styles.loading}>Loading tokens...</div>
             ) : tokens.length === 0 ? (
                 <div className={styles.empty}>
-                    <div className={styles.emptyIcon}>🔑</div>
+                    <div className={styles.emptyIcon}>ðŸ”‘</div>
                     <p>No API tokens yet</p>
                     <small>Create your first token to start using InventoryGPT API</small>
                 </div>
@@ -246,7 +246,7 @@ const InventoryGptTokensPage = () => {
                                 onClick={() => handleRevokeToken(token.id)}
                                 disabled={!token.is_active}
                             >
-                                🔒 Revoke Token
+                                ðŸ”’ Revoke Token
                             </button>
                         </div>
                     ))}
@@ -263,7 +263,7 @@ const InventoryGptTokensPage = () => {
                                 className={styles.closeBtn}
                                 onClick={() => setShowCreateModal(false)}
                             >
-                                ✕
+                                âœ•
                             </button>
                         </div>
 
@@ -313,7 +313,7 @@ const InventoryGptTokensPage = () => {
                             </div>
 
                             <div className={styles.apiEndpoints}>
-                                <h4>📡 Available API Endpoints:</h4>
+                                <h4>ðŸ“¡ Available API Endpoints:</h4>
                                 <ul>
                                     <li><code>GET /api/inventorygpt/inventory-state</code> - Current inventory across warehouses</li>
                                     <li><code>GET /api/inventorygpt/warehouse-metrics</code> - Warehouse performance KPIs</li>
@@ -335,7 +335,7 @@ const InventoryGptTokensPage = () => {
                                 className={styles.submitBtn}
                                 onClick={handleCreateToken}
                             >
-                                🔑 Generate Token
+                                ðŸ”‘ Generate Token
                             </button>
                         </div>
                     </div>
@@ -347,18 +347,18 @@ const InventoryGptTokensPage = () => {
                 <div className={styles.modal} onClick={() => setShowTokenModal(false)}>
                     <div className={styles.modalContent + ' ' + styles.tokenModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h2>✨ Your API Token</h2>
+                            <h2>âœ¨ Your API Token</h2>
                             <button 
                                 className={styles.closeBtn}
                                 onClick={() => setShowTokenModal(false)}
                             >
-                                ✕
+                                âœ•
                             </button>
                         </div>
 
                         <div className={styles.tokenDisplay}>
                             <p className={styles.warning}>
-                                ⚠️ Save this token in a secure location. You won't be able to see it again!
+                                âš ï¸ Save this token in a secure location. You won't be able to see it again!
                             </p>
 
                             <div className={styles.tokenBox}>
@@ -367,14 +367,14 @@ const InventoryGptTokensPage = () => {
                                     className={styles.copyBtn}
                                     onClick={handleCopyToken}
                                 >
-                                    {copiedToClipboard ? '✓ Copied!' : '📋 Copy'}
+                                    {copiedToClipboard ? 'âœ“ Copied!' : 'ðŸ“‹ Copy'}
                                 </button>
                             </div>
 
                             <div className={styles.usage}>
                                 <h4>How to use:</h4>
                                 <pre>{`curl -H "Authorization: Bearer ${generatedToken}" \\
-  https://api.giftgala.in/api/inventorygpt/inventory-state`}</pre>
+  https://api.insora.in/api/inventorygpt/inventory-state`}</pre>
                             </div>
                         </div>
 

@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 const STATUS_TABS = ['All', 'Pending', 'Packed', 'Shipped', 'Delivered', 'RTO'];
 
 const STATUS_STYLE = {
@@ -100,7 +100,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '16px 20px', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', background: '#ffffff', fontFamily: 'Inter, sans-serif', padding: '16px 20px', boxSizing: 'border-box' }}>
 
       {/* FILTER BAR */}
       <div style={{ flexShrink: 0, background: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: '1px solid #F1F5F9' }}>

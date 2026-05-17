@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 import {useState,useEffect} from 'react';
 
-const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.giftgala.in';
+const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.insora.in';
 
 const BarChart=({data})=>{
   const max=Math.max(...data);
@@ -45,12 +45,12 @@ function formatActivity(dateStr){
   return{main:d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}),sub:d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})};
 }
 
-/* ── Overlay backdrop ── */
+/* â”€â”€ Overlay backdrop â”€â”€ */
 function Overlay({onClose,children}){
   return(
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(2px)'}}>
       <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:20,boxShadow:'0 24px 60px rgba(0,0,0,0.18)',width:480,maxWidth:'90vw',padding:28,position:'relative'}}>
-        <button onClick={onClose} style={{position:'absolute',top:16,right:16,background:'#F3F4F6',border:'none',borderRadius:8,width:28,height:28,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',color:'#6B7280'}}>✕</button>
+        <button onClick={onClose} style={{position:'absolute',top:16,right:16,background:'#F3F4F6',border:'none',borderRadius:8,width:28,height:28,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',color:'#6B7280'}}>âœ•</button>
         {children}
       </div>
     </div>
@@ -104,7 +104,7 @@ export default function WebsiteCustomersPage(){
   const iconBtn={background:'#fff',border:'1px solid #E5E7EB',borderRadius:12,width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:'0 2px 8px rgba(0,0,0,0.06)',transition:'box-shadow 0.2s'};
 
   return(
-    <div style={{background:'#F6F8FB',fontFamily:'Inter,sans-serif',padding:'20px 32px 0 32px',display:'flex',flexDirection:'column',position:'relative'}}>
+    <div style={{background:'#ffffff',fontFamily:'Inter,sans-serif',padding:'12px 0 0',display:'flex',flexDirection:'column',position:'relative',width:'100%',boxSizing:'border-box'}}>
 
       {/* Metric Cards */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:16,flexShrink:0}}>
@@ -212,7 +212,7 @@ export default function WebsiteCustomersPage(){
                 </div>
                 <div>
                   <div style={{fontSize:13,color:'#374151',wordBreak:'break-all'}}>{c.email||'-'}</div>
-                  <div style={{fontSize:12,color:'#9CA3AF',marginTop:2}}>{c.phone||'—'}</div>
+                  <div style={{fontSize:12,color:'#9CA3AF',marginTop:2}}>{c.phone||'â€”'}</div>
                 </div>
                 <div><StatusBadge isActive={c.is_active===1||c.is_active===true}/></div>
                 <div>
@@ -236,13 +236,13 @@ export default function WebsiteCustomersPage(){
           })}
         </div>
 
-        {/* Pagination — always visible, never pushed out */}
+        {/* Pagination â€” always visible, never pushed out */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 24px',borderTop:'1px solid #F1F5F9',flexShrink:0,background:'#fff',borderRadius:'0 0 16px 16px'}}>
           <span style={{fontSize:12,fontWeight:500,color:'#6B7280'}}>
-            Showing {totalCustomers===0?0:((currentPage-1)*10)+1}–{Math.min(currentPage*10,totalCustomers)} of {totalCustomers.toLocaleString('en-IN')} customers
+            Showing {totalCustomers===0?0:((currentPage-1)*10)+1}â€“{Math.min(currentPage*10,totalCustomers)} of {totalCustomers.toLocaleString('en-IN')} customers
           </span>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
-            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage<=1} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',cursor:currentPage<=1?'not-allowed':'pointer',opacity:currentPage<=1?0.4:1,fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage<=1} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',cursor:currentPage<=1?'not-allowed':'pointer',opacity:currentPage<=1?0.4:1,fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>â€¹</button>
             {Array.from({length:Math.min(5,totalPages)},(_,i)=>{
               const start=Math.max(1,Math.min(currentPage-2,totalPages-4));
               const p=start+i;
@@ -251,16 +251,16 @@ export default function WebsiteCustomersPage(){
                 <button key={p} onClick={()=>setCurrentPage(p)} style={{width:32,height:32,borderRadius:8,border:currentPage===p?'none':'1.5px solid #E5E7EB',background:currentPage===p?'#2563EB':'#fff',color:currentPage===p?'#fff':'#374151',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{p}</button>
               );
             })}
-            {totalPages>5&&currentPage<totalPages-2&&<span style={{color:'#9CA3AF',fontSize:13,padding:'0 4px'}}>…</span>}
+            {totalPages>5&&currentPage<totalPages-2&&<span style={{color:'#9CA3AF',fontSize:13,padding:'0 4px'}}>â€¦</span>}
             {totalPages>5&&currentPage<totalPages-2&&(
               <button onClick={()=>setCurrentPage(totalPages)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',color:'#374151',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{totalPages}</button>
             )}
-            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage>=totalPages} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',cursor:currentPage>=totalPages?'not-allowed':'pointer',opacity:currentPage>=totalPages?0.4:1,fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
+            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage>=totalPages} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',cursor:currentPage>=totalPages?'not-allowed':'pointer',opacity:currentPage>=totalPages?0.4:1,fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>â€º</button>
           </div>
         </div>
       </div>
 
-      {/* ── Growth Chart Overlay ── */}
+      {/* â”€â”€ Growth Chart Overlay â”€â”€ */}
       {overlay==='chart'&&(
         <Overlay onClose={()=>setOverlay(null)}>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>
@@ -278,7 +278,7 @@ export default function WebsiteCustomersPage(){
         </Overlay>
       )}
 
-      {/* ── AI Insights Overlay ── */}
+      {/* â”€â”€ AI Insights Overlay â”€â”€ */}
       {overlay==='insights'&&(
         <Overlay onClose={()=>setOverlay(null)}>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>

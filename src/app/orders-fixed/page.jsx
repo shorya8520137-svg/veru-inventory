@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
 
 export default function OrdersFixed() {
@@ -7,21 +7,21 @@ export default function OrdersFixed() {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        const apiUrl = 'http://api.giftgala.in/api/website/orders?page=1&limit=10';
+        const apiUrl = 'https://api.insora.in/api/website/orders?page=1&limit=10';
         
-        console.log('🚀 NEW ORDERS PAGE - CALLING API:', apiUrl);
+        console.log('ðŸš€ NEW ORDERS PAGE - CALLING API:', apiUrl);
         
         fetch(apiUrl, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => r.json())
             .then(res => {
-                console.log('✅ API RESPONSE:', res);
+                console.log('âœ… API RESPONSE:', res);
                 const ordersData = res.data?.orders || res.orders || [];
-                console.log('📦 ORDERS:', ordersData);
+                console.log('ðŸ“¦ ORDERS:', ordersData);
                 setOrders(ordersData);
             })
-            .catch(err => console.error('❌ ERROR:', err))
+            .catch(err => console.error('âŒ ERROR:', err))
             .finally(() => setLoading(false));
     }, []);
 
@@ -29,7 +29,7 @@ export default function OrdersFixed() {
 
     return (
         <div style={{padding: '20px', fontFamily: 'Arial, sans-serif'}}>
-            <h1>🛍️ Website Orders - FIXED VERSION</h1>
+            <h1>ðŸ›ï¸ Website Orders - FIXED VERSION</h1>
             <p>This page directly calls the API and displays product names.</p>
             
             <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '20px'}}>

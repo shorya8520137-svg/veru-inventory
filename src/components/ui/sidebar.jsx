@@ -63,7 +63,7 @@ const SidebarProvider = ({ children }) => {
 
     return (
         <SidebarContext.Provider value={{ isMobile, openMobile, setOpenMobile, collapsed, toggleCollapse }}>
-            <div className="flex min-h-screen w-full bg-slate-50 text-slate-900">
+            <div className="flex min-h-screen w-full bg-white text-slate-900">
                 {children}
             </div>
         </SidebarContext.Provider>

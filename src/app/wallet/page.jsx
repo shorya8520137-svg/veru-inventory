@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -17,7 +17,7 @@ import {
   Wallet
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
 
 const fallbackHistory = [
   {
@@ -135,7 +135,7 @@ export default function WalletDashboard() {
             <div className="mt-7">
               <p className="text-sm text-slate-500">Available Balance</p>
               <div className="mt-1 text-4xl font-bold tracking-tight text-slate-950">
-                {loading ? "₹0.00" : `₹${Number(walletBalance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
+                {loading ? "â‚¹0.00" : `â‚¹${Number(walletBalance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
               </div>
             </div>
 
@@ -213,7 +213,7 @@ export default function WalletDashboard() {
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-950">Recent Ledger Activity</h2>
-            <button className="text-sm font-semibold text-slate-950">View All →</button>
+            <button className="text-sm font-semibold text-slate-950">View All â†’</button>
           </div>
 
           <div className="overflow-hidden rounded-md border border-slate-100">
@@ -254,7 +254,7 @@ export default function WalletDashboard() {
                       <td className="px-4 py-4 text-right font-bold text-slate-950">
                         {transaction.amount === null || transaction.amount === undefined
                           ? "--"
-                          : `₹${Number(transaction.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
+                          : `â‚¹${Number(transaction.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
                       </td>
                     </tr>
                   );

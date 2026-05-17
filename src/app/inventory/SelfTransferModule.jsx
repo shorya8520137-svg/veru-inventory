@@ -264,7 +264,7 @@ export default function SelfTransferModule() {
     };
 
     return (
-        <div style={{ height: '100%', background: '#F5F7FA', fontFamily: 'Inter,sans-serif', padding: '0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ height: '100%', background: '#ffffff', fontFamily: 'Inter,sans-serif', padding: '0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             {/* Debug Console */}
             {showDebug && (
                 <div style={{ background: '#1F2937', color: '#10B981', padding: '12px', fontSize: '11px', fontFamily: 'monospace', maxHeight: '150px', overflowY: 'auto', borderBottom: '2px solid #10B981' }}>

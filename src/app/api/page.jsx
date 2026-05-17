@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
@@ -152,7 +152,7 @@ const ApiPage = () => {
     const maskApiKey = (key) => {
         if (!key || key === 'undefined') return 'No key available';
         if (key.length <= 12) return key;
-        return key.substring(0, 12) + '••••••••••••••••••••';
+        return key.substring(0, 12) + 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
     };
 
     const formatDate = (dateString) => {
@@ -187,7 +187,7 @@ const ApiPage = () => {
 
             <div className={styles.apiInfo}>
                 <div className={styles.apiSection}>
-                    <h3>🛍️ Website Products & Categories API</h3>
+                    <h3>ðŸ›ï¸ Website Products & Categories API</h3>
                     <p className={styles.sectionDesc}>Manage products and categories for your website integration</p>
                     
                     <div className={styles.endpoint}>
@@ -216,7 +216,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>📦 Website Orders API</h3>
+                    <h3>ðŸ“¦ Website Orders API</h3>
                     <p className={styles.sectionDesc}>Complete order management system for website integration</p>
                     
                     <div className={styles.endpoint}>
@@ -253,7 +253,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>👥 Website Customers API</h3>
+                    <h3>ðŸ‘¥ Website Customers API</h3>
                     <p className={styles.sectionDesc}>Manage website customer accounts and authentication</p>
                     
                     <div className={styles.endpoint}>
@@ -298,7 +298,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>🔑 Website Customer Authentication API</h3>
+                    <h3>ðŸ”‘ Website Customer Authentication API</h3>
                     <p className={styles.sectionDesc}>Signup and login APIs for your website customers (NO AUTH REQUIRED)</p>
                     
                     <div className={styles.endpoint}>
@@ -350,7 +350,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>💬 Customer Support Chat API</h3>
+                    <h3>ðŸ’¬ Customer Support Chat API</h3>
                     <p className={styles.sectionDesc}>AI-powered customer support bot with auto-responses (NO AUTH REQUIRED for customers)</p>
                     
                     <div className={styles.endpoint}>
@@ -427,7 +427,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>🤖 Bot Auto-Response Keywords</h3>
+                    <h3>ðŸ¤– Bot Auto-Response Keywords</h3>
                     <p className={styles.sectionDesc}>The bot automatically responds to these keywords in customer messages:</p>
                     
                     <div className={styles.keywordList}>
@@ -456,7 +456,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>⭐ Product Reviews API</h3>
+                    <h3>â­ Product Reviews API</h3>
                     <p className={styles.sectionDesc}>Complete review system with ratings, comments, and helpful voting</p>
                     
                     <div className={styles.endpoint}>
@@ -561,13 +561,13 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>📊 Timeline API</h3>
+                    <h3>ðŸ“Š Timeline API</h3>
                     <p className={styles.sectionDesc}>Track product inventory movements and history across warehouses</p>
                     
                     <div className={styles.endpoint}>
                         <strong>Get Product Timeline:</strong>
-                        <code>GET https://api.giftgala.in/api/timeline/[productCode]</code>
-                        <button onClick={() => copyToClipboard('https://api.giftgala.in/api/timeline/{productCode}')}>
+                        <code>GET https://api.insora.in/api/timeline/[productCode]</code>
+                        <button onClick={() => copyToClipboard('https://api.insora.in/api/timeline/{productCode}')}>
                             <Copy size={14} />
                         </button>
                         <div className={styles.endpointDetails}>
@@ -579,8 +579,8 @@ const ApiPage = () => {
                     
                     <div className={styles.endpoint}>
                         <strong>Get Timeline Summary:</strong>
-                        <code>GET https://api.giftgala.in/api/timeline</code>
-                        <button onClick={() => copyToClipboard('https://api.giftgala.in/api/timeline')}>
+                        <code>GET https://api.insora.in/api/timeline</code>
+                        <button onClick={() => copyToClipboard('https://api.insora.in/api/timeline')}>
                             <Copy size={14} />
                         </button>
                         <div className={styles.endpointDetails}>
@@ -592,7 +592,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>🔐 Authentication</h3>
+                    <h3>ðŸ” Authentication</h3>
                     <p className={styles.sectionDesc}>All API requests require authentication using Bearer tokens</p>
                     
                     <div className={styles.authExample}>
@@ -605,7 +605,7 @@ const ApiPage = () => {
                 </div>
 
                 <div className={styles.apiSection}>
-                    <h3>💻 Usage Examples</h3>
+                    <h3>ðŸ’» Usage Examples</h3>
                     
                     <div className={styles.exampleGroup}>
                         <h4>Products API</h4>
@@ -727,24 +727,24 @@ const ApiPage = () => {
                         <h4>Timeline API</h4>
                         <div className={styles.usage}>
                             <strong>Get product timeline:</strong>
-                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"</code>
-                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"')}>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"')}>
                                 <Copy size={14} />
                             </button>
                         </div>
                         
                         <div className={styles.usage}>
                             <strong>Get timeline summary by product:</strong>
-                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?groupBy=product&dateFrom=2025-01-01"</code>
-                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?groupBy=product&dateFrom=2025-01-01"')}>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?groupBy=product&dateFrom=2025-01-01"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?groupBy=product&dateFrom=2025-01-01"')}>
                                 <Copy size={14} />
                             </button>
                         </div>
                         
                         <div className={styles.usage}>
                             <strong>Get warehouse timeline:</strong>
-                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"</code>
-                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.giftgala.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"')}>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"')}>
                                 <Copy size={14} />
                             </button>
                         </div>
@@ -765,9 +765,9 @@ const ApiPage = () => {
                                 <strong>{apiKey.name}</strong>
                                 <div className={styles.keyDetails}>
                                     <code>{maskApiKey(apiKey.key || apiKey.api_key)}</code>
-                                    <span>•</span>
+                                    <span>â€¢</span>
                                     <span>{apiKey.usage_count || 0} calls</span>
-                                    <span>•</span>
+                                    <span>â€¢</span>
                                     <span>Last used: {formatDate(apiKey.last_used_at)}</span>
                                 </div>
                             </div>

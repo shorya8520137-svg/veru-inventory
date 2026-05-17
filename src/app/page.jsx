@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useRef } from "react";
+import { motion } from "framer-motion";
 import {
     ArrowRight,
     BarChart3,
@@ -26,6 +28,8 @@ import {
     Workflow,
     Zap
 } from "lucide-react";
+import ThreeDHero from "@/components/ThreeDHero";
+import { AnimatedSection, StaggerContainer, StaggerItem } from "@/components/ScrollAnimations";
 import styles from "./page.module.css";
 
 const productServices = [
@@ -133,11 +137,9 @@ export default function Home() {
     return (
         <main className={styles.page}>
             <section className={styles.hero}>
-                <img
-                    className={styles.heroImage}
-                    src="/homepage/inventorygpt-ai-brain.png"
-                    alt="Holographic InventoryGPT brain for insora.in"
-                />
+                {/* 3D Animated Background */}
+                <ThreeDHero />
+                
                 <div className={styles.heroShade} />
                 <div className={styles.scanLayer} />
                 <div className={styles.signalOne} />
@@ -145,30 +147,70 @@ export default function Home() {
                 <div className={styles.orbitRing} />
 
                 <nav className={styles.nav} aria-label="insora.in homepage navigation">
-                    <Link className={styles.brand} href="/">
-                        <span className={styles.brandMark}>IN</span>
-                        <span>insora.in</span>
-                    </Link>
-                    <div className={styles.navLinks}>
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <Link className={styles.brand} href="/">
+                            <span className={styles.brandMark}>IN</span>
+                            <span>insora.in</span>
+                        </Link>
+                    </motion.div>
+                    <motion.div
+                        className={styles.navLinks}
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                    >
                         <a href="#services">Services</a>
                         <a href="#brain">InventoryGPT Brain</a>
                         <a href="#clients">Clients</a>
                         <a href="#contact">Contact</a>
-                    </div>
-                    <Link className={styles.loginButton} href="/login">
-                        <LockKeyhole size={16} />
-                        Login
-                    </Link>
+                    </motion.div>
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                    >
+                        <Link className={styles.loginButton} href="/login">
+                            <LockKeyhole size={16} />
+                            Login
+                        </Link>
+                    </motion.div>
                 </nav>
 
                 <div className={styles.heroContent}>
-                    <p className={styles.eyebrow}>insora.in AI operations platform</p>
-                    <h1>Inventory, commerce, delivery, billing, and AI in one operating brain.</h1>
-                    <p className={styles.heroText}>
+                    <motion.p
+                        className={styles.eyebrow}
+                        initial={{ opacity: 0, x: -30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.8, delay: 0.3 }}
+                    >
+                        insora.in AI operations platform
+                    </motion.p>
+                    <motion.h1
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.5 }}
+                    >
+                        Inventory, commerce, delivery, billing, and AI in one operating brain.
+                    </motion.h1>
+                    <motion.p
+                        className={styles.heroText}
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.7 }}
+                    >
                         Insora builds enterprise-grade inventory systems for warehouses, stores,
                         marketplaces, delivery teams, support teams, and AI-powered decision making.
-                    </p>
-                    <div className={styles.heroActions}>
+                    </motion.p>
+                    <motion.div
+                        className={styles.heroActions}
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.9 }}
+                    >
                         <a className={styles.primaryCta} href="#brain">
                             Enter InventoryGPT
                             <ArrowRight size={18} />
@@ -177,12 +219,17 @@ export default function Home() {
                             Open client login
                             <LockKeyhole size={18} />
                         </Link>
-                    </div>
-                    <div className={styles.heroMeta}>
+                    </motion.div>
+                    <motion.div
+                        className={styles.heroMeta}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 1.1 }}
+                    >
                         <span><Warehouse size={15} /> Multi-warehouse operations</span>
                         <span><Bot size={15} /> AI inventory intelligence</span>
                         <span><ShieldCheck size={15} /> Secure client workspace</span>
-                    </div>
+                    </motion.div>
                 </div>
 
                 <div className={styles.nextHint}>
@@ -201,114 +248,90 @@ export default function Home() {
             </section>
 
             <section className={styles.services} id="services">
-                <div className={styles.sectionIntro}>
-                    <p className={styles.eyebrow}>Product services</p>
-                    <h2>Insora covers the full inventory operations loop.</h2>
-                    <p>
-                        The product scope is built from real warehouse, store, marketplace, delivery,
-                        billing, support, and AI workflows. Commercial website and developer-extension
-                        items are intentionally excluded from this public product page.
-                    </p>
-                </div>
+                <AnimatedSection>
+                    <div className={styles.sectionIntro}>
+                        <p className={styles.eyebrow}>Product services</p>
+                        <h2>Insora covers the full inventory operations loop.</h2>
+                        <p>
+                            The product scope is built from real warehouse, store, marketplace, delivery,
+                            billing, support, and AI workflows. Commercial website and developer-extension
+                            items are intentionally excluded from this public product page.
+                        </p>
+                    </div>
+                </AnimatedSection>
 
-                <div className={styles.serviceGrid}>
+                <StaggerContainer className={styles.serviceGrid}>
                     {productServices.map((service) => {
                         const Icon = service.icon;
                         return (
-                            <article className={styles.serviceCard} key={service.title}>
-                                <Icon size={22} />
-                                <h3>{service.title}</h3>
-                                <p>{service.text}</p>
-                            </article>
+                            <StaggerItem key={service.title}>
+                                <article className={styles.serviceCard}>
+                                    <Icon size={22} />
+                                    <h3>{service.title}</h3>
+                                    <p>{service.text}</p>
+                                </article>
+                            </StaggerItem>
                         );
                     })}
-                </div>
-            </section>
-
-            <section className={styles.brainSection} id="brain">
-                <div className={styles.brainSticky}>
-                    <div className={styles.brainVisual}>
-                        <img src="/homepage/inventorygpt-ai-brain.png" alt="" />
-                        <div className={styles.brainTunnel} />
-                        <div className={styles.brainPulse} />
-                        <div className={styles.brainCore}>
-                            <BrainCircuit size={28} />
-                            <span>InventoryGPT</span>
-                        </div>
-                    </div>
-                </div>
-                <div className={styles.brainStory}>
-                    <p className={styles.eyebrow}>Infographic journey</p>
-                    <h2>Scroll down and enter the InventoryGPT brain.</h2>
-                    <p>
-                        The page moves from visible business modules into the intelligence layer where
-                        operational signals become AI-readable context and executable recommendations.
-                    </p>
-                    <div className={styles.flowList}>
-                        {brainFlow.map((step) => {
-                            const Icon = step.icon;
-                            return (
-                                <article className={styles.flowCard} key={step.label}>
-                                    <div>
-                                        <Icon size={22} />
-                                        <span>{step.label}</span>
-                                    </div>
-                                    <p>{step.title}</p>
-                                </article>
-                            );
-                        })}
-                    </div>
-                </div>
+                </StaggerContainer>
             </section>
 
             <section className={styles.clients} id="clients">
-                <div className={styles.sectionIntro}>
-                    <p className={styles.eyebrow}>Client ecosystem</p>
-                    <h2>Built for real operators and client brands.</h2>
-                    <p>
-                        Client names are shown only as client references. The platform brand remains
-                        insora.in across the public page.
-                    </p>
-                </div>
-                <div className={styles.clientGrid}>
+                <AnimatedSection>
+                    <div className={styles.sectionIntro}>
+                        <p className={styles.eyebrow}>Client ecosystem</p>
+                        <h2>Built for real operators and client brands.</h2>
+                        <p>
+                            Client names are shown only as client references. The platform brand remains
+                            insora.in across the public page.
+                        </p>
+                    </div>
+                </AnimatedSection>
+                <StaggerContainer className={styles.clientGrid}>
                     {clients.map((client) => (
-                        <div className={styles.clientCard} key={client}>
-                            <Globe2 size={18} />
-                            <span>{client}</span>
-                        </div>
+                        <StaggerItem key={client}>
+                            <div className={styles.clientCard}>
+                                <Globe2 size={18} />
+                                <span>{client}</span>
+                            </div>
+                        </StaggerItem>
                     ))}
-                </div>
+                </StaggerContainer>
             </section>
 
             <section className={styles.contactBand} id="contact">
-                <div className={styles.contactCopy}>
-                    <p className={styles.eyebrow}>Work with insora.in</p>
-                    <h2>Build a smarter inventory operations layer.</h2>
-                    <p>
-                        For inventory software, InventoryGPT, warehouse workflows, marketplace
-                        integrations, delivery systems, billing, support, and automation, connect with Insora.
-                    </p>
-                </div>
-                <div className={styles.contactPanel}>
-                    <a href="mailto:contact@insora.in" className={styles.contactAction}>
-                        <BarChart3 size={18} />
-                        <span>
-                            <strong>Contact</strong>
-                            contact@insora.in
-                        </span>
-                    </a>
-                    <a href="mailto:support@insora.in" className={styles.contactAction}>
-                        <Headphones size={18} />
-                        <span>
-                            <strong>Support</strong>
-                            support@insora.in
-                        </span>
-                    </a>
-                    <Link className={styles.primaryCta} href="/login">
-                        Client login
-                        <ArrowRight size={18} />
-                    </Link>
-                </div>
+                <AnimatedSection>
+                    <div className={styles.contactCopy}>
+                        <p className={styles.eyebrow}>Work with insora.in</p>
+                        <h2>Build a smarter inventory operations layer.</h2>
+                        <p>
+                            For inventory software, InventoryGPT, warehouse workflows, marketplace
+                            integrations, delivery systems, billing, support, and automation, connect with Insora.
+                        </p>
+                    </div>
+                </AnimatedSection>
+                <AnimatedSection delay={0.2}>
+                    <div className={styles.contactPanel}>
+                        <a href="mailto:contact@insora.in" className={styles.contactAction}>
+                            <BarChart3 size={18} />
+                            <span>
+                                <strong>Contact</strong>
+                                contact@insora.in
+                            </span>
+                        </a>
+                        <a href="mailto:support@insora.in" className={styles.contactAction}>
+                            <Headphones size={18} />
+                            <span>
+                                <strong>Support</strong>
+                                support@insora.in
+                            </span>
+                        </a>
+                        <Link className={styles.primaryCta} href="/login">
+                            Client login
+                            <ArrowRight size={18} />
+                        </Link>
+                    </div>
+                </AnimatedSection>
             </section>
         </main>
     );

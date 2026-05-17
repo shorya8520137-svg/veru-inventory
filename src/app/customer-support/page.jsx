@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 import {useState,useEffect} from 'react';
 import {useRouter} from 'next/navigation';
 
-const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.giftgala.in';
+const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.insora.in';
 
-/* ── Mini sparkline SVG ── */
+/* â”€â”€ Mini sparkline SVG â”€â”€ */
 const MiniChart=({color='#BFDBFE',points='0,40 20,35 40,38 60,28 80,30 100,20 120,22'})=>(
   <svg width='100%' height='36' viewBox='0 0 120 44' preserveAspectRatio='none' style={{display:'block'}}>
     <defs>
@@ -18,7 +18,7 @@ const MiniChart=({color='#BFDBFE',points='0,40 20,35 40,38 60,28 80,30 100,20 12
   </svg>
 );
 
-/* ── Avatar ── */
+/* â”€â”€ Avatar â”€â”€ */
 const Avatar=({name,size=40})=>{
   const initials=(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const colors=['#3B82F6','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1'];
@@ -30,7 +30,7 @@ const Avatar=({name,size=40})=>{
   );
 };
 
-/* ── Priority Badge ── */
+/* â”€â”€ Priority Badge â”€â”€ */
 const PriorityBadge=({priority})=>{
   const cfg={
     high:{bg:'#FEE2E2',color:'#991B1B',label:'High'},
@@ -42,7 +42,7 @@ const PriorityBadge=({priority})=>{
   return <span style={{background:c.bg,color:c.color,borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:600}}>{c.label}</span>;
 };
 
-/* ── Status Badge ── */
+/* â”€â”€ Status Badge â”€â”€ */
 const StatusBadge=({status})=>{
   const cfg={
     open:{bg:'#DCFCE7',color:'#166534',label:'Open'},
@@ -103,9 +103,9 @@ export default function CustomerSupportPage(){
   const card={background:'#fff',borderRadius:16,border:'1px solid #E5E7EB',boxShadow:'0 2px 16px rgba(0,0,0,0.04)',padding:'20px 24px'};
 
   return(
-    <div style={{background:'#F6F8FB',fontFamily:'Inter,sans-serif',padding:'24px 28px'}}>
+    <div style={{background:'#ffffff',fontFamily:'Inter,sans-serif',padding:'12px 0 0',width:'100%',boxSizing:'border-box'}}>
 
-      {/* ── Metric Cards ── */}
+      {/* â”€â”€ Metric Cards â”€â”€ */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
 
         {/* Total Inquiries */}
@@ -147,7 +147,7 @@ export default function CustomerSupportPage(){
           <MiniChart color='#93C5FD' points='0,32 20,28 40,30 60,20 80,22 100,14 120,16'/>
         </div>
 
-        {/* SLA Risk — critical card */}
+        {/* SLA Risk â€” critical card */}
         <div style={{...card,background:'#FFF5F5',border:'1px solid #FCA5A5'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.08em',color:'#6B7280'}}>SLA RISK ALERTS</div>
@@ -161,7 +161,7 @@ export default function CustomerSupportPage(){
         </div>
       </div>
 
-      {/* ── Main Table Card ── */}
+      {/* â”€â”€ Main Table Card â”€â”€ */}
       <div style={{background:'#fff',borderRadius:16,border:'1px solid #E5E7EB',boxShadow:'0 2px 16px rgba(0,0,0,0.04)',overflow:'hidden'}}>
 
         {/* Header */}
@@ -219,7 +219,7 @@ export default function CustomerSupportPage(){
                 {/* Subject */}
                 <div style={{paddingRight:12}}>
                   <div style={{fontSize:13,fontWeight:600,color:'#111827',marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{conv.subject||'General Inquiry'}</div>
-                  <div style={{fontSize:12,color:'#9CA3AF',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{conv.description||conv.last_message||'—'}</div>
+                  <div style={{fontSize:12,color:'#9CA3AF',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{conv.description||conv.last_message||'â€”'}</div>
                 </div>
 
                 {/* Type */}
@@ -227,7 +227,7 @@ export default function CustomerSupportPage(){
                   {conv.inquiry_type?(
                     <span style={{background:'#EFF6FF',color:'#2563EB',borderRadius:20,padding:'4px 10px',fontSize:11,fontWeight:600,whiteSpace:'nowrap',textTransform:'capitalize'}}>{conv.inquiry_type.replace('_',' ')}</span>
                   ):(
-                    <span style={{color:'#D1D5DB',fontSize:12}}>—</span>
+                    <span style={{color:'#D1D5DB',fontSize:12}}>â€”</span>
                   )}
                 </div>
 
@@ -257,10 +257,10 @@ export default function CustomerSupportPage(){
         {pagination&&(
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 28px',borderTop:'1px solid #F1F5F9',flexShrink:0}}>
             <span style={{fontSize:12,color:'#6B7280'}}>
-              Showing {pagination.total===0?0:((currentPage-1)*10)+1}–{Math.min(currentPage*10,pagination.total||0)} of {pagination.total||0} conversations
+              Showing {pagination.total===0?0:((currentPage-1)*10)+1}â€“{Math.min(currentPage*10,pagination.total||0)} of {pagination.total||0} conversations
             </span>
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage<=1} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:16,cursor:currentPage<=1?'not-allowed':'pointer',opacity:currentPage<=1?0.4:1,display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+              <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage<=1} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:16,cursor:currentPage<=1?'not-allowed':'pointer',opacity:currentPage<=1?0.4:1,display:'flex',alignItems:'center',justifyContent:'center'}}>â€¹</button>
               {Array.from({length:Math.min(5,pagination.pages||1)},(_,i)=>{
                 const start=Math.max(1,Math.min(currentPage-2,(pagination.pages||1)-4));
                 const p=start+i;
@@ -269,7 +269,7 @@ export default function CustomerSupportPage(){
                   <button key={p} onClick={()=>setCurrentPage(p)} style={{width:32,height:32,borderRadius:8,border:currentPage===p?'none':'1.5px solid #E5E7EB',background:currentPage===p?'#2563EB':'#fff',color:currentPage===p?'#fff':'#374151',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{p}</button>
                 );
               })}
-              <button onClick={()=>setCurrentPage(p=>Math.min(pagination.pages||1,p+1))} disabled={currentPage>=(pagination.pages||1)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:16,cursor:currentPage>=(pagination.pages||1)?'not-allowed':'pointer',opacity:currentPage>=(pagination.pages||1)?0.4:1,display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
+              <button onClick={()=>setCurrentPage(p=>Math.min(pagination.pages||1,p+1))} disabled={currentPage>=(pagination.pages||1)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:16,cursor:currentPage>=(pagination.pages||1)?'not-allowed':'pointer',opacity:currentPage>=(pagination.pages||1)?0.4:1,display:'flex',alignItems:'center',justifyContent:'center'}}>â€º</button>
             </div>
           </div>
         )}

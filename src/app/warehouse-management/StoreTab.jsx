@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Plus, Store, MapPin, Phone, User, Search, Edit2, Trash2, X } from "lucide-react";
@@ -165,7 +165,7 @@ export default function StoreTab() {
     );
 
     return (
-        <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
+        <div style={{height:"100%",background:"#ffffff",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
             {/* Message Display */}
             {message && (
                 <div style={{padding:"12px 24px",background:"#DCFCE7",color:"#166534",fontSize:"14px",borderBottom:"1px solid #BBF7D0",flexShrink:0}}>
@@ -268,7 +268,7 @@ export default function StoreTab() {
                     <div style={{background:"#fff",borderRadius:"12px",padding:"24px",width:"100%",maxWidth:"500px",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
                             <h2 style={{margin:0,fontSize:"18px",fontWeight:"700",color:"#111827"}}>{editingId ? "Edit Store" : "Add Store"}</h2>
-                            <button onClick={() => {setShowForm(false); resetForm();}} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:"24px"}}>×</button>
+                            <button onClick={() => {setShowForm(false); resetForm();}} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:"24px"}}>Ã—</button>
                         </div>
                         
                         <form onSubmit={handleSubmit} style={{display:"flex",flexDirection:"column",gap:"16px"}}>

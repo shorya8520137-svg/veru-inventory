@@ -1,5 +1,5 @@
-// HTTPS FIX - 20260218141500 - SECURE API DOMAIN
-// Updated to https://api.giftgala.in - MIXED CONTENT FIX
+﻿// HTTPS FIX - 20260218141500 - SECURE API DOMAIN
+// Updated to https://api.insora.in - MIXED CONTENT FIX
 // This deployment MUST use HTTPS for security compliance
 
 "use client";
@@ -9,15 +9,15 @@ import { Download, X } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // FORCE HTTPS API URL - SECURITY FIX
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 const API = `${API_BASE}/api/website/orders`;
 const ROWS_PER_PAGE = 6;
 
 // HTTPS DEPLOYMENT ALERT - 20260218141500
-console.log('🔒 HTTPS DEPLOYMENT - SECURE API DOMAIN - 20260218141500');
-console.log('🔒 API Base URL:', API_BASE);
-console.log('🔒 Full API URL:', API);
-console.log('🔒 Environment NEXT_PUBLIC_API_BASE:', process.env.NEXT_PUBLIC_API_BASE);
+console.log('ðŸ”’ HTTPS DEPLOYMENT - SECURE API DOMAIN - 20260218141500');
+console.log('ðŸ”’ API Base URL:', API_BASE);
+console.log('ðŸ”’ Full API URL:', API);
+console.log('ðŸ”’ Environment NEXT_PUBLIC_API_BASE:', process.env.NEXT_PUBLIC_API_BASE);
 
 // Force git to detect changes - v5 - HTTPS SECURITY FIX
 export default function WebsiteOrder() {
@@ -37,19 +37,19 @@ export default function WebsiteOrder() {
     /* ---------------- FETCH ---------------- */
     useEffect(() => {
         // HTTPS SECURITY FIX - 20260218141500
-        console.log('🔒 USEEFFECT RUNNING - HTTPS SECURITY FIX 20260218141500');
-        console.log('🔒 Using SECURE API URL:', API);
-        console.log('🔒 API Base from env:', API_BASE);
+        console.log('ðŸ”’ USEEFFECT RUNNING - HTTPS SECURITY FIX 20260218141500');
+        console.log('ðŸ”’ Using SECURE API URL:', API);
+        console.log('ðŸ”’ API Base from env:', API_BASE);
         
         const token = localStorage.getItem('token');
         const apiUrl = `${API}?page=1&limit=100&cachebust=${Date.now()}`;
         
         // DEBUG: Log what we're calling - HTTPS VERSION
-        console.log('🔍 HTTPS FRONTEND DEBUG - 20260218141500:');
+        console.log('ðŸ” HTTPS FRONTEND DEBUG - 20260218141500:');
         console.log('- API constant:', API);
         console.log('- API_BASE constant:', API_BASE);
         console.log('- Full URL:', apiUrl);
-        console.log('- Protocol:', apiUrl.startsWith('https://') ? 'HTTPS ✅' : 'HTTP ❌');
+        console.log('- Protocol:', apiUrl.startsWith('https://') ? 'HTTPS âœ…' : 'HTTP âŒ');
         console.log('- Token exists:', !!token);
         console.log('- Token preview:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
         console.log('- Current timestamp:', new Date().toISOString());
@@ -58,31 +58,31 @@ export default function WebsiteOrder() {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => {
-                console.log('📡 HTTPS DEBUG - Response status:', r.status);
-                console.log('📡 HTTPS DEBUG - Response URL:', r.url);
-                console.log('📡 HTTPS DEBUG - Protocol:', r.url.startsWith('https://') ? 'HTTPS ✅' : 'HTTP ❌');
+                console.log('ðŸ“¡ HTTPS DEBUG - Response status:', r.status);
+                console.log('ðŸ“¡ HTTPS DEBUG - Response URL:', r.url);
+                console.log('ðŸ“¡ HTTPS DEBUG - Protocol:', r.url.startsWith('https://') ? 'HTTPS âœ…' : 'HTTP âŒ');
                 return r.json();
             })
             .then(res => {
-                console.log('📦 HTTPS DEBUG - FULL API RESPONSE:', res);
-                console.log('📦 HTTPS DEBUG - Response type:', typeof res);
-                console.log('📦 HTTPS DEBUG - Response keys:', Object.keys(res));
+                console.log('ðŸ“¦ HTTPS DEBUG - FULL API RESPONSE:', res);
+                console.log('ðŸ“¦ HTTPS DEBUG - Response type:', typeof res);
+                console.log('ðŸ“¦ HTTPS DEBUG - Response keys:', Object.keys(res));
                 
                 // Handle both old and new API response formats
                 const ordersData = res.data?.orders || res.orders || [];
-                console.log('📋 HTTPS DEBUG - Orders data:', ordersData);
-                console.log('📋 HTTPS DEBUG - Orders length:', ordersData.length);
+                console.log('ðŸ“‹ HTTPS DEBUG - Orders data:', ordersData);
+                console.log('ðŸ“‹ HTTPS DEBUG - Orders length:', ordersData.length);
                 
                 if (ordersData.length > 0) {
-                    console.log('📋 HTTPS DEBUG - First order:', ordersData[0]);
-                    console.log('📋 HTTPS DEBUG - First order products:', ordersData[0]?.products);
+                    console.log('ðŸ“‹ HTTPS DEBUG - First order:', ordersData[0]);
+                    console.log('ðŸ“‹ HTTPS DEBUG - First order products:', ordersData[0]?.products);
                     if (ordersData[0]?.products && ordersData[0].products.length > 0) {
-                        console.log('📋 HTTPS DEBUG - First product name:', ordersData[0].products[0]?.product_name);
+                        console.log('ðŸ“‹ HTTPS DEBUG - First product name:', ordersData[0].products[0]?.product_name);
                     }
                     
                     // Debug each order's products - HTTPS VERSION
                     ordersData.forEach((order, index) => {
-                        console.log(`📋 HTTPS DEBUG - Order ${index + 1} (${order.order_number}):`);
+                        console.log(`ðŸ“‹ HTTPS DEBUG - Order ${index + 1} (${order.order_number}):`);
                         console.log(`   - Item count: ${order.item_count}`);
                         console.log(`   - Products exists: ${!!order.products}`);
                         console.log(`   - Products is array: ${Array.isArray(order.products)}`);
@@ -100,9 +100,9 @@ export default function WebsiteOrder() {
                 setOrders(ordersData);
             })
             .catch(err => {
-                console.error('❌ HTTPS DEBUG - FRONTEND ERROR:', err);
-                console.error('❌ HTTPS DEBUG - Error details:', err.message);
-                console.error('❌ HTTPS DEBUG - Mixed content issue?', err.message.includes('Mixed Content'));
+                console.error('âŒ HTTPS DEBUG - FRONTEND ERROR:', err);
+                console.error('âŒ HTTPS DEBUG - Error details:', err.message);
+                console.error('âŒ HTTPS DEBUG - Mixed content issue?', err.message.includes('Mixed Content'));
                 setError(err.message);
             })
             .finally(() => setLoading(false));
@@ -261,7 +261,7 @@ export default function WebsiteOrder() {
                     {chips.map(c => (
                         <span key={c} className={styles.chip}>
               {c}
-                            <button onClick={() => setChips(chips.filter(x => x !== c))}>×</button>
+                            <button onClick={() => setChips(chips.filter(x => x !== c))}>Ã—</button>
             </span>
                     ))}
 
@@ -285,7 +285,7 @@ export default function WebsiteOrder() {
 
                 <div className={styles.filters}>
                     <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
-                    <span>→</span>
+                    <span>â†’</span>
                     <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
 
                     <button className={styles.iconBtn} onClick={exportExcel}>
@@ -346,27 +346,27 @@ export default function WebsiteOrder() {
                                             {o.products.map((p, idx) => (
                                                 <div key={idx} style={{ marginBottom: '8px', fontSize: '12px' }}>
                                                     <div style={{ fontWeight: '500' }}>{p.product_name}</div>
-                                                    <div style={{ color: '#666' }}>Qty: {p.quantity} × ₹{p.unit_price}</div>
+                                                    <div style={{ color: '#666' }}>Qty: {p.quantity} Ã— â‚¹{p.unit_price}</div>
                                                     {p.customization && (
                                                         <div style={{ marginTop: '4px', padding: '4px', background: '#f0f9ff', borderRadius: '4px' }}>
                                                             {p.customization.engravingText && (
                                                                 <div style={{ color: '#0066cc' }}>
-                                                                    🖊️ Engraving: {p.customization.engravingText}
+                                                                    ðŸ–Šï¸ Engraving: {p.customization.engravingText}
                                                                 </div>
                                                             )}
                                                             {p.customization.customizationText && (
                                                                 <div style={{ color: '#0066cc' }}>
-                                                                    ✏️ Custom: {p.customization.customizationText}
+                                                                    âœï¸ Custom: {p.customization.customizationText}
                                                                 </div>
                                                             )}
                                                             {p.customization.comboField1 && (
                                                                 <div style={{ color: '#9333ea' }}>
-                                                                    📝 Field 1: {p.customization.comboField1}
+                                                                    ðŸ“ Field 1: {p.customization.comboField1}
                                                                 </div>
                                                             )}
                                                             {p.customization.comboField2 && (
                                                                 <div style={{ color: '#9333ea' }}>
-                                                                    📝 Field 2: {p.customization.comboField2}
+                                                                    ðŸ“ Field 2: {p.customization.comboField2}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -378,7 +378,7 @@ export default function WebsiteOrder() {
                                         `${o.item_count || 0} item(s)`
                                     )}
                                 </td>
-                                <td>₹{o.total_amount || 0}</td>
+                                <td>â‚¹{o.total_amount || 0}</td>
                                 <td>{o.payment_method || "-"}</td>
                                 <td>{o.tracking_number || "-"}</td>
                                 <td>{o.payment_status || "-"}</td>

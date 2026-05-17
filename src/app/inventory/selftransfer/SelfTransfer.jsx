@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import styles from "./selfTransfer.module.css";
 
-const API_BASE = "https://api.giftgala.in";
+const API_BASE = "https://api.insora.in";
 
 const MOVEMENT_META = {
     OPENING: { label: "Opening", color: "#22c55e" },
@@ -42,7 +42,7 @@ export default function SelfTransfer() {
                 movement_type: 'SELF_TRANSFER',
                 barcode: transfer.transfer_reference,
                 product_name: transfer.transfer_type,
-                location_code: `${transfer.source_location} → ${transfer.destination_location}`,
+                location_code: `${transfer.source_location} â†’ ${transfer.destination_location}`,
                 qty: 1, // Each transfer is one record
                 direction: 'TRANSFER',
                 reference: transfer.transfer_reference
@@ -106,7 +106,7 @@ export default function SelfTransfer() {
             {/* MAIN GRID */}
             <div className={styles.mainGrid}>
 
-                {/* LEFT — TIMELINE */}
+                {/* LEFT â€” TIMELINE */}
                 <div className={styles.timeline}>
                     <div className={styles.rail} />
                     {ledger.map((l, i) => {
@@ -132,7 +132,7 @@ export default function SelfTransfer() {
                     })}
                 </div>
 
-                {/* RIGHT — GRAPH + TABLE */}
+                {/* RIGHT â€” GRAPH + TABLE */}
                 <div className={styles.rightCol}>
 
                     {/* GRAPH */}

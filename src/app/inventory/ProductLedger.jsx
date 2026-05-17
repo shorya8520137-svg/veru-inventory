@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
 /* ================= LABEL MAP ================= */
 const LABELS = {
@@ -176,7 +176,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
         setSummary({ ...overview, finalStock });
     };
 
-    // ── type → badge config ──────────────────────────────────────────────────────────────────────
+    // â”€â”€ type â†’ badge config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const TYPE_BADGE = {
         OPENING:       { label:'OPENING',   bg:'#1e3a5f', color:'#93C5FD' },
         BULK_UPLOAD:   { label:'UPLOAD',    bg:'#1e3a5f', color:'#93C5FD' },
@@ -192,7 +192,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
     };
     const getBadge = (type) => TYPE_BADGE[type] || { label: type, bg:'#1E293B', color:'#94A3B8' };
 
-    // ── dot colour by direction ──────────────────────────────────────────────────────────────────
+    // â”€â”€ dot colour by direction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const dotColor = (row) => {
         if (row.direction === 'IN') return '#059669';
         if (row.direction === 'OUT') return '#DC2626';
@@ -203,10 +203,10 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(3px)' }}
             onClick={(e) => e.target === e.currentTarget && onClose && onClose()}>
 
-            {/* ── Shell ── */}
+            {/* â”€â”€ Shell â”€â”€ */}
             <div style={{ display:'flex', flexDirection:'column', width:'92vw', maxWidth:1100, height:'88vh', background:'#FFFFFF', borderRadius:16, overflow:'hidden', border:'1px solid #E5E7EB', boxShadow:'0 40px 100px rgba(0,0,0,0.3)' }}>
 
-                {/* ── Top bar ── */}
+                {/* â”€â”€ Top bar â”€â”€ */}
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', background:'#F9FAFB', borderBottom:'1px solid #E5E7EB', flexShrink:0 }}>
                     <div>
                         <div style={{ fontSize:10, color:'#6B7280', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:3 }}>
@@ -214,18 +214,18 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                             <span style={{ marginLeft:8, padding:'2px 6px', background:'#10B981', color:'#FFFFFF', borderRadius:4, fontSize:8 }}>v2.1</span>
                         </div>
                         <div style={{ fontSize:16, fontWeight:700, color:'#111827', letterSpacing:'-0.01em' }}>
-                            Product Ledger — <span style={{ color:'#2563EB' }}>{productBarcode}</span>
+                            Product Ledger â€” <span style={{ color:'#2563EB' }}>{productBarcode}</span>
                         </div>
                     </div>
                     <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                        <button onClick={onClose} style={{ width:30, height:30, borderRadius:7, border:'1px solid #E5E7EB', background:'#FFFFFF', color:'#6B7280', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>×</button>
+                        <button onClick={onClose} style={{ width:30, height:30, borderRadius:7, border:'1px solid #E5E7EB', background:'#FFFFFF', color:'#6B7280', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>Ã—</button>
                     </div>
                 </div>
 
-                {/* ── Body: sidebar + main ── */}
+                {/* â”€â”€ Body: sidebar + main â”€â”€ */}
                 <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
-                    {/* ── LEFT SIDEBAR ── */}
+                    {/* â”€â”€ LEFT SIDEBAR â”€â”€ */}
                     <div style={{ width:220, flexShrink:0, background:'#F9FAFB', borderRight:'1px solid #E5E7EB', display:'flex', flexDirection:'column', padding:'16px 14px', gap:16, overflowY:'auto', scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch' }}>
                         <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
 
@@ -258,7 +258,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                         <div>
                             <div style={{ fontSize:10, fontWeight:700, color:'#9CA3AF', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>Stock Overview</div>
                             {loading ? (
-                                <div style={{ color:'#9CA3AF', fontSize:11 }}>Loading…</div>
+                                <div style={{ color:'#9CA3AF', fontSize:11 }}>Loadingâ€¦</div>
                             ) : (
                                 <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
                                     {[
@@ -283,11 +283,11 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                         {/* Current Balance card */}
                         <div style={{ marginTop:'auto', background:'#EFF6FF', borderRadius:10, padding:'12px 14px', border:'1px solid #DBEAFE' }}>
                             <div style={{ fontSize:9, fontWeight:700, color:'#6B7280', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>Current Balance</div>
-                            <div style={{ fontSize:28, fontWeight:700, color:'#2563EB', letterSpacing:'-0.02em' }}>{loading ? '—' : summary.finalStock}</div>
+                            <div style={{ fontSize:28, fontWeight:700, color:'#2563EB', letterSpacing:'-0.02em' }}>{loading ? 'â€”' : summary.finalStock}</div>
                         </div>
                     </div>
 
-                    {/* ── RIGHT MAIN PANEL ── */}
+                    {/* â”€â”€ RIGHT MAIN PANEL â”€â”€ */}
                     <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
                         {/* KPI Cards Row */}
@@ -347,7 +347,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                         letterSpacing: '-0.02em',
                                         marginBottom: 4
                                     }}>
-                                        {loading ? '—' : kpi.value}
+                                        {loading ? 'â€”' : kpi.value}
                                     </div>
                                     <div style={{ 
                                         fontSize: 9, 
@@ -371,7 +371,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                         <div style={{ flex:1, overflowY:'auto', scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch' }}>
                             <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
                             {loading ? (
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#9CA3AF', fontSize:12 }}>Loading…</div>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#9CA3AF', fontSize:12 }}>Loadingâ€¦</div>
                             ) : error ? (
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'#DC2626', fontSize:12 }}>{error}</div>
                             ) : timeline.length === 0 ? (
@@ -405,7 +405,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                                                     <span 
                                                         onClick={() => {
-                                                            console.log('🔍 BADGE CLICK v2.1');
+                                                            console.log('ðŸ” BADGE CLICK v2.1');
                                                             console.log('Type:', row.type, '| Length:', row.type?.length, '| CharCodes:', row.type?.split('').map(c => c.charCodeAt(0)));
                                                             console.log('Reference:', row.reference);
                                                             console.log('Current expandedEntry:', expandedEntry);
@@ -418,10 +418,10 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                             
                                                             if (isValidType && hasRef) {
                                                                 const newValue = expandedEntry === row.reference ? null : row.reference;
-                                                                console.log('✅ Setting expandedEntry to:', newValue);
+                                                                console.log('âœ… Setting expandedEntry to:', newValue);
                                                                 setExpandedEntry(newValue);
                                                             } else {
-                                                                console.log('❌ Cannot expand - Type valid:', isValidType, '| Has ref:', hasRef);
+                                                                console.log('âŒ Cannot expand - Type valid:', isValidType, '| Has ref:', hasRef);
                                                             }
                                                         }}
                                                         style={{ 
@@ -484,7 +484,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 textTransform: 'uppercase', 
                                                                 marginBottom: 4 
                                                             }}>
-                                                                📤 OUT (SOURCE)
+                                                                ðŸ“¤ OUT (SOURCE)
                                                             </div>
                                                             <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 600, marginBottom: 8 }}>
                                                                 {row.source_location || 'Unknown Source'}
@@ -526,7 +526,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 textTransform: 'uppercase', 
                                                                 marginBottom: 4 
                                                             }}>
-                                                                📥 IN (DESTINATION)
+                                                                ðŸ“¥ IN (DESTINATION)
                                                             </div>
                                                             <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginBottom: 8 }}>
                                                                 {row.destination_location || storeCode}
@@ -623,7 +623,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 textTransform: 'uppercase', 
                                                                 marginBottom: 8 
                                                             }}>
-                                                                {row.direction === 'IN' ? '📥 DISPATCH RECEIVED FROM WAREHOUSE' : '📤 DISPATCH - STOCK SENT OUT'}
+                                                                {row.direction === 'IN' ? 'ðŸ“¥ DISPATCH RECEIVED FROM WAREHOUSE' : 'ðŸ“¤ DISPATCH - STOCK SENT OUT'}
                                                             </div>
                                                             <div style={{ 
                                                                 fontSize: 11, 
@@ -632,7 +632,7 @@ export default function ProductLedger({ productBarcode, productName, storeCode, 
                                                                 marginBottom: 8 
                                                             }}>
                                                                 {row.direction === 'IN' ? 
-                                                                    `From: ${row.source_location || 'Warehouse'} → To: ${row.destination_location || storeCode}` :
+                                                                    `From: ${row.source_location || 'Warehouse'} â†’ To: ${row.destination_location || storeCode}` :
                                                                     `${row.warehouse || storeCode}`
                                                                 }
                                                             </div>

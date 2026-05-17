@@ -1,11 +1,11 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, defs, linearGradient, stop
 } from 'recharts';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
 const FILTERS = ['7D', '30D', '90D'];
 
@@ -113,10 +113,10 @@ function StockChart({ config, products, selectedProduct, onProductChange, filter
           background: '#F8FAFC', marginBottom: 12, outline: 'none', cursor: 'pointer',
         }}
       >
-        <option value="">— Select Product —</option>
+        <option value="">â€” Select Product â€”</option>
         {products.map(p => (
           <option key={p.barcode || p.p_id} value={p.product_name}>
-            {p.product_name} {p.product_variant ? `(${p.product_variant})` : ''} — Stock: {p.total_stock ?? 0}
+            {p.product_name} {p.product_variant ? `(${p.product_variant})` : ''} â€” Stock: {p.total_stock ?? 0}
           </option>
         ))}
       </select>

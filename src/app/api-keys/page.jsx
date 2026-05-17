@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import styles from './apiKeys.module.css';
@@ -14,7 +14,7 @@ const ApiKeysPage = () => {
     const [generatedKey, setGeneratedKey] = useState('');
     const [showKeyModal, setShowKeyModal] = useState(false);
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
     useEffect(() => {
         fetchApiKeys();
@@ -238,7 +238,7 @@ const ApiKeysPage = () => {
 
     const maskApiKey = (key) => {
         if (key.length <= 12) return key;
-        return key.substring(0, 12) + '••••••••••••••••••••';
+        return key.substring(0, 12) + 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
     };
 
     if (loading) {
@@ -263,19 +263,19 @@ const ApiKeysPage = () => {
                     onClick={() => setShowCreateModal(true)}
                     className={styles.createBtn}
                 >
-                    🔑 Create New API Key
+                    ðŸ”‘ Create New API Key
                 </button>
             </div>
 
             {success && (
                 <div className={styles.successMessage}>
-                    ✅ {success}
+                    âœ… {success}
                 </div>
             )}
 
             {error && (
                 <div className={styles.errorMessage}>
-                    ❌ {error}
+                    âŒ {error}
                 </div>
             )}
 
@@ -306,7 +306,7 @@ const ApiKeysPage = () => {
 
                 {apiKeys.length === 0 ? (
                     <div className={styles.emptyState}>
-                        <div className={styles.emptyIcon}>🔑</div>
+                        <div className={styles.emptyIcon}>ðŸ”‘</div>
                         <h3>No API Keys Yet</h3>
                         <p>Create your first API key to start integrating with your website</p>
                         <button 
@@ -327,7 +327,7 @@ const ApiKeysPage = () => {
                                     </div>
                                     <div className={styles.keyStatus}>
                                         <span className={`${styles.statusBadge} ${apiKey.is_active ? styles.active : styles.inactive}`}>
-                                            {apiKey.is_active ? '🟢 Active' : '🔴 Inactive'}
+                                            {apiKey.is_active ? 'ðŸŸ¢ Active' : 'ðŸ”´ Inactive'}
                                         </span>
                                     </div>
                                 </div>
@@ -342,7 +342,7 @@ const ApiKeysPage = () => {
                                                 className={styles.copyBtn}
                                                 title="Copy to clipboard"
                                             >
-                                                📋
+                                                ðŸ“‹
                                             </button>
                                         </div>
                                     </div>
@@ -368,13 +368,13 @@ const ApiKeysPage = () => {
                                         onClick={() => handleToggleKey(apiKey.id, apiKey.is_active)}
                                         className={`${styles.actionBtn} ${apiKey.is_active ? styles.deactivateBtn : styles.activateBtn}`}
                                     >
-                                        {apiKey.is_active ? '⏸️ Deactivate' : '▶️ Activate'}
+                                        {apiKey.is_active ? 'â¸ï¸ Deactivate' : 'â–¶ï¸ Activate'}
                                     </button>
                                     <button 
                                         onClick={() => handleDeleteKey(apiKey.id)}
                                         className={`${styles.actionBtn} ${styles.deleteBtn}`}
                                     >
-                                        🗑️ Delete
+                                        ðŸ—‘ï¸ Delete
                                     </button>
                                 </div>
                             </div>
@@ -393,7 +393,7 @@ const ApiKeysPage = () => {
                                 onClick={() => setShowCreateModal(false)}
                                 className={styles.closeBtn}
                             >
-                                ✕
+                                âœ•
                             </button>
                         </div>
 
@@ -421,7 +421,7 @@ const ApiKeysPage = () => {
                             </div>
 
                             <div className={styles.infoBox}>
-                                <h4>🔒 Security Notice</h4>
+                                <h4>ðŸ”’ Security Notice</h4>
                                 <ul>
                                     <li>Keep your API keys secure and never share them publicly</li>
                                     <li>Use different keys for different environments (dev, staging, prod)</li>
@@ -442,7 +442,7 @@ const ApiKeysPage = () => {
                                 onClick={handleCreateKey}
                                 className={styles.createBtn}
                             >
-                                🔑 Create API Key
+                                ðŸ”‘ Create API Key
                             </button>
                         </div>
                     </div>
@@ -454,7 +454,7 @@ const ApiKeysPage = () => {
                 <div className={styles.modal}>
                     <div className={styles.modalContent}>
                         <div className={styles.modalHeader}>
-                            <h2>🎉 API Key Created Successfully!</h2>
+                            <h2>ðŸŽ‰ API Key Created Successfully!</h2>
                         </div>
 
                         <div className={styles.modalBody}>
@@ -466,13 +466,13 @@ const ApiKeysPage = () => {
                                         onClick={() => copyToClipboard(generatedKey)}
                                         className={styles.copyBtn}
                                     >
-                                        📋 Copy
+                                        ðŸ“‹ Copy
                                     </button>
                                 </div>
                             </div>
 
                             <div className={styles.warningBox}>
-                                <h4>⚠️ Important!</h4>
+                                <h4>âš ï¸ Important!</h4>
                                 <p>This is the only time you'll see this API key. Make sure to copy it and store it securely. If you lose it, you'll need to create a new one.</p>
                             </div>
                         </div>

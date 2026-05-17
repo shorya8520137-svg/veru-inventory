@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import styles from './profile.module.css';
@@ -28,7 +28,7 @@ const ProfilePage = () => {
     const [tickets, setTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
     useEffect(() => {
         fetchUserData();

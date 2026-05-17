@@ -1,11 +1,13 @@
 /* Website Products Management Styles */
 
 .container {
-    padding: 15px;
-    max-width: 1400px;
-    margin: 0 auto;
-    background: #f5f5f5;
-    min-height: 100vh;
+    padding: 12px 0 0;
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    background: #ffffff;
+    min-height: calc(100vh - 64px);
+    box-sizing: border-box;
 }
 
 .header {

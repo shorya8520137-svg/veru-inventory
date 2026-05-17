@@ -33,6 +33,8 @@
     padding: 24px 16px;
     border-right: 1px solid #e5e7eb;
     background: #ffffff;
+    display: flex;
+    flex-direction: column;
 }
 
 .identity {
@@ -80,6 +82,9 @@
 .tabs {
     display: grid;
     gap: 4px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .tabButton {
@@ -110,9 +115,61 @@
     font-weight: 700;
 }
 
+.themeToggleBlock {
+    margin-top: auto;
+    padding-top: 18px;
+    border-top: 1px solid #eef2f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.themeToggleLabel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.themeSwitch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #e2e8f0;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.themeSwitchOn {
+    background: #5850ec;
+    border-color: #5850ec;
+}
+
+.themeSwitchThumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+}
+
+.themeSwitchOn .themeSwitchThumb {
+    transform: translateX(20px);
+}
+
 .content {
     min-width: 0;
-    padding: 24px 32px;
+    padding: 24px 20px;
 }
 
 .topBar {

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,18 +48,19 @@ export default function ClientLayout({ children }) {
         };
     }, []);
 
-    // Don't show sidebar on login pages - render directly without complex logic
+    // Public marketing/auth pages render outside the authenticated app shell.
     const isLoginPage = pathname === "/login" || pathname === "/simple-login" || pathname === "/login-isolated";
+    const isPublicPage = pathname === "/" || isLoginPage;
 
     // Redirect to login if not authenticated (only after loading is complete)
     useEffect(() => {
-        if (!isLoginPage && !loading && !user) {
+        if (!isPublicPage && !loading && !user) {
             router.push("/login");
         }
-    }, [user, loading, router, isLoginPage]);
+    }, [user, loading, router, isPublicPage]);
 
-    // For login pages, render directly without any authentication checks
-    if (isLoginPage) {
+    // For public pages, render directly without sidebar, top nav, or auth redirects.
+    if (isPublicPage) {
         return <>{children}</>;
     }
 
@@ -93,21 +94,45 @@ export default function ClientLayout({ children }) {
     }
 
     // Check if current page is InventoryGPT or customer support chat
-    const isInventoryGPTPage = pathname === "/inventorygpt";
+    const isInventoryGPTPage =
+        pathname === '/inventorygpt' || pathname?.startsWith('/inventorygpt/');
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100vw', backgroundColor: '#ffffff' }}>
+        <div
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: isInventoryGPTPage ? '100vh' : undefined,
+                minHeight: isInventoryGPTPage ? undefined : '100vh',
+                width: '100vw',
+                overflow: isInventoryGPTPage ? 'hidden' : undefined,
+                backgroundColor: '#ffffff'
+            }}
+        >
             {/* TOP NAVIGATION BAR - Full Width Above Everything */}
-            {!isInventoryGPTPage && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
-                    <TopNavBar onTransferStock={() => setOpenFIFO(true)} />
-                </div>
-            )}
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
+                <TopNavBar onTransferStock={() => setOpenFIFO(true)} />
+            </div>
 
             {/* MAIN LAYOUT - Below Top Navbar */}
-            <div style={{ display: 'flex', flex: 1, paddingTop: isInventoryGPTPage ? 0 : '64px' }}>
-                <SidebarProvider>
-                    {/* SIDEBAR - Starts below top navbar */}
+            <div
+                style={{
+                    display: 'flex',
+                    flex: 1,
+                    minHeight: 0,
+                    paddingTop: '64px',
+                    ...(isInventoryGPTPage
+                        ? { height: 'calc(100vh - 64px)', overflow: 'hidden' }
+                        : {})
+                }}
+            >
+                <SidebarProvider
+                    className={
+                        isInventoryGPTPage
+                            ? 'flex h-full min-h-0 w-full overflow-hidden bg-white'
+                            : undefined
+                    }
+                >
                     <Sidebar>
                         <InventoryMenu 
                             onOpenOperation={(tab) => {
@@ -117,12 +142,24 @@ export default function ClientLayout({ children }) {
                         />
                     </Sidebar>
 
-                    {/* MAIN CONTENT */}
-                    <div className="flex-1 min-w-0 flex flex-col">
-                        <main className="flex-1 min-w-0 relative" style={{ backgroundColor: '#ffffff' }}>
-                            <div className="p-0">
-                                {children}
-                            </div>
+                    <div
+                        className={`flex-1 min-w-0 flex flex-col ${
+                            isInventoryGPTPage ? 'min-h-0 h-full overflow-hidden' : ''
+                        }`}
+                    >
+                        <main
+                            className={`flex-1 min-w-0 w-full relative flex flex-col min-h-0 ${
+                                isInventoryGPTPage ? 'h-full overflow-hidden' : ''
+                            }`}
+                            style={{ backgroundColor: '#ffffff' }}
+                        >
+                            {isInventoryGPTPage ? (
+                                <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+                                    {children}
+                                </div>
+                            ) : (
+                                <div className="content-wrapper app-main-edge w-full max-w-none p-0">{children}</div>
+                            )}
                         </main>
                     </div>
 
@@ -401,7 +438,7 @@ export default function ClientLayout({ children }) {
                                 </div>
                                 <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 100px)', padding: '32px' }}>
                                     <div style={{ textAlign: 'center', color: '#64748b' }}>
-                                        <div style={{ fontSize: '48px', marginBottom: '24px' }}>🔧</div>
+                                        <div style={{ fontSize: '48px', marginBottom: '24px' }}>ðŸ”§</div>
                                         <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Recovery Operations</h3>
                                         <p style={{ color: '#64748b' }}>Recovery functionality coming soon...</p>
                                     </div>

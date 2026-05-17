@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import styles from "../login/login.module.css";
@@ -15,14 +15,14 @@ export default function IsolatedLoginPage() {
         setError("");
         setLoading(true);
 
-        console.log("🚀 Form submitted - JavaScript is working!");
+        console.log("ðŸš€ Form submitted - JavaScript is working!");
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
-            console.log("🔗 API Base:", apiBase);
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            console.log("ðŸ”— API Base:", apiBase);
 
             const requestBody = { email, password };
-            console.log("📤 Request body:", requestBody);
+            console.log("ðŸ“¤ Request body:", requestBody);
 
             const response = await fetch(`${apiBase}/api/auth/login`, {
                 method: 'POST',
@@ -32,21 +32,21 @@ export default function IsolatedLoginPage() {
                 body: JSON.stringify(requestBody),
             });
 
-            console.log("📥 Response status:", response.status);
+            console.log("ðŸ“¥ Response status:", response.status);
             const data = await response.json();
-            console.log("📥 Response data:", data);
+            console.log("ðŸ“¥ Response data:", data);
 
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                console.log("✅ Login successful! Redirecting...");
+                console.log("âœ… Login successful! Redirecting...");
                 window.location.href = "/products";
             } else {
                 setError(data.message || "Invalid credentials");
-                console.log("❌ Login failed:", data.message);
+                console.log("âŒ Login failed:", data.message);
             }
         } catch (error) {
-            console.error("❌ Network error:", error);
+            console.error("âŒ Network error:", error);
             setError("Login failed. Please try again.");
         } finally {
             setLoading(false);
@@ -65,8 +65,8 @@ export default function IsolatedLoginPage() {
                             </svg>
                         </div>
                         <div className={styles.logoText}>
-                            <span className={styles.companyName}>hunyhuny</span>
-                            <span className={styles.tagline}>Inventory Management</span>
+                            <span className={styles.companyName}>Insora</span>
+                            <span className={styles.tagline}>AI Operations Platform</span>
                         </div>
                     </div>
                     <h1 className={styles.title}>Welcome Back (Isolated)</h1>

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useRef } from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
 const inp = {
   width:'100%', padding:'9px 12px', borderRadius:8,
@@ -107,9 +107,9 @@ export default function OrderPage() {
           product:     form.productName,
           payment,
           status:      'Created',
-          value:       `₹${(Number(form.unitPrice)*qty).toFixed(2)}`,
+          value:       `â‚¹${(Number(form.unitPrice)*qty).toFixed(2)}`,
           date:        new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
-          shiprocket:  data.awb || data.courier || '—',
+          shiprocket:  data.awb || data.courier || 'â€”',
         }, ...prev]);
         setView('table');
       } else {
@@ -120,7 +120,7 @@ export default function OrderPage() {
   };
 
   return (
-    <div style={{ background:'#F1F5F9', fontFamily:'Inter,sans-serif', padding:'16px 24px', minHeight:'100vh' }}>
+    <div style={{ background:'#ffffff', fontFamily:'Inter,sans-serif', padding:'16px 24px', minHeight:'100vh' }}>
 
       {!isFormOpen ? (
         <div 
@@ -188,7 +188,7 @@ export default function OrderPage() {
                 <div>
                   <label style={lbl}>SELECT WAREHOUSE</label>
                   <select style={{ ...inp, cursor:'pointer' }} value={form.warehouse} onChange={e=>set('warehouse',e.target.value)}>
-                    <option value="">— Select Warehouse —</option>
+                    <option value="">â€” Select Warehouse â€”</option>
                     {warehouses.map((w,i)=>(
                       <option key={i} value={w.warehouse_code||w.code||w}>{w.Warehouse_name||w.name||w.warehouse_code||w}</option>
                     ))}
@@ -212,7 +212,7 @@ export default function OrderPage() {
               </div>
               {form.warehouse && (
                 <div style={{ marginTop:10, background:'#F0FDF4', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#16A34A', fontWeight:600 }}>
-                  ✓ Warehouse selected: {form.warehouse}
+                  âœ“ Warehouse selected: {form.warehouse}
                 </div>
               )}
             </div>
@@ -265,11 +265,11 @@ export default function OrderPage() {
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:12 }}>
                 <div><label style={lbl}>BARCODE / SKU</label><input style={{ ...inp, background:'#F1F5F9' }} value={form.barcode} readOnly placeholder="Auto-filled from search"/></div>
-                <div><label style={lbl}>UNIT PRICE</label><input style={inp} placeholder="₹0.00" value={form.unitPrice} onChange={e=>set('unitPrice',e.target.value)}/></div>
+                <div><label style={lbl}>UNIT PRICE</label><input style={inp} placeholder="â‚¹0.00" value={form.unitPrice} onChange={e=>set('unitPrice',e.target.value)}/></div>
                 <div>
                   <label style={lbl}>QUANTITY</label>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
+                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:32,height:32,borderRadius:8,border:'1.5px solid #E5E7EB',background:'#fff',fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>âˆ’</button>
                     <span style={{ fontSize:14,fontWeight:700,minWidth:24,textAlign:'center' }}>{qty}</span>
                     <button onClick={()=>setQty(q=>q+1)} style={{ width:32,height:32,borderRadius:8,border:'1.5px solid #2563EB',background:'#EFF6FF',color:'#2563EB',fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
                   </div>
@@ -302,7 +302,7 @@ export default function OrderPage() {
                 <div><label style={lbl}>H (CM)</label><input style={inp} value={form.h} onChange={e=>set('h',e.target.value)}/></div>
               </div>
               <div style={{ marginTop:12, background:'#EFF6FF', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#1E40AF', fontWeight:600 }}>
-                📦 Applicable Weight: {Math.max(Number(form.deadWeight)||0, Number(volWeight))} kg
+                ðŸ“¦ Applicable Weight: {Math.max(Number(form.deadWeight)||0, Number(volWeight))} kg
               </div>
             </div>
 
@@ -333,14 +333,14 @@ export default function OrderPage() {
             </div>
           </div>
 
-          {/* RIGHT — AI + SUMMARY */}
+          {/* RIGHT â€” AI + SUMMARY */}
           <div style={{ position:'sticky', top:16 }}>
             <div style={{ background:'#fff', borderRadius:16, padding:'16px 18px', boxShadow:'0 2px 10px rgba(0,0,0,0.06)', border:'1px solid #F1F5F9', marginBottom:14 }}>
-              <div style={{ fontSize:11, fontWeight:800, color:'#7C3AED', letterSpacing:'0.06em', marginBottom:12 }}>✦ PRECISION ARCHITECT AI</div>
+              <div style={{ fontSize:11, fontWeight:800, color:'#7C3AED', letterSpacing:'0.06em', marginBottom:12 }}>âœ¦ PRECISION ARCHITECT AI</div>
               {[
-                { type:'error',   icon:'⚠', text:'Delivery phone number required for RTO protection.' },
-                { type:'warning', icon:'●', text:'Verify weight to avoid courier surcharges.' },
-                { type:'success', icon:'✓', text:'Warehouse selected — ready for dispatch.' },
+                { type:'error',   icon:'âš ', text:'Delivery phone number required for RTO protection.' },
+                { type:'warning', icon:'â—', text:'Verify weight to avoid courier surcharges.' },
+                { type:'success', icon:'âœ“', text:'Warehouse selected â€” ready for dispatch.' },
               ].map((h,i)=>(
                 <div key={i} style={{ display:'flex', gap:10, marginBottom:8, padding:'8px 10px', borderRadius:8, background:h.type==='error'?'#FEF2F2':h.type==='warning'?'#FFFBEB':'#F0FDF4', border:`1px solid ${h.type==='error'?'#FECACA':h.type==='warning'?'#FDE68A':'#BBF7D0'}` }}>
                   <span style={{ fontSize:12, color:h.type==='error'?'#DC2626':h.type==='warning'?'#D97706':'#16A34A' }}>{h.icon}</span>
@@ -351,7 +351,7 @@ export default function OrderPage() {
             <div style={{ background:'linear-gradient(135deg,#1E3A5F,#1E40AF)', borderRadius:16, padding:'18px 20px', color:'#fff' }}>
               <div style={{ fontSize:14, fontWeight:800, marginBottom:14 }}>Order Summary</div>
               {[
-                { label:'Subtotal',       val:`₹${(Number(form.unitPrice||0)*qty).toFixed(2)}` },
+                { label:'Subtotal',       val:`â‚¹${(Number(form.unitPrice||0)*qty).toFixed(2)}` },
                 { label:'Shipping',       val:'Calculated at dispatch' },
                 { label:'Payment',        val:payment },
               ].map((r,i)=>(
@@ -361,7 +361,7 @@ export default function OrderPage() {
               ))}
               <div style={{ borderTop:'1px solid rgba(255,255,255,0.2)', marginTop:10, paddingTop:10 }}>
                 <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.07em', opacity:0.7, marginBottom:4 }}>TOTAL</div>
-                <div style={{ fontSize:22, fontWeight:900 }}>₹{(Number(form.unitPrice||0)*qty).toFixed(2)}</div>
+                <div style={{ fontSize:22, fontWeight:900 }}>â‚¹{(Number(form.unitPrice||0)*qty).toFixed(2)}</div>
               </div>
             </div>
           </div>

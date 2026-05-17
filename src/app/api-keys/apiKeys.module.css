@@ -2,7 +2,7 @@
 
 .container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+    background: #ffffff;
     padding: 2rem;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -18,18 +18,14 @@
 }
 
 .header div h1 {
-    color: #ffffff;
+    color: #0f172a;
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
 .header div p {
-    color: #b0b0b0;
+    color: #64748b;
     font-size: 1.1rem;
     font-weight: 400;
 }
@@ -62,7 +58,7 @@
     align-items: center;
     justify-content: center;
     min-height: 50vh;
-    color: #ffffff;
+    color: #374151;
 }
 
 .spinner {
@@ -117,12 +113,11 @@
 }
 
 .statCard {
-    background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+    background: #ffffff;
     border-radius: 16px;
     padding: 2rem;
-    border: 1px solid #404040;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     text-align: center;
 }
 
@@ -138,7 +133,7 @@
 }
 
 .statCard p {
-    color: #b0b0b0;
+    color: #64748b;
     font-size: 1rem;
     font-weight: 500;
 }
@@ -153,24 +148,24 @@
 }
 
 .keysHeader h2 {
-    color: #ffffff;
+    color: #0f172a;
     font-size: 2rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
 
 .keysHeader p {
-    color: #b0b0b0;
+    color: #64748b;
     font-size: 1.1rem;
 }
 
 .emptyState {
     text-align: center;
     padding: 4rem 2rem;
-    background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+    background: #ffffff;
     border-radius: 20px;
-    border: 1px solid #404040;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .emptyIcon {
@@ -179,7 +174,7 @@
 }
 
 .emptyState h3 {
-    color: #ffffff;
+    color: #0f172a;
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 1rem;
@@ -197,19 +192,18 @@
 }
 
 .keyCard {
-    background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+    background: #ffffff;
     border-radius: 20px;
     padding: 2rem;
-    border: 1px solid #404040;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .keyCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
-    border-color: #505050;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #d1d5db;
 }
 
 .keyHeader {
@@ -220,14 +214,14 @@
 }
 
 .keyInfo h3 {
-    color: #ffffff;
+    color: #0f172a;
     font-size: 1.3rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
 
 .keyInfo p {
-    color: #b0b0b0;
+    color: #64748b;
     font-size: 1rem;
 }
 
@@ -263,7 +257,7 @@
 }
 
 .keyValue label {
-    color: #e0e0e0;
+    color: #374151;
     font-size: 0.9rem;
     font-weight: 500;
     display: block;
@@ -274,8 +268,8 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-    border: 1px solid #404040;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
     padding: 0.75rem 1rem;
 }

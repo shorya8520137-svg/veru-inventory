@@ -252,7 +252,7 @@ const drawShippingManifest = async (pdf, activities, warehouseAddresses, x, y, w
     const footerY = y + height - 20;
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('HUNYHUNY OVERSEAS PVT LTD', x + 10, footerY);
+    pdf.text('INSORA', x + 10, footerY);
     
     pdf.setFont('helvetica', 'normal');
     pdf.text('Phone: 9263006000 | GST: 06AAECH7204C1Z3', x + 10, footerY + 5);

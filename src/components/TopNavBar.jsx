@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { Search, User, Bell, ArrowUpDown } from "lucide-react";
@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 
 function getAvatarUrl(path) {
     if (!path) return '';
@@ -14,7 +14,7 @@ function getAvatarUrl(path) {
     return `${API_BASE}${path}`;
 }
 
-// Convert raw role slug → human-readable label
+// Convert raw role slug â†’ human-readable label
 function getRoleLabel(user) {
     if (!user) return 'User';
     // Prefer explicit display name fields if backend sends them
@@ -41,32 +41,32 @@ function getRoleLabel(user) {
 // Global navigation items - ONLY actual existing pages from sidebar
 const NAVIGATION_ITEMS = [
     // Products
-    { id: 'products', title: 'Products', path: '/products', category: 'Products', icon: '🏷️' },
-    { id: 'website-products', title: 'Website Products', path: '/website-products', category: 'Products', icon: '🌐' },
+    { id: 'products', title: 'Products', path: '/products', category: 'Products', icon: 'ðŸ·ï¸' },
+    { id: 'website-products', title: 'Website Products', path: '/website-products', category: 'Products', icon: 'ðŸŒ' },
     
     // Inventory Management
-    { id: 'inventory', title: 'Inventory', path: '/inventory', category: 'Inventory', icon: '📦' },
+    { id: 'inventory', title: 'Inventory', path: '/inventory', category: 'Inventory', icon: 'ðŸ“¦' },
     
     // Billing System
-    { id: 'billing-create', title: 'Create Bill', path: '/billing/create', category: 'Billing', icon: '💰' },
-    { id: 'billing-history', title: 'Bill History', path: '/billing/history', category: 'Billing', icon: '📋' },
-    { id: 'billing-inventory', title: 'Store Inventory', path: '/billing/store-inventory', category: 'Billing', icon: '📦' },
+    { id: 'billing-create', title: 'Create Bill', path: '/billing/create', category: 'Billing', icon: 'ðŸ’°' },
+    { id: 'billing-history', title: 'Bill History', path: '/billing/history', category: 'Billing', icon: 'ðŸ“‹' },
+    { id: 'billing-inventory', title: 'Store Inventory', path: '/billing/store-inventory', category: 'Billing', icon: 'ðŸ“¦' },
     
     // Order Management
-    { id: 'orders', title: 'Orders', path: '/order', category: 'Orders', icon: '📋' },
-    { id: 'dispatch', title: 'Dispatch Orders', path: '/order', category: 'Orders', icon: '🚚' },
-    { id: 'website-orders', title: 'Website Orders', path: '/website-orders', category: 'Orders', icon: '🌐' },
-    { id: 'order-store', title: 'Order Store', path: '/order/store', category: 'Orders', icon: '🛒' },
+    { id: 'orders', title: 'Orders', path: '/order', category: 'Orders', icon: 'ðŸ“‹' },
+    { id: 'dispatch', title: 'Dispatch Orders', path: '/order', category: 'Orders', icon: 'ðŸšš' },
+    { id: 'website-orders', title: 'Website Orders', path: '/website-orders', category: 'Orders', icon: 'ðŸŒ' },
+    { id: 'order-store', title: 'Order Store', path: '/order/store', category: 'Orders', icon: 'ðŸ›’' },
     
     // System Management
-    { id: 'permissions', title: 'Permissions', path: '/permissions', category: 'System', icon: '🔐' },
-    { id: 'audit-logs', title: 'Audit Logs', path: '/audit-logs', category: 'System', icon: '📝' },
+    { id: 'permissions', title: 'Permissions', path: '/permissions', category: 'System', icon: 'ðŸ”' },
+    { id: 'audit-logs', title: 'Audit Logs', path: '/audit-logs', category: 'System', icon: 'ðŸ“' },
     
     // API Management
-    { id: 'api', title: 'API Access', path: '/api', category: 'API', icon: '🔑' },
+    { id: 'api', title: 'API Access', path: '/api', category: 'API', icon: 'ðŸ”‘' },
     
     // Debug & Testing (existing pages)
-    { id: 'api-debug', title: 'API Debug', path: '/api-debug', category: 'Debug', icon: '🔧' },
+    { id: 'api-debug', title: 'API Debug', path: '/api-debug', category: 'Debug', icon: 'ðŸ”§' },
 ];
 
 export default function TopNavBar({ onTransferStock }) {
@@ -247,7 +247,7 @@ export default function TopNavBar({ onTransferStock }) {
                                     padding: '4px'
                                 }}
                             >
-                                ✕
+                                âœ•
                             </button>
                         )}
                     </div>
@@ -305,11 +305,11 @@ export default function TopNavBar({ onTransferStock }) {
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <span>{item.category}</span>
-                                            <span>•</span>
+                                            <span>â€¢</span>
                                             <span>{item.path}</span>
                                         </div>
                                     </div>
-                                    <div style={{ color: '#9CA3AF', fontSize: '14px' }}>→</div>
+                                    <div style={{ color: '#9CA3AF', fontSize: '14px' }}>â†’</div>
                                 </div>
                             ))}
                         </div>
@@ -319,7 +319,7 @@ export default function TopNavBar({ onTransferStock }) {
                             background: '#F9FAFB'
                         }}>
                             <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                                Use ↑↓ to navigate, Enter to select, Esc to close
+                                Use â†‘â†“ to navigate, Enter to select, Esc to close
                             </span>
                         </div>
                     </div>

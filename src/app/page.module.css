@@ -1,0 +1,824 @@
+﻿.page {
+    min-height: 100vh;
+    background: #050910;
+    color: #f7fbff;
+    overflow-x: hidden;
+}
+
+.hero {
+    position: relative;
+    min-height: 100vh;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    padding: 110px clamp(20px, 5vw, 92px) 98px;
+    overflow: hidden;
+    background: #020409;
+}
+
+.heroImage {
+    position: absolute;
+    inset: 0;
+    z-index: -5;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.04);
+    animation: cinematicDrift 8s ease-in-out infinite alternate;
+}
+
+.heroShade {
+    position: absolute;
+    inset: 0;
+    z-index: -4;
+    background:
+        radial-gradient(circle at 75% 42%, rgba(0, 224, 255, 0.18), transparent 30%),
+        linear-gradient(90deg, rgba(2, 4, 9, 0.98) 0%, rgba(2, 4, 9, 0.84) 36%, rgba(2, 4, 9, 0.18) 72%, rgba(2, 4, 9, 0.82) 100%),
+        linear-gradient(180deg, rgba(2, 4, 9, 0.1), #020409 100%);
+}
+
+.scanLayer,
+.signalOne,
+.signalTwo,
+.orbitRing {
+    position: absolute;
+    pointer-events: none;
+}
+
+.scanLayer {
+    inset: 0;
+    z-index: -2;
+    background:
+        repeating-linear-gradient(90deg, rgba(92, 237, 255, 0.08) 0 1px, transparent 1px 98px),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 86px);
+    mask-image: linear-gradient(90deg, transparent, #000 16%, #000 78%, transparent);
+    animation: gridFlight 8s linear infinite;
+}
+
+.signalOne,
+.signalTwo {
+    height: 2px;
+    left: 45%;
+    right: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, transparent, #6bf7ff, #ffffff, transparent);
+    box-shadow: 0 0 28px rgba(0, 225, 255, 0.9);
+    opacity: 0.82;
+}
+
+.signalOne {
+    top: 43%;
+    animation: neuralPulse 2.8s ease-in-out infinite;
+}
+
+.signalTwo {
+    top: 52%;
+    animation: neuralPulse 3.4s ease-in-out infinite 0.6s;
+}
+
+.orbitRing {
+    width: 32vw;
+    max-width: 560px;
+    aspect-ratio: 1;
+    right: 12vw;
+    top: 17vh;
+    z-index: -1;
+    border: 1px solid rgba(116, 242, 255, 0.28);
+    border-radius: 50%;
+    box-shadow: inset 0 0 44px rgba(0, 217, 255, 0.15), 0 0 80px rgba(0, 217, 255, 0.08);
+    animation: slowOrbit 12s linear infinite;
+}
+
+.nav {
+    position: absolute;
+    top: 18px;
+    left: clamp(20px, 5vw, 92px);
+    right: clamp(20px, 5vw, 92px);
+    z-index: 4;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+}
+
+.brand,
+.navLinks,
+.navLinks a,
+.loginButton {
+    display: flex;
+    align-items: center;
+}
+
+.brand {
+    gap: 10px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.brandMark {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(117, 241, 255, 0.42);
+    border-radius: 8px;
+    background: rgba(1, 15, 24, 0.72);
+    color: #89f9ff;
+    box-shadow: 0 0 24px rgba(0, 209, 255, 0.2);
+}
+
+.navLinks {
+    justify-content: center;
+    gap: 8px;
+}
+
+.navLinks a,
+.loginButton {
+    min-height: 38px;
+    justify-content: center;
+    border-radius: 8px;
+    padding: 0 13px;
+    color: #d7faff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+    border: 1px solid rgba(203, 246, 255, 0.18);
+    background: rgba(5, 12, 22, 0.62);
+    backdrop-filter: blur(16px);
+}
+
+.loginButton {
+    gap: 8px;
+    color: #001014;
+    background: linear-gradient(135deg, #ffffff, #72f8ff);
+}
+
+.heroContent {
+    width: min(900px, 100%);
+    position: relative;
+    z-index: 1;
+}
+
+.eyebrow {
+    margin: 0 0 12px;
+    color: #75f7ff;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.hero h1 {
+    margin: 0;
+    max-width: 930px;
+    color: #ffffff;
+    font-size: clamp(46px, 7.3vw, 104px);
+    line-height: 0.94;
+    font-weight: 900;
+}
+
+.heroText {
+    max-width: 720px;
+    margin: 26px 0 0;
+    color: #c9d8e6;
+    font-size: clamp(17px, 2vw, 22px);
+    line-height: 1.5;
+}
+
+.heroActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 34px;
+}
+
+.primaryCta,
+.secondaryCta {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border-radius: 8px;
+    padding: 0 18px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.primaryCta {
+    color: #001014;
+    background: linear-gradient(135deg, #ffffff, #72f8ff);
+    box-shadow: 0 0 38px rgba(45, 233, 255, 0.3);
+}
+
+.secondaryCta {
+    color: #f4fdff;
+    border: 1px solid rgba(200, 248, 255, 0.24);
+    background: rgba(8, 17, 30, 0.72);
+    backdrop-filter: blur(18px);
+}
+
+.heroMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.heroMeta span {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 8px;
+    border: 1px solid rgba(112, 238, 255, 0.2);
+    background: rgba(0, 15, 24, 0.58);
+    color: #bceff6;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.founderCard {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    max-width: 1120px;
+    margin: 42px auto 42px;
+    padding: 36px;
+    border-radius: 32px;
+    background: rgba(248, 251, 254, 0.98);
+    border: 1px solid rgba(204, 214, 226, 0.85);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+}
+
+.founderVisual {
+    flex-shrink: 0;
+    width: 220px;
+    height: 220px;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(209, 217, 224, 0.95);
+}
+
+.founderVisual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.founderCopy h2 {
+    margin: 10px 0 10px;
+    color: #102134;
+    font-size: clamp(28px, 3vw, 38px);
+    line-height: 1.05;
+}
+
+.founderCopy p {
+    margin: 0;
+    max-width: 860px;
+    color: #334155;
+    font-size: clamp(15px, 1.2vw, 18px);
+    line-height: 1.65;
+}
+
+.nextHint {
+    position: absolute;
+    left: clamp(20px, 5vw, 92px);
+    bottom: 24px;
+    color: #b7d8df;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.nextHint i {
+    width: 48px;
+    height: 1px;
+    background: linear-gradient(90deg, #72f8ff, transparent);
+}
+
+.metricsBand {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    background: rgba(115, 238, 255, 0.16);
+    border-block: 1px solid rgba(126, 245, 255, 0.16);
+}
+
+.metric {
+    min-height: 136px;
+    display: grid;
+    align-content: center;
+    gap: 8px;
+    padding: 24px clamp(20px, 4vw, 54px);
+    background: linear-gradient(180deg, rgba(7, 14, 25, 0.98), rgba(3, 8, 15, 0.98));
+}
+
+.metric strong {
+    color: #ffffff;
+    font-size: clamp(30px, 4vw, 54px);
+    line-height: 1;
+}
+
+.metric span {
+    color: #9edeea;
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.services,
+.clients,
+.contactBand {
+    padding: clamp(76px, 9vw, 128px) clamp(20px, 5vw, 92px);
+}
+
+.services {
+    background: #f6f9fc;
+    color: #07111f;
+}
+
+.sectionIntro {
+    max-width: 920px;
+}
+
+.sectionIntro .eyebrow {
+    color: #0284c7;
+}
+
+.sectionIntro h2,
+.brainStory h2,
+.contactCopy h2 {
+    margin: 0;
+    color: inherit;
+    font-size: clamp(34px, 5vw, 68px);
+    line-height: 1;
+}
+
+.sectionIntro p:not(.eyebrow),
+.brainStory p,
+.contactCopy p {
+    color: #5f7184;
+    font-size: 17px;
+    line-height: 1.65;
+}
+
+.serviceGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 42px;
+}
+
+.serviceCard {
+    min-height: 274px;
+    border: 1px solid #dce7ef;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff, #f8fcff);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.05);
+}
+
+.serviceCard::after {
+    content: "";
+    position: absolute;
+    inset: auto -20% 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.55), transparent);
+    animation: cardScan 4.8s ease-in-out infinite;
+}
+
+.serviceCard svg {
+    color: #0ea5e9;
+}
+
+.serviceCard h3 {
+    margin: 30px 0 10px;
+    color: #07111f;
+    font-size: 20px;
+}
+
+.serviceCard p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.58;
+    font-size: 14px;
+}
+
+.brainSection {
+    position: relative;
+    min-height: 170vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
+    gap: clamp(28px, 5vw, 72px);
+    padding: clamp(70px, 8vw, 110px) clamp(20px, 5vw, 92px);
+    background:
+        radial-gradient(circle at 30% 38%, rgba(0, 217, 255, 0.16), transparent 30%),
+        linear-gradient(180deg, #06111f, #020409);
+    color: #ffffff;
+    overflow: clip;
+}
+
+.brainSticky {
+    position: sticky;
+    top: 48px;
+    height: calc(100vh - 96px);
+    display: flex;
+    align-items: center;
+}
+
+.brainVisual {
+    width: 100%;
+    min-height: min(72vh, 680px);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(112, 238, 255, 0.18);
+    border-radius: 8px;
+    background: #030813;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.26);
+}
+
+.brainVisual img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.56;
+    transform: scale(1.12);
+    animation: brainZoom 8s ease-in-out infinite alternate;
+}
+
+.brainTunnel,
+.brainPulse {
+    position: absolute;
+    inset: 0;
+}
+
+.brainTunnel {
+    background:
+        radial-gradient(ellipse at center, transparent 0 18%, rgba(0, 229, 255, 0.2) 19%, transparent 22%),
+        repeating-radial-gradient(ellipse at center, rgba(86, 237, 255, 0.35) 0 1px, transparent 2px 48px),
+        repeating-linear-gradient(90deg, rgba(111, 235, 255, 0.12) 0 1px, transparent 1px 54px);
+    transform: perspective(760px) rotateX(66deg) scale(1.34);
+    mix-blend-mode: screen;
+    animation: tunnelMove 4s linear infinite;
+}
+
+.brainPulse {
+    width: 32%;
+    background: linear-gradient(90deg, transparent, rgba(104, 245, 255, 0.7), transparent);
+    filter: blur(10px);
+    animation: pulseForward 2.6s ease-in-out infinite;
+}
+
+.brainCore {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 0 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(118, 246, 255, 0.38);
+    background: rgba(1, 12, 22, 0.74);
+    color: #eaffff;
+    font-size: 14px;
+    font-weight: 900;
+    backdrop-filter: blur(16px);
+}
+
+.brainStory {
+    align-self: start;
+    padding-top: 12vh;
+}
+
+.brainStory .eyebrow {
+    color: #75f7ff;
+}
+
+.brainStory p {
+    color: #b7ccd5;
+}
+
+.flowList {
+    display: grid;
+    gap: 18px;
+    margin-top: 34px;
+}
+
+.flowCard {
+    min-height: 180px;
+    border: 1px solid rgba(127, 237, 255, 0.17);
+    border-radius: 8px;
+    background:
+        linear-gradient(145deg, rgba(8, 20, 34, 0.94), rgba(2, 6, 14, 0.98)),
+        radial-gradient(circle at 90% 10%, rgba(0, 217, 255, 0.2), transparent 34%);
+    padding: 24px;
+}
+
+.flowCard div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #75f7ff;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.flowCard p {
+    margin: 24px 0 0;
+    color: #e7f6fb;
+    font-size: clamp(18px, 2vw, 25px);
+    line-height: 1.35;
+    font-weight: 800;
+}
+
+.clients {
+    background: #f6f9fc;
+    color: #07111f;
+}
+
+.clientGrid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 38px;
+}
+
+.clientCard {
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid #dce7ef;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #07111f;
+    font-size: 17px;
+    font-weight: 900;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.05);
+}
+
+.clientCard svg {
+    color: #0ea5e9;
+}
+
+.contactBand {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+    gap: clamp(24px, 5vw, 72px);
+    align-items: stretch;
+    background:
+        radial-gradient(circle at 88% 18%, rgba(0, 217, 255, 0.13), transparent 28%),
+        #06111f;
+    color: #ffffff;
+}
+
+.contactCopy p {
+    color: #b7ccd5;
+}
+
+.contactPanel {
+    display: grid;
+    gap: 14px;
+    align-content: center;
+    border: 1px solid rgba(112, 238, 255, 0.2);
+    border-radius: 8px;
+    padding: 26px;
+    background:
+        linear-gradient(145deg, rgba(5, 13, 25, 0.96), rgba(2, 6, 14, 0.98)),
+        radial-gradient(circle at 80% 20%, rgba(0, 217, 255, 0.2), transparent 34%);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+}
+
+.contactAction {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 237, 255, 0.16);
+    color: #e8fbff;
+    text-decoration: none;
+}
+
+.contactAction svg {
+    color: #75f7ff;
+}
+
+.contactAction span {
+    display: grid;
+    gap: 4px;
+    color: #b7ccd5;
+    font-size: 14px;
+}
+
+.contactAction strong {
+    color: #ffffff;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+@keyframes cinematicDrift {
+    from {
+        transform: scale(1.04) translate3d(0, 0, 0);
+    }
+    to {
+        transform: scale(1.1) translate3d(-1.4%, -1%, 0);
+    }
+}
+
+@keyframes gridFlight {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 120px 86px;
+    }
+}
+
+@keyframes neuralPulse {
+    0%, 100% {
+        transform: translateX(-18%) scaleX(0.45);
+        opacity: 0.2;
+    }
+    48% {
+        transform: translateX(0) scaleX(1);
+        opacity: 0.98;
+    }
+}
+
+@keyframes slowOrbit {
+    from {
+        transform: rotate(0deg) scale(1);
+    }
+    to {
+        transform: rotate(360deg) scale(1.05);
+    }
+}
+
+@keyframes cardScan {
+    0%, 100% {
+        transform: translateX(-80%);
+        opacity: 0;
+    }
+    45%, 55% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(80%);
+    }
+}
+
+@keyframes brainZoom {
+    from {
+        transform: scale(1.12);
+    }
+    to {
+        transform: scale(1.22) translate3d(-2%, -1%, 0);
+    }
+}
+
+@keyframes tunnelMove {
+    from {
+        background-position: center 0;
+    }
+    to {
+        background-position: center 96px;
+    }
+}
+
+@keyframes pulseForward {
+    from {
+        transform: translateX(-120%);
+        opacity: 0;
+    }
+    45% {
+        opacity: 1;
+    }
+    to {
+        transform: translateX(320%);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 1120px) {
+    .serviceGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .clientGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .hero {
+        min-height: 860px;
+        align-items: flex-end;
+    }
+
+    .nav {
+        grid-template-columns: auto auto;
+    }
+
+    .navLinks {
+        display: none;
+    }
+
+    .metricsBand,
+    .brainSection,
+    .contactBand {
+        grid-template-columns: 1fr;
+    }
+
+    .brainSection {
+        min-height: auto;
+    }
+
+    .brainSticky {
+        position: relative;
+        top: auto;
+        height: auto;
+    }
+
+    .brainVisual {
+        min-height: 420px;
+    }
+
+    .brainStory {
+        padding-top: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .hero {
+        min-height: 820px;
+        padding-top: 96px;
+        padding-bottom: 74px;
+    }
+
+    .hero h1 {
+        font-size: 43px;
+    }
+
+    .heroActions,
+    .primaryCta,
+    .secondaryCta {
+        width: 100%;
+    }
+
+    .metricsBand,
+    .serviceGrid,
+    .clientGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric {
+        min-height: 108px;
+    }
+
+    .services,
+    .clients,
+    .contactBand,
+    .brainSection {
+        padding-block: 70px;
+    }
+
+    .serviceCard {
+        min-height: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .heroImage,
+    .scanLayer,
+    .signalOne,
+    .signalTwo,
+    .orbitRing,
+    .serviceCard::after,
+    .brainVisual img,
+    .brainTunnel,
+    .brainPulse {
+        animation: none;
+    }
+}

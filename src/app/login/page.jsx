@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import styles from './login.module.css';
 
@@ -30,11 +31,11 @@ export default function LoginPage() {
         setError("");
         setLoading(true);
 
-        console.log("🚀 Form submitted - JavaScript is working!");
+        console.log("ðŸš€ Form submitted - JavaScript is working!");
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
-            console.log("🔗 API Base:", apiBase);
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            console.log("ðŸ”— API Base:", apiBase);
 
             // Prepare request body
             const requestBody = { 
@@ -45,7 +46,7 @@ export default function LoginPage() {
                     isBackupCode: isBackupCode 
                 })
             };
-            console.log("� Request body:", { ...requestBody, password: "***" });
+            console.log("ï¿½ Request body:", { ...requestBody, password: "***" });
 
             const response = await fetch(`${apiBase}/api/auth/login`, {
                 method: 'POST',
@@ -55,13 +56,13 @@ export default function LoginPage() {
                 body: JSON.stringify(requestBody),
             });
 
-            console.log("📥 Response status:", response.status);
+            console.log("ðŸ“¥ Response status:", response.status);
             const data = await response.json();
-            console.log("📥 Response data:", data);
+            console.log("ðŸ“¥ Response data:", data);
 
             // Handle 2FA requirement
             if (data.requires_2fa && !requires2FA) {
-                console.log("🔐 2FA Required - Showing 2FA input");
+                console.log("ðŸ” 2FA Required - Showing 2FA input");
                 setRequires2FA(true);
                 setUserId(data.user_id);
                 setLoading(false);
@@ -72,11 +73,11 @@ export default function LoginPage() {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                console.log("✅ Login successful! Redirecting...");
+                console.log("âœ… Login successful! Redirecting...");
                 window.location.href = "/products";
             } else {
                 setError(data.message || "Invalid credentials");
-                console.log("❌ Login failed:", data.message);
+                console.log("âŒ Login failed:", data.message);
                 
                 // Reset 2FA state on error
                 if (requires2FA) {
@@ -84,7 +85,7 @@ export default function LoginPage() {
                 }
             }
         } catch (error) {
-            console.error("❌ Network error:", error);
+            console.error("âŒ Network error:", error);
             setError("Login failed. Please try again.");
         } finally {
             setLoading(false);
@@ -124,7 +125,7 @@ export default function LoginPage() {
         setError("");
         
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             
             // First login to get token
             const loginResponse = await fetch(`${apiBase}/api/auth/login`, {
@@ -153,10 +154,10 @@ export default function LoginPage() {
             
             const setupData = await setupResponse.json();
             
-            console.log('🔐 Setup response:', setupData);
+            console.log('ðŸ” Setup response:', setupData);
             
             if (setupData.success) {
-                console.log('✅ 2FA setup successful');
+                console.log('âœ… 2FA setup successful');
                 console.log('QR Code URL length:', setupData.data.qrCodeUrl ? setupData.data.qrCodeUrl.length : 0);
                 console.log('Backup codes count:', setupData.data.backupCodes ? setupData.data.backupCodes.length : 0);
                 
@@ -166,7 +167,7 @@ export default function LoginPage() {
                 setSetupStep(1);
                 setUserId(loginData.user.id);
             } else {
-                console.error('❌ 2FA setup failed:', setupData.message);
+                console.error('âŒ 2FA setup failed:', setupData.message);
                 setError(setupData.message || 'Failed to setup 2FA');
             }
         } catch (error) {
@@ -186,7 +187,7 @@ export default function LoginPage() {
         setError("");
         
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             
             // Login again to get fresh token
             const loginResponse = await fetch(`${apiBase}/api/auth/login`, {
@@ -251,15 +252,17 @@ export default function LoginPage() {
                 <div className={styles.circle3}></div>
             </div>
 
+            <div className={styles.loginShell}>
             {/* Login Card */}
             <div className={styles.loginCard}>
                 {/* Header */}
                 <div className={styles.header}>
+                    <Link href="/" className={styles.homeLink}>Back to Insora home</Link>
                     <div className={styles.logo}>
                         <div className={styles.logoIcon}>
                             <img 
                                 src="/logo-dark.png" 
-                                alt="StockSphere Logo" 
+                                alt="Insora Logo" 
                                 style={{ 
                                     width: '32px', 
                                     height: '32px',
@@ -267,13 +270,13 @@ export default function LoginPage() {
                                 }}
                                 onError={(e) => {
                                     e.target.style.display = 'none';
-                                    e.target.parentNode.innerHTML = '<div style="font-size: 20px; font-weight: bold; color: white;">SS</div>';
+                                    e.target.parentNode.innerHTML = '<div style="font-size: 20px; font-weight: bold; color: white;">IN</div>';
                                 }}
                             />
                         </div>
                         <div className={styles.logoText}>
-                            <div className={styles.companyName}>StockSphere</div>
-                            <div className={styles.tagline}>INVENTORY MANAGEMENT</div>
+                            <div className={styles.companyName}>Insora</div>
+                            <div className={styles.tagline}>AI OPERATIONS PLATFORM</div>
                         </div>
                     </div>
                     
@@ -283,7 +286,7 @@ export default function LoginPage() {
                     <p className={styles.subtitle}>
                         {requires2FA 
                             ? 'Enter the 6-digit code from your authenticator app' 
-                            : 'Sign in to your StockSphere account'
+                            : 'Sign in to your Insora workspace'
                         }
                     </p>
                 </div>
@@ -344,10 +347,10 @@ export default function LoginPage() {
                             {/* 2FA Help Info */}
                             <div className={styles.helpBox}>
                                 <div style={{ fontWeight: '600', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    💡 Need help with 2FA?
+                                    ðŸ’¡ Need help with 2FA?
                                 </div>
                                 <div style={{ fontSize: '13px' }}>
-                                    Open <strong>Google Authenticator</strong> app on your phone and enter the 6-digit code for "hunyhuny"
+                                    Open <strong>Google Authenticator</strong> app on your phone and enter the 6-digit code for "Insora"
                                 </div>
                             </div>
 
@@ -357,7 +360,7 @@ export default function LoginPage() {
                                 onClick={reset2FA}
                                 className={styles.secondaryBtn}
                             >
-                                ← Back to login
+                                â† Back to login
                             </button>
                         </>
                     ) : (
@@ -445,6 +448,24 @@ export default function LoginPage() {
                     </button>
                 </form>
             </div>
+            <aside className={styles.servicePanel}>
+                <p className={styles.panelEyebrow}>Insora operations cloud</p>
+                <h2>One secure login for every AI operations layer.</h2>
+                <p>
+                    Access InventoryGPT, warehouse inventory, dispatch, logistics, billing, commerce APIs,
+                    support, audit logs, roles, and API token generation from the same Insora console.
+                </p>
+                <div className={styles.serviceList}>
+                    <span>InventoryGPT data-feed APIs</span>
+                    <span>Commerce products and orders</span>
+                    <span>Warehouse dispatch and tracking</span>
+                    <span>Roles, permissions, 2FA, and audit</span>
+                </div>
+                <Link href="/" className={styles.domainLink}>
+                    Explore Insora services
+                </Link>
+            </aside>
+            </div>
             {/* 2FA Setup Modal */}
             {show2FASetup && (
                 <div className={styles.modal}>
@@ -458,7 +479,7 @@ export default function LoginPage() {
                                 onClick={close2FASetup}
                                 className={styles.closeButton}
                             >
-                                ×
+                                Ã—
                             </button>
                         </div>
 
@@ -559,7 +580,7 @@ export default function LoginPage() {
                         {/* Step 3: Success */}
                         {setupStep === 3 && (
                             <div className={styles.successStep}>
-                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>âœ…</div>
                                 <h3 style={{ color: '#16a34a', marginBottom: '16px' }}>2FA Successfully Enabled!</h3>
                                 <p style={{ marginBottom: '20px' }}>
                                     Your account is now protected with Two-Factor Authentication. You can now login normally.

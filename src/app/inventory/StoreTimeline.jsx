@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { ArrowDown, ArrowUp, Package, Truck, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
@@ -93,7 +93,7 @@ export default function StoreTimeline() {
                 pageSize: 'A4',
                 pageMargins: [40, 60, 40, 60],
                 content: [
-                    // 🔥 HEADER WITH LOGO
+                    // ðŸ”¥ HEADER WITH LOGO
                     {
                         columns: [
                             {
@@ -155,7 +155,7 @@ export default function StoreTimeline() {
                     // Horizontal line
                     { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#CCCCCC' }], margin: [0, 10, 0, 20] },
                     
-                    // 🔹 FROM → TO
+                    // ðŸ”¹ FROM â†’ TO
                     {
                         columns: [
                             {
@@ -179,7 +179,7 @@ export default function StoreTimeline() {
                         margin: [0, 0, 0, 30]
                     },
                     
-                    // 🔥 TABLE
+                    // ðŸ”¥ TABLE
                     {
                         table: {
                             headerRows: 1,
@@ -198,8 +198,8 @@ export default function StoreTimeline() {
                                     { text: event.productName || 'Product', fontSize: 10 },
                                     { text: event.productBarcode || 'N/A', fontSize: 10 },
                                     { text: quantity.toString(), alignment: 'center', fontSize: 10 },
-                                    { text: `₹${unitPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 10 },
-                                    { text: `₹${totalPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 10, bold: true }
+                                    { text: `â‚¹${unitPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 10 },
+                                    { text: `â‚¹${totalPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 10, bold: true }
                                 ]
                             ]
                         },
@@ -239,7 +239,7 @@ export default function StoreTimeline() {
                                                 ],
                                                 [
                                                     { text: 'TOTAL AMOUNT', bold: true, fontSize: 12, border: [false, true, false, false], borderColor: ['', '#000000', '', ''] },
-                                                    { text: `₹${totalPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 12, bold: true, border: [false, true, false, false], borderColor: ['', '#000000', '', ''] }
+                                                    { text: `â‚¹${totalPrice.toLocaleString('en-IN')}`, alignment: 'right', fontSize: 12, bold: true, border: [false, true, false, false], borderColor: ['', '#000000', '', ''] }
                                                 ]
                                             ]
                                         },
@@ -258,7 +258,7 @@ export default function StoreTimeline() {
                             {
                                 stack: [
                                     { text: 'EVENT DETAILS', fontSize: 11, bold: true, margin: [0, 0, 0, 10] },
-                                    { text: `Event Type        : Self Transfer (Store → Warehouse)`, fontSize: 9 },
+                                    { text: `Event Type        : Self Transfer (Store â†’ Warehouse)`, fontSize: 9 },
                                     { text: `Transaction Type  : Dispatch`, fontSize: 9 },
                                     { text: `Reference ID      : ${transferReference}`, fontSize: 9 },
                                     { text: `Created By        : Insora Inventory System`, fontSize: 9 },
@@ -493,7 +493,7 @@ export default function StoreTimeline() {
         <div style={{ 
             height: '100vh', 
             maxHeight: '800px',
-            background: '#F5F7FA', 
+            background: '#ffffff', 
             fontFamily: 'Inter,sans-serif', 
             padding: '0', 
             display: 'flex', 

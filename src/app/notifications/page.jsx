@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NOTIFICATIONS PAGE
  * Full page view of all notifications with filtering and management
  */
@@ -19,14 +19,14 @@ const NotificationsPage = () => {
 
     // Notification types for filtering
     const notificationTypes = [
-        { value: 'all', label: 'All Types', icon: '🔔' },
-        { value: 'LOGIN', label: 'Login', icon: '👤' },
-        { value: 'DISPATCH', label: 'Dispatch', icon: '📦' },
-        { value: 'RETURN', label: 'Return', icon: '↩️' },
-        { value: 'DAMAGE', label: 'Damage', icon: '⚠️' },
-        { value: 'PRODUCT', label: 'Product', icon: '🏷️' },
-        { value: 'INVENTORY', label: 'Inventory', icon: '📊' },
-        { value: 'SYSTEM', label: 'System', icon: '🔔' }
+        { value: 'all', label: 'All Types', icon: 'ðŸ””' },
+        { value: 'LOGIN', label: 'Login', icon: 'ðŸ‘¤' },
+        { value: 'DISPATCH', label: 'Dispatch', icon: 'ðŸ“¦' },
+        { value: 'RETURN', label: 'Return', icon: 'â†©ï¸' },
+        { value: 'DAMAGE', label: 'Damage', icon: 'âš ï¸' },
+        { value: 'PRODUCT', label: 'Product', icon: 'ðŸ·ï¸' },
+        { value: 'INVENTORY', label: 'Inventory', icon: 'ðŸ“Š' },
+        { value: 'SYSTEM', label: 'System', icon: 'ðŸ””' }
     ];
 
     // Fetch notifications
@@ -36,7 +36,7 @@ const NotificationsPage = () => {
             const token = localStorage.getItem('token');
             if (!token) return;
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}/api/notifications?page=${pageNum}&limit=20`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in'}/api/notifications?page=${pageNum}&limit=20`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -68,7 +68,7 @@ const NotificationsPage = () => {
             const token = localStorage.getItem('token');
             if (!token) return;
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}/api/notifications/${notificationId}/read`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in'}/api/notifications/${notificationId}/read`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -97,7 +97,7 @@ const NotificationsPage = () => {
             const token = localStorage.getItem('token');
             if (!token) return;
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}/api/notifications/mark-all-read`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in'}/api/notifications/mark-all-read`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -147,7 +147,7 @@ const NotificationsPage = () => {
     // Get notification icon
     const getNotificationIcon = (type) => {
         const typeObj = notificationTypes.find(t => t.value === type);
-        return typeObj ? typeObj.icon : '🔔';
+        return typeObj ? typeObj.icon : 'ðŸ””';
     };
 
     // Get notification color
@@ -301,7 +301,7 @@ const NotificationsPage = () => {
                                                         </span>
                                                         {notification.event_data?.location && (
                                                             <span className="flex items-center gap-1">
-                                                                📍 {notification.event_data.location}
+                                                                ðŸ“ {notification.event_data.location}
                                                             </span>
                                                         )}
                                                     </div>

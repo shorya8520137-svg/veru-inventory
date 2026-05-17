@@ -163,7 +163,7 @@ export default function ReviewsPage() {
   const FILTERS = ['all','pending','approved','rejected'];
 
   return (
-    <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '20px 24px' }}>
+    <div style={{ background: '#ffffff', fontFamily: 'Inter, sans-serif', padding: '20px 24px' }}>
 
       {/* STATS */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:20 }}>

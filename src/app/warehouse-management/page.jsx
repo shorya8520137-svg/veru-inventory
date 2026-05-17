@@ -9,7 +9,7 @@ export default function WarehouseManagementPage() {
     const [activeTab, setActiveTab] = useState("warehouses");
 
     return (
-        <div style={{height:"100%",background:"#F5F7FA",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
+        <div style={{height:"100%",background:"#ffffff",fontFamily:"Inter,sans-serif",padding:"0",display:"flex",flexDirection:"column",minHeight:0}}>
             {/* Tab Navigation - No padding, edge to edge */}
             <div style={{background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",flexShrink:0}}>
                 <button

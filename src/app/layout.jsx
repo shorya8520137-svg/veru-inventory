@@ -1,4 +1,4 @@
-import "./globals.css";
+﻿import "./globals.css";
 import "react-chat-elements/dist/main.css";
 
 import ClientLayout from "./layout.client";
@@ -7,21 +7,19 @@ import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata = {
-    title: "hunyhuny - Smart Inventory Solutions",
-    description: "Professional inventory management system with modern UI",
+    title: "insora.in - AI Operations Platform",
+    description: "insora.in builds AI-powered inventory, warehouse, marketplace, delivery, billing, support, and operations systems.",
 };
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="en" data-theme="light">
+        <html lang="en" suppressHydrationWarning>
         <body className="page-container">
         <ThemeProvider>
             <AuthProvider>
                 <PermissionsProvider>
                     <ClientLayout>
-                        <div className="content-wrapper">
-                            {children}
-                        </div>
+                        {children}
                     </ClientLayout>
                 </PermissionsProvider>
             </AuthProvider>

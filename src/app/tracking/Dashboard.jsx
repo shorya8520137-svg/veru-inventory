@@ -5,7 +5,7 @@ import TrackingMap from "./TrackingMap";
 import Orders from "./Order";
 import "./dashboard.css";
 
-const API_BASE = "https://api.hunyhuny.org";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
 const POLL_INTERVAL = 15000;
 
 export default function Dashboard() {

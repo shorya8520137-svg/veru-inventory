@@ -59,7 +59,7 @@ export default function DeliveryPage() {
   const [awb, setAwb] = useState('');
 
   return (
-    <div style={{ background: '#F1F5F9', fontFamily: 'Inter, sans-serif', padding: '16px' }}>
+    <div style={{ background: '#ffffff', fontFamily: 'Inter, sans-serif', padding: '16px' }}>
 
       {/* KPI CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>

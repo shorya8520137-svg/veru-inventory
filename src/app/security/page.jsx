@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getToken } from "../../utils/api";
@@ -26,7 +26,7 @@ export default function SecurityPage() {
     const checkTwoFactorStatus = async () => {
         try {
             const token = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             
             const response = await fetch(`${apiBase}/api/2fa/status`, {
                 headers: {
@@ -50,7 +50,7 @@ export default function SecurityPage() {
         
         try {
             const token = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             
             const response = await fetch(`${apiBase}/api/2fa/setup`, {
                 method: 'POST',
@@ -88,7 +88,7 @@ export default function SecurityPage() {
         
         try {
             const token = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             
             const response = await fetch(`${apiBase}/api/2fa/verify-enable`, {
                 method: 'POST',
@@ -132,7 +132,7 @@ export default function SecurityPage() {
         
         try {
             const authToken = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
             
             const response = await fetch(`${apiBase}/api/2fa/disable`, {
                 method: 'POST',
@@ -164,11 +164,11 @@ export default function SecurityPage() {
 
     const downloadBackupCodes = () => {
         const codesText = backupCodes.join('\n');
-        const blob = new Blob([`Backup Codes for hunyhuny Inventory System\n\nGenerated: ${new Date().toLocaleString()}\n\n${codesText}\n\nKeep these codes safe! Each code can only be used once.`], { type: 'text/plain' });
+        const blob = new Blob([`Backup Codes for Insora Inventory System\n\nGenerated: ${new Date().toLocaleString()}\n\n${codesText}\n\nKeep these codes safe! Each code can only be used once.`], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'hunyhuny-backup-codes.txt';
+        a.download = 'insora-backup-codes.txt';
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -481,7 +481,7 @@ export default function SecurityPage() {
                     {setupStep === 3 && (
                         <div>
                             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#16a34a' }}>
-                                ✅ 2FA Successfully Enabled!
+                                âœ… 2FA Successfully Enabled!
                             </h3>
                             <p style={{ color: '#6b7280', marginBottom: '20px' }}>
                                 Save these backup codes in a safe place. You can use them to access your account if you lose your authenticator device.
@@ -605,7 +605,7 @@ export default function SecurityPage() {
                                     padding: '4px'
                                 }}
                             >
-                                ×
+                                Ã—
                             </button>
                         </div>
 

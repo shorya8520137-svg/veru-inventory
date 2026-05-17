@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -21,8 +21,11 @@ import {
     Trash2,
     TrendingUp,
     User,
-    Wallet
+    Wallet,
+    Moon,
+    Sun
 } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
     Area,
     AreaChart,
@@ -36,7 +39,7 @@ import {
 } from 'recharts';
 import styles from './profile.module.css';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
 const apiDocs = [
     {
         title: 'Authentication',
@@ -180,6 +183,7 @@ function normalizeUser(data) {
 }
 
 export default function ProfilePage() {
+    const { theme, toggleTheme, isDark } = useTheme();
     const [activeTab, setActiveTab] = useState('profile');
     const [apiMode, setApiMode] = useState('website');
     const [profile, setProfile] = useState(null);
@@ -564,6 +568,21 @@ export default function ProfilePage() {
                             );
                         })}
                     </nav>
+                    <div className={styles.themeToggleBlock}>
+                        <div className={styles.themeToggleLabel}>
+                            {isDark ? <Moon size={18} /> : <Sun size={18} />}
+                            <span>Dark theme</span>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isDark}
+                            className={`${styles.themeSwitch} ${isDark ? styles.themeSwitchOn : ''}`}
+                            onClick={toggleTheme}
+                        >
+                            <span className={styles.themeSwitchThumb} />
+                        </button>
+                    </div>
                 </aside>
 
                 <section className={styles.content}>
@@ -642,11 +661,11 @@ export default function ProfilePage() {
                                             <Wallet size={16} />
                                             <span>LOGISTICS WALLET</span>
                                         </div>
-                                        <div className={styles.walletDots}>⋮</div>
+                                        <div className={styles.walletDots}>â‹®</div>
                                     </div>
                                     <div className={styles.walletBody}>
                                         <span className={styles.walletLabel}>Available Balance</span>
-                                        <div className={styles.walletAmount}>₹{Number(walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                        <div className={styles.walletAmount}>â‚¹{Number(walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                     </div>
                                     <div className={styles.walletActions}>
                                         <button type="button" className={styles.walletRechargeBtn}>
@@ -668,14 +687,14 @@ export default function ProfilePage() {
                                         <h3>Contact Information</h3>
                                     </div>
                                     <div className={styles.premiumInfoBox}>
-                                        <div className={styles.infoBoxIcon}>✉</div>
+                                        <div className={styles.infoBoxIcon}>âœ‰</div>
                                         <div className={styles.infoBoxContent}>
                                             <span>EMAIL ADDRESS</span>
                                             <strong>{profileForm.email || 'N/A'}</strong>
                                         </div>
                                     </div>
                                     <div className={styles.premiumInfoBox}>
-                                        <div className={styles.infoBoxIcon}>📞</div>
+                                        <div className={styles.infoBoxIcon}>ðŸ“ž</div>
                                         <div className={styles.infoBoxContent}>
                                             <span>PHONE NUMBER</span>
                                             <strong>{profileForm.phone || 'N/A'}</strong>
@@ -754,7 +773,7 @@ export default function ProfilePage() {
                                 <div className={styles.ledgerHeader}>
                                     <h3>Recent Ledger Activity</h3>
                                     <button type="button" className={styles.viewAllBtn} onClick={() => setActiveTab('wallet')}>
-                                        View All →
+                                        View All â†’
                                     </button>
                                 </div>
                                 <div className={styles.ledgerTableWrap}>
@@ -783,7 +802,7 @@ export default function ProfilePage() {
                                                         </span>
                                                     </td>
                                                     <td className={styles.ledgerAmount}>
-                                                        {row.amount > 0 ? '+' : ''}{row.amount === 0 ? '₹0.00' : `₹${Number(row.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                        {row.amount > 0 ? '+' : ''}{row.amount === 0 ? 'â‚¹0.00' : `â‚¹${Number(row.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -986,7 +1005,7 @@ export default function ProfilePage() {
                                                         <div>
                                                             <strong>{token.name}</strong>
                                                             <span>{token.description || 'InventoryGPT data feed token'}</span>
-                                                            <code>{token.token_prefix}••••••••••••••••</code>
+                                                            <code>{token.token_prefix}â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</code>
                                                             <div className={styles.tokenMeta}>
                                                                 <small>{token.usage_count || 0} calls</small>
                                                                 <small>Expires {formatDate(token.expires_at)}</small>
