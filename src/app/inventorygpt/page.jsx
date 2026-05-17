@@ -484,6 +484,12 @@ function detectIntent(text) {
   }
   if (/show.*categor|categor/.test(t)) return { type: 'categories', raw: text };
   
+  // Check for barcode/SKU lookup (10+ digit numbers)
+  const barcodeMatch = t.match(/\b(\d{10,})\b/);
+  if (barcodeMatch || /which.*categor|belong.*categor|product.*categor/.test(t)) {
+    return { type: 'product_lookup', barcode: barcodeMatch?.[1] || null, raw: text };
+  }
+  
   if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
     const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
     if (match) return { type: 'products', category: match[1].trim(), raw: text };
@@ -607,6 +613,7 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
   const showCategoryGrid = intent?.type === 'categories' && Array.isArray(categories) && categories.length > 0;
   const showWebsiteCategoryGrid = intent?.type === 'website_categories' && Array.isArray(websiteCategories) && websiteCategories.length > 0;
   const showProductMatrix = intent?.type === 'products' && Array.isArray(products) && products.length > 0;
+  const showProductLookup = intent?.type === 'product_lookup' && Array.isArray(products) && products.length > 0;
 
   // Filter products by category if needed
   const filteredProducts = useMemo(() => {
@@ -621,6 +628,17 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
       return pCat.includes(cat) || pName.includes(cat) || pSku.includes(cat);
     });
   }, [products, showProductMatrix, intent?.category]);
+
+  // Product lookup by barcode
+  const lookupProduct = useMemo(() => {
+    if (!showProductLookup) return null;
+    const barcode = intent?.barcode;
+    if (!barcode) return products[0]; // Show first product if no barcode
+    return products.find((p) => 
+      (p.barcode || p.sku || '').toString().includes(barcode) ||
+      (p.product_name || '').toLowerCase().includes(intent?.raw?.toLowerCase() || '')
+    ) || products[0];
+  }, [products, showProductLookup, intent]);
 
   async function copyText() {
     try {
@@ -655,6 +673,30 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
         ) : showProductMatrix ? (
           /* Product Matrix ONLY - no markdown text */
           <ProductMatrix products={filteredProducts} title={`${intent?.category ? `${intent.category} Products` : 'Products'}`} onAskAI={() => {}} />
+        ) : showProductLookup && lookupProduct ? (
+          /* Product Lookup - Show product details with category */
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <h3 className="text-lg font-semibold text-slate-900">Product Details</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ProductCard product={lookupProduct} index={0} onAskAI={() => {}} />
+            </div>
+            {lookupProduct.category && (
+              <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
+                <p className="text-sm font-semibold text-violet-900">
+                  ️ Category: <span className="font-bold capitalize">{lookupProduct.category}</span>
+                </p>
+                {lookupProduct.category_name && lookupProduct.category_name !== lookupProduct.category && (
+                  <p className="text-sm text-violet-700 mt-1">
+                    Also known as: {lookupProduct.category_name}
+                  </p>
+                )}
+              </div>
+            )}
+          </motion.div>
         ) : (
           /* Regular text response */
           <>
