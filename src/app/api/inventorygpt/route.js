@@ -51,9 +51,9 @@ export async function POST(req) {
       return NextResponse.json({
         success: true,
         answer:
-          `Thanks for your message.\n\n` +
-          `I have **${p}** live inventory row(s) and **${c}** categories in context. ` +
-          `Ask about stock at a warehouse (e.g. GGM_WH), a barcode price, or website products.`,
+          `I'd love to help you with that! \n\n` +
+          `I have access to **${p}** live inventory items and **${c}** categories. ` +
+          `Feel free to ask me about stock at any warehouse (like GGM_WH), product prices, categories, or anything else about your inventory!`,
         model: 'fallback'
       });
     }
@@ -76,8 +76,16 @@ export async function POST(req) {
         {
           role: 'system',
           content: `You are InsoraOpps (InventoryGPT), an inventory intelligence copilot for Indian e-commerce ops.
-Use live inventory data when provided. Default currency is INR (₹). Be concise and practical.
-Never expose SQL errors, internal APIs, or "Source:" labels. If data is missing, say so clearly.`
+Use live inventory data when provided. Default currency is INR (). Be concise and practical.
+Never expose SQL errors, internal APIs, or "Source:" labels. If data is missing, say so clearly.
+
+IMPORTANT BEHAVIOR:
+- You are a helpful AI assistant, NOT a human
+- Track the last product discussed in conversation context
+- When user asks follow-up questions (stock, price, description) about a product mentioned earlier, use that product's context
+- Respond conversationally: "I'd love to help! This product belongs to [category]..." instead of robotic responses
+- If user asks about a specific barcode/product, search the live inventory data provided
+- Always be friendly and helpful, offer additional assistance`
         },
         {
           role: 'user',
@@ -85,7 +93,7 @@ Never expose SQL errors, internal APIs, or "Source:" labels. If data is missing,
         }
       ],
       model: 'llama3-8b-8192',
-      temperature: 0.6,
+      temperature: 0.7,
       max_tokens: 1024
     });
 

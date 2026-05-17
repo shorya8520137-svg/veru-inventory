@@ -478,11 +478,21 @@ function ProductMatrix({ products, title, onAskAI }) {
 function detectIntent(text) {
   const t = text.toLowerCase();
   
-  // Check for barcode/SKU lookup FIRST (10+ digit numbers)
+  // Check for barcode/SKU lookup FIRST (10+ digit numbers) - ONLY if explicitly asking to show product
   const barcodeMatch = t.match(/\b(\d{10,})\b/);
-  if (barcodeMatch || /which.*categor|belong.*categor|product.*categor|this product/.test(t)) {
-    console.log('🔍 Intent detected: product_lookup', { barcode: barcodeMatch?.[1], text: text });
-    return { type: 'product_lookup', barcode: barcodeMatch?.[1] || null, raw: text };
+  const isExplicitProductRequest = /show.*product|show.*me|which.*categor|belong.*categor|product.*categor|details.*product/.test(t);
+  
+  if (barcodeMatch && isExplicitProductRequest) {
+    console.log('🔍 Intent detected: product_lookup (explicit)', { barcode: barcodeMatch[1], text: text });
+    return { type: 'product_lookup', barcode: barcodeMatch[1], raw: text };
+  }
+  
+  // Check for follow-up questions about product (stock, price, description)
+  // These should NOT trigger product_lookup UI, just regular AI response
+  const isFollowUpQuestion = /stock|price|description|cost|qty|quantity|detail/.test(t) && !isExplicitProductRequest;
+  if (isFollowUpQuestion) {
+    console.log('🔍 Intent detected: follow_up_question (no UI)', { text: text });
+    return null; // Let AI handle this normally
   }
   
   // Check website categories FIRST (before regular categories)
@@ -679,24 +689,52 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
           >
-            <h3 className="text-lg font-semibold text-slate-900">Product Details</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <ProductCard product={lookupProduct} index={0} onAskAI={() => {}} />
-            </div>
-            {lookupProduct.category && (
-              <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
-                <p className="text-sm font-semibold text-violet-900">
-                  ️ Category: <span className="font-bold capitalize">{lookupProduct.category}</span>
-                </p>
-                {lookupProduct.category_name && lookupProduct.category_name !== lookupProduct.category && (
-                  <p className="text-sm text-violet-700 mt-1">
-                    Also known as: {lookupProduct.category_name}
-                  </p>
-                )}
+            <h3 className="text-base font-semibold text-slate-900 mb-4">Product Details</h3>
+            <div className="space-y-4">
+              {/* Product Card */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-slate-900">{lookupProduct.product_name || lookupProduct.name || 'Unknown Product'}</h4>
+                    <p className="mt-1 text-xs text-slate-500">SKU: {lookupProduct.barcode || lookupProduct.sku || 'N/A'}</p>
+                    <p className="mt-2 text-lg font-bold text-slate-900">
+                      ₹{(parseFloat(lookupProduct.price || lookupProduct.selling_price || 0)).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {parseInt(lookupProduct.stock || lookupProduct.quantity || 0) === 0 ? (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">
+                        Out of Stock
+                      </span>
+                    ) : parseInt(lookupProduct.stock || lookupProduct.quantity || 0) < 10 ? (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
+                        Low Stock
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
+                        {lookupProduct.stock || lookupProduct.quantity} in stock
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+              
+              {/* Category Info - Inline with message */}
+              {lookupProduct.category && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-violet-50 border border-violet-100">
+                  <span className="text-sm font-medium text-violet-600">📦 Category:</span>
+                  <span className="text-sm font-bold text-violet-900 capitalize">{lookupProduct.category}</span>
+                  {lookupProduct.category_name && lookupProduct.category_name !== lookupProduct.category && (
+                    <>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-xs text-violet-600">Also: {lookupProduct.category_name}</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </motion.div>
         ) : (
           /* Regular text response */
