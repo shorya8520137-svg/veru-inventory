@@ -840,7 +840,13 @@ class ProductController {
     // BULK IMPORT WITH PROGRESS
     // ===============================
     static bulkImportWithProgress(req, res) {
+        console.log('🔍 BULK IMPORT BACKEND DEBUG:');
+        console.log('📦 File received:', req.file?.originalname, 'Size:', req.file?.size, 'MIME:', req.file?.mimetype);
+        console.log('🔑 User:', req.user?.email, 'Role:', req.user?.role);
+        console.log('📂 File path:', req.file?.path);
+        
         if (!req.file) {
+            console.error('❌ No file uploaded');
             return res.status(400).json({ 
                 success: false, 
                 message: 'No file uploaded' 
@@ -848,33 +854,41 @@ class ProductController {
         }
 
         const ext = req.file.originalname.split('.').pop().toLowerCase();
+        console.log('📄 File extension:', ext);
         let products = [];
 
         try {
             if (ext === 'csv') {
+                console.log('📊 Parsing CSV file...');
                 fs.createReadStream(req.file.path)
                     .pipe(csv())
                     .on('data', (row) => products.push(row))
-                    .on('end', () => insertProductsWithProgress(products, req, res))
+                    .on('end', () => {
+                        console.log('✅ CSV parsed successfully, total rows:', products.length);
+                        insertProductsWithProgress(products, req, res)
+                    })
                     .on('error', (err) => {
-                        console.error('CSV parsing error:', err);
+                        console.error('❌ CSV parsing error:', err);
                         res.status(400).json({ 
                             success: false, 
                             message: 'Invalid CSV file format' 
                         });
                     });
             } else if (['xlsx', 'xls'].includes(ext)) {
+                console.log('📊 Parsing Excel file...');
                 const wb = XLSX.readFile(req.file.path);
                 products = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                console.log('✅ Excel parsed successfully, total rows:', products.length);
                 insertProductsWithProgress(products, req, res);
             } else {
+                console.error('❌ Unsupported file format:', ext);
                 return res.status(400).json({ 
                     success: false, 
                     message: 'Unsupported file format. Please use CSV or Excel files.' 
                 });
             }
         } catch (error) {
-            console.error('Bulk import error:', error);
+            console.error('❌ Bulk import error:', error);
             res.status(500).json({ 
                 success: false, 
                 message: 'Failed to process file' 

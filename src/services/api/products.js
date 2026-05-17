@@ -101,9 +101,17 @@ export const productsAPI = {
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE;
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         
+        console.log('🔍 BULK IMPORT DEBUG:');
+        console.log('📦 File:', file?.name, 'Size:', file?.size, 'Type:', file?.type);
+        console.log('🔗 API URL:', `${API_BASE_URL}/api/products/bulk/import/progress`);
+        console.log('🔑 Token exists:', !!token);
+        console.log('📤 Starting upload...');
+        
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
+
+            console.log('📦 FormData created');
 
             fetch(`${API_BASE_URL}/api/products/bulk/import/progress`, {
                 method: 'POST',
@@ -112,7 +120,24 @@ export const productsAPI = {
                 },
                 body: formData
             }).then(response => {
+                console.log('📨 Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    ok: response.ok
+                });
+                
                 if (!response.ok) {
+                    // Try to read error response body
+                    response.clone().text().then(text => {
+                        console.error('❌ Error response body:', text);
+                        try {
+                            const json = JSON.parse(text);
+                            console.error('❌ Parsed error:', json);
+                        } catch (e) {
+                            console.error('❌ Could not parse error response');
+                        }
+                    });
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 

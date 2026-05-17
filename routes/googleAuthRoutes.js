@@ -21,7 +21,7 @@ router.get('/google',
 router.get('/google/callback',
     passport.authenticate('google', { 
         session: false,
-        failureRedirect: 'https://giftgala.in/login?error=auth_failed'
+        failureRedirect: 'https://insora.in/login?error=auth_failed'
     }),
     (req, res) => {
         try {
@@ -40,10 +40,10 @@ router.get('/google/callback',
             );
 
             // Redirect to frontend with token
-            res.redirect(`https://giftgala.in/dashboard?token=${token}`);
+            res.redirect(`https://insora.in/dashboard?token=${token}`);
         } catch (error) {
             console.error('Error in Google callback:', error);
-            res.redirect('https://giftgala.in/login?error=token_generation_failed');
+            res.redirect('https://insora.in/login?error=token_generation_failed');
         }
     }
 );
@@ -57,7 +57,7 @@ router.get('/google/status', (req, res) => {
         message: 'Google OAuth is configured',
         clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not Set',
         clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not Set',
-        callbackURL: 'https://api.giftgala.in/auth/google/callback'
+        callbackURL: 'https://api.insora.in/auth/google/callback'
     });
 });
 
