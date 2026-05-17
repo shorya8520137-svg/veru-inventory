@@ -478,29 +478,14 @@ function ProductMatrix({ products, title, onAskAI }) {
 function detectIntent(text) {
   const t = text.toLowerCase();
   
-  // Check for barcode/SKU lookup FIRST (10+ digit numbers) - ONLY if explicitly asking to show product
-  const barcodeMatch = t.match(/\b(\d{10,})\b/);
-  const isExplicitProductRequest = /show.*product|show.*me|which.*categor|belong.*categor|product.*categor|details.*product/.test(t);
-  
-  if (barcodeMatch && isExplicitProductRequest) {
-    console.log('🔍 Intent detected: product_lookup (explicit)', { barcode: barcodeMatch[1], text: text });
-    return { type: 'product_lookup', barcode: barcodeMatch[1], raw: text };
-  }
-  
-  // Check for follow-up questions about product (stock, price, description)
-  // These should NOT trigger product_lookup UI, just regular AI response
-  const isFollowUpQuestion = /stock|price|description|cost|qty|quantity|detail/.test(t) && !isExplicitProductRequest;
-  if (isFollowUpQuestion) {
-    console.log('🔍 Intent detected: follow_up_question (no UI)', { text: text });
-    return null; // Let AI handle this normally
-  }
-  
-  // Check website categories FIRST (before regular categories)
+  // Check website categories
   if (/show.*all.*categor.*website|show.*website.*categor|website.*categor|all.*categor.*website/.test(t)) {
     return { type: 'website_categories', raw: text };
   }
+  // Show categories grid
   if (/show.*categor|categor/.test(t)) return { type: 'categories', raw: text };
   
+  // Show products grid - ONLY when user explicitly says "show me products"
   if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
     const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
     if (match) return { type: 'products', category: match[1].trim(), raw: text };
@@ -510,6 +495,7 @@ function detectIntent(text) {
   if (/dead\s*stock|slow\s*moving|excess/.test(t)) return { type: 'dead_stock', raw: text };
   if (/transfer|movement/.test(t)) return { type: 'transfers', raw: text };
   if (/how\s*(many|much).*warehouse|how\s*(many|much).*store|total\s*(warehouse|store)/.test(t)) return { type: 'warehouse_count', raw: text };
+  // Everything else goes to AI as text response (no UI cards)
   return null;
 }
 
@@ -624,7 +610,6 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
   const showCategoryGrid = intent?.type === 'categories' && Array.isArray(categories) && categories.length > 0;
   const showWebsiteCategoryGrid = intent?.type === 'website_categories' && Array.isArray(websiteCategories) && websiteCategories.length > 0;
   const showProductMatrix = intent?.type === 'products' && Array.isArray(products) && products.length > 0;
-  const showProductLookup = intent?.type === 'product_lookup' && Array.isArray(products) && products.length > 0;
 
   // Filter products by category if needed
   const filteredProducts = useMemo(() => {
@@ -639,17 +624,6 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
       return pCat.includes(cat) || pName.includes(cat) || pSku.includes(cat);
     });
   }, [products, showProductMatrix, intent?.category]);
-
-  // Product lookup by barcode
-  const lookupProduct = useMemo(() => {
-    if (!showProductLookup) return null;
-    const barcode = intent?.barcode;
-    if (!barcode) return products[0]; // Show first product if no barcode
-    return products.find((p) => 
-      (p.barcode || p.sku || '').toString().includes(barcode) ||
-      (p.product_name || '').toLowerCase().includes(intent?.raw?.toLowerCase() || '')
-    ) || products[0];
-  }, [products, showProductLookup, intent]);
 
   async function copyText() {
     try {
@@ -684,58 +658,6 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
         ) : showProductMatrix ? (
           /* Product Matrix ONLY - no markdown text */
           <ProductMatrix products={filteredProducts} title={`${intent?.category ? `${intent.category} Products` : 'Products'}`} onAskAI={() => {}} />
-        ) : showProductLookup && lookupProduct ? (
-          /* Product Lookup - Show product details with category */
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <h3 className="text-base font-semibold text-slate-900 mb-4">Product Details</h3>
-            <div className="space-y-4">
-              {/* Product Card */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-slate-900">{lookupProduct.product_name || lookupProduct.name || 'Unknown Product'}</h4>
-                    <p className="mt-1 text-xs text-slate-500">SKU: {lookupProduct.barcode || lookupProduct.sku || 'N/A'}</p>
-                    <p className="mt-2 text-lg font-bold text-slate-900">
-                      ₹{(parseFloat(lookupProduct.price || lookupProduct.selling_price || 0)).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {parseInt(lookupProduct.stock || lookupProduct.quantity || 0) === 0 ? (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">
-                        Out of Stock
-                      </span>
-                    ) : parseInt(lookupProduct.stock || lookupProduct.quantity || 0) < 10 ? (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
-                        Low Stock
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
-                        {lookupProduct.stock || lookupProduct.quantity} in stock
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Category Info - Inline with message */}
-              {lookupProduct.category && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-violet-50 border border-violet-100">
-                  <span className="text-sm font-medium text-violet-600">📦 Category:</span>
-                  <span className="text-sm font-bold text-violet-900 capitalize">{lookupProduct.category}</span>
-                  {lookupProduct.category_name && lookupProduct.category_name !== lookupProduct.category && (
-                    <>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-xs text-violet-600">Also: {lookupProduct.category_name}</span>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
         ) : (
           /* Regular text response */
           <>

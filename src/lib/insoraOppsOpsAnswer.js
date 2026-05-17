@@ -121,6 +121,57 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
     };
   }
 
+  // --- BARCODE / PRODUCT LOOKUP ---
+  const lookupBarcode = extractBarcode(q);
+  if (lookupBarcode || /which.*categor|belong.*categor|product.*categor|this.*product/.test(lower)) {
+    // If barcode provided, look up the product
+    if (lookupBarcode) {
+      // First try dispatch_product (products table)
+      const prodRes = await apiGet(`/api/products?search=${encodeURIComponent(lookupBarcode)}&limit=5`, authToken);
+      if (!prodRes.error && prodRes.data) {
+        const prodList = prodRes.data?.data || prodRes.data?.products || (Array.isArray(prodRes.data) ? prodRes.data : []);
+        const found = prodList.find(p => (p.barcode || p.sku || '').toString().includes(lookupBarcode));
+        if (found) {
+          const name = found.product_name || found.name || 'Unknown';
+          const cat = found.category || found.category_name || found.category_display_name || 'Uncategorized';
+          const price = found.price || found.selling_price || 0;
+          const stock = found.total_stock || found.stock || 0;
+          const desc = found.description || 'No description available';
+          return {
+            answer: `**${name}** (SKU: \`${lookupBarcode}\`)
+
+` +
+              `- **Category:** ${cat}\n` +
+              `- **Price:** ${formatInr(price)}\n` +
+              `- **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}\n` +
+              `- **Description:** ${desc}\n\n` +
+              `Would you like to know anything else about this product? I can help with stock details, pricing, or warehouse info.`
+          };
+        }
+      }
+      // Fallback: try inventory table
+      const invRes = await apiGet(`/api/inventory?search=${encodeURIComponent(lookupBarcode)}&limit=5`, authToken);
+      if (!invRes.error && invRes.data) {
+        const invList = pickInventoryRows(invRes.data);
+        const found = invList.find(r => (r.code || r.barcode || '').toString().includes(lookupBarcode));
+        if (found) {
+          const name = found.product_name || found.name || lookupBarcode;
+          const wh = found.warehouse || found.warehouse_code || 'Unknown';
+          const stock = found.stock ?? 0;
+          return {
+            answer: `**${name}** (SKU: \`${lookupBarcode}\`)\n\n` +
+              `- **Warehouse:** ${wh}\n` +
+              `- **Stock:** ${stock} units\n\n` +
+              `Would you like more details about this product?`
+          };
+        }
+      }
+      return { answer: `I couldn't find a product with barcode **${lookupBarcode}**. Please check the barcode and try again.` };
+    }
+    // If no barcode but category question about a product
+    return null; // Fall through to AI
+  }
+
   // --- CATEGORIES ---
   if (/categor(y|ies)/.test(lower)) {
     // Return empty answer - frontend will show visual category grid
