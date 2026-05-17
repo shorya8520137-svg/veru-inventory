@@ -42,13 +42,15 @@ class ProductController {
                 p.category_id,
                 p.created_at,
                 c.display_name AS category_display_name,
+                c.name AS category_name,
+                c.display_name AS category,
                 COALESCE(SUM(i.stock), 0) as total_stock,
                 COUNT(DISTINCT i.warehouse) as warehouse_count
             FROM dispatch_product p
             LEFT JOIN product_categories c ON p.category_id = c.id
             LEFT JOIN inventory i ON p.barcode = i.code
             ${where}
-            GROUP BY p.p_id, p.product_name, p.product_variant, p.barcode, p.price, p.cost_price, p.weight, p.dimensions, p.description, p.category_id, p.created_at, c.display_name
+            GROUP BY p.p_id, p.product_name, p.product_variant, p.barcode, p.price, p.cost_price, p.weight, p.dimensions, p.description, p.category_id, p.created_at, c.display_name, c.name
             ORDER BY p.created_at DESC
             LIMIT ? OFFSET ?
         `;

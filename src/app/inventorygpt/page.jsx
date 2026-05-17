@@ -614,7 +614,7 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
     const cat = intent.category.toLowerCase();
     return products.filter((p) => {
       // Check multiple possible category fields
-      const pCat = (p.category || p.product_category || p.type || p.category_name || p.category_id || '').toString().toLowerCase();
+      const pCat = (p.category || p.category_name || p.product_category || p.type || p.category_name || p.category_id || p.category_display_name || '').toString().toLowerCase();
       const pName = (p.product_name || p.name || p.title || '').toLowerCase();
       const pSku = (p.sku || p.barcode || '').toLowerCase();
       // Match by category name OR product name containing the category
