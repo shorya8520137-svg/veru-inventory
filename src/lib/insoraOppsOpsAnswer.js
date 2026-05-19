@@ -1,4 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  process.env.API_BASE ||
+  'https://api.giftgala.in';
 
 function isInternalErrorText(text) {
   return /unknown column|sql|syntax error|er_|errno|processed_by|select\s+.+\s+from/i.test(
@@ -28,14 +31,18 @@ function extractBarcode(q) {
 }
 
 async function apiGet(path, token) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { error: data.message || data.error || `HTTP ${res.status}` };
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: data.message || data.error || `HTTP ${res.status}` };
+    }
+    return { data };
+  } catch (error) {
+    return { error: error?.message || 'Network error' };
   }
-  return { data };
 }
 
 function pickInventoryRows(payload) {
@@ -88,7 +95,7 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
     contextData.product = 'damaged_products';
   }
 
-  if (!authToken && /stock|warehouse|timeline|website|barcode|price|category|transfer|order|dead/i.test(lower)) {
+  if (!authToken && /stock|warehouse|timeline|website|barcode|price|transfer|order|dead/i.test(lower)) {
     return {
       answer:
         'Please sign in so I can read **live warehouse stock**, **timeline**, **transfers**, **orders**, and **website products** from your account.',
@@ -134,9 +141,37 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
         if (found) {
           const name = found.product_name || found.name || 'Unknown';
           const cat = found.category || found.category_name || found.category_display_name || 'Uncategorized';
-          const price = found.price || found.selling_price || 0;
+          const price = found.price || found.selling_price || found.mrp || 0;
           const stock = found.total_stock || found.stock || 0;
           const desc = found.description || 'No description available';
+          return {
+            answer: `**${name}** (SKU: \`${lookupBarcode}\`)
+
+` +
+              `- **Category:** ${cat}\n` +
+              `- **Price:** ${formatInr(price)}\n` +
+              `- **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}\n` +
+              `- **Description:** ${desc}\n\n` +
+              `Would you like to know anything else about this product? I can help with stock details, pricing, or warehouse info.`
+          };
+        }
+      }
+      const webRes = await apiGet(`/api/website/products?search=${encodeURIComponent(lookupBarcode)}&limit=5`, authToken);
+      if (!webRes.error && webRes.data) {
+        const webList = Array.isArray(webRes.data?.data)
+          ? webRes.data.data
+          : Array.isArray(webRes.data?.products)
+            ? webRes.data.products
+            : Array.isArray(webRes.data)
+              ? webRes.data
+              : [];
+        const foundWeb = webList.find(p => (p.barcode || p.sku || '').toString().includes(lookupBarcode));
+        if (foundWeb) {
+          const name = foundWeb.product_name || foundWeb.name || 'Unknown';
+          const cat = foundWeb.category_name || foundWeb.category || foundWeb.category_display_name || 'Uncategorized';
+          const price = foundWeb.price || foundWeb.offer_price || foundWeb.final_price || 0;
+          const stock = foundWeb.stock_quantity ?? foundWeb.stock ?? 0;
+          const desc = foundWeb.description || 'No description available';
           return {
             answer: `**${name}** (SKU: \`${lookupBarcode}\`)
 

@@ -5,6 +5,32 @@ import { buildInventoryGptBrainContext } from '@/lib/inventorygptBrainContext';
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct-v0.1';
 const OPENROUTER_URL = 'https://api.openrouter.ai/v1/chat/completions';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || 'https://api.giftgala.in';
+
+async function fetchWebsiteProductByBarcode(barcode, token) {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/website/products?search=${encodeURIComponent(barcode)}&limit=5`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+          : { 'Content-Type': 'application/json' }
+      }
+    );
+    if (!response.ok) return null;
+    const data = await response.json().catch(() => ({}));
+    const list = Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data?.products)
+        ? data.products
+        : Array.isArray(data)
+          ? data
+          : [];
+    return list.find((p) => (p.barcode || p.sku || p.code || '').toString().includes(barcode)) || null;
+  } catch {
+    return null;
+  }
+}
 
 async function requestOpenRouterCompletion(messages) {
   if (!OPENROUTER_API_KEY) {
@@ -34,6 +60,19 @@ async function requestOpenRouterCompletion(messages) {
   return data;
 }
 
+function extractBarcode(text) {
+  const m = String(text || '').match(/\b(\d{4,16})\b/);
+  return m ? m[1] : null;
+}
+
+function findProduct(list, code) {
+  if (!Array.isArray(list) || !code) return null;
+  return list.find((p) => {
+    const b = (p.barcode || p.sku || p.code || '').toString();
+    return b && b.includes(code);
+  }) || null;
+}
+
 export async function POST(req) {
   try {
     const { question, products, categories, conversationHistory, authToken } =
@@ -41,6 +80,33 @@ export async function POST(req) {
 
     if (!question) {
       return NextResponse.json({ success: false, error: 'Question is required' }, { status: 400 });
+    }
+
+    const prods = Array.isArray(products) ? products : [];
+    const cats = Array.isArray(categories) ? categories : [];
+    const localBarcode = extractBarcode(question);
+
+    if (localBarcode) {
+      let found = findProduct(prods, localBarcode);
+      if (!found) {
+        found = await fetchWebsiteProductByBarcode(localBarcode, authToken || '');
+      }
+      if (found) {
+        const name = found.product_name || found.name || found.title || 'Product';
+        const cat = found.category || found.category_name || found.category_display_name || 'Uncategorized';
+        const price = found.price ?? found.selling_price ?? found.mrp ?? found.final_price ?? null;
+        const stock = found.total_stock ?? found.stock ?? found.quantity ?? found.stock_quantity ?? null;
+        return NextResponse.json({
+          success: true,
+          answer:
+            `**${name}** (SKU: \`${localBarcode}\`)\n\n` +
+            `- **Category:** ${cat}\n` +
+            `${price != null ? `- **Price:** ${typeof price === 'number' ? `₹${price.toLocaleString('en-IN')}` : price}\n` : ''}` +
+            `${stock != null ? `- **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}\n` : ''}` +
+            `\nWould you like anything else about this product?`,
+          model: 'local-lookup'
+        });
+      }
     }
 
     const opsAnswer = await tryInsoraOppsDataAnswer(question, authToken || '');
@@ -63,29 +129,11 @@ export async function POST(req) {
       }
     }
 
-    const prods =
-      brain?.inventoryPreview?.length ? brain.inventoryPreview : Array.isArray(products) ? products : [];
-    const cats = Array.isArray(categories) ? categories : [];
+    const liveProducts = brain?.inventoryPreview?.length ? brain.inventoryPreview : prods;
+    const liveCategories = cats;
 
-    // Quick local lookup: if user asked about a barcode and we have that product
-    // in the provided `products` array, return a concise deterministic answer
-    // instead of the generic fallback when OpenRouter is not configured.
-    const extractBarcode = (text) => {
-      const m = String(text || '').match(/\b(\d{4,16})\b/);
-      return m ? m[1] : null;
-    };
-
-    const findProduct = (list, code) => {
-      if (!Array.isArray(list) || !code) return null;
-      return list.find((p) => {
-        const b = (p.barcode || p.sku || p.code || '').toString();
-        return b && b.includes(code);
-      }) || null;
-    };
-
-    const localBarcode = extractBarcode(question);
     if (localBarcode) {
-      const found = findProduct(prods, localBarcode);
+      const found = findProduct(liveProducts, localBarcode);
       if (found) {
         const name = found.product_name || found.name || found.title || 'Product';
         const cat = found.category || found.category_name || found.category_display_name || 'Uncategorized';
@@ -105,8 +153,8 @@ export async function POST(req) {
     }
 
     if (!OPENROUTER_API_KEY) {
-      const p = prods.length;
-      const c = cats.length;
+      const p = liveProducts.length;
+      const c = liveCategories.length;
       return NextResponse.json({
         success: true,
         answer:
@@ -118,12 +166,12 @@ export async function POST(req) {
     }
 
     const productContext =
-      prods.length > 0
-        ? `Live inventory sample:\n${JSON.stringify(prods.slice(0, 30), null, 2)}`
+      liveProducts.length > 0
+        ? `Live inventory sample:\n${JSON.stringify(liveProducts.slice(0, 30), null, 2)}`
         : 'No live inventory rows in context.';
 
     const categoryContext =
-      cats.length > 0 ? `\nCategories:\n${JSON.stringify(cats.slice(0, 20), null, 2)}` : '';
+      liveCategories.length > 0 ? `\nCategories:\n${JSON.stringify(liveCategories.slice(0, 20), null, 2)}` : '';
 
     const historyContext =
       conversationHistory?.length > 0
