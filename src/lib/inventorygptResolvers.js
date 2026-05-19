@@ -98,12 +98,73 @@ export function extractLastInventoryGptBarcode(history) {
   return null;
 }
 
+// Extract active context from conversation history (category, product, warehouse, SKU)
+export function extractActiveContext(conversationHistory = []) {
+  const context = {
+    category: null,
+    product: null,
+    warehouse: null,
+    sku: null,
+  };
+
+  if (!Array.isArray(conversationHistory)) return context;
+
+  const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+
+  // Search from most recent to oldest
+  for (const message of [...conversationHistory].reverse()) {
+    const content = String(message?.content || "");
+    const isAssistant = message?.role === "assistant";
+    const isUser = message?.role === "user";
+
+    // Extract category from assistant responses
+    if (isAssistant) {
+      // Match: "**Category:** Clothing" or "Category: Clothing" or "category: sports"
+      // Simplified regex: look for "Category" followed by category name anywhere in content
+      for (const cat of categoryNames) {
+        const catRegex = new RegExp(`Category[^\\n]*${cat}`, 'i');
+        if (catRegex.test(content) && !context.category) {
+          context.category = cat;
+        }
+      }
+      // Match: SKU: `FG-082-5KG` or SKU: FG-082-5KG
+      const skuMatch = content.match(/SKU:\s*`?([A-Za-z0-9-]+)`?/i);
+      if (skuMatch && !context.sku) {
+        context.sku = skuMatch[1];
+      }
+      // Match product name from bold text at start: "**H&M Women Jeans**"
+      const productMatch = content.match(/\*\*([^*]+)\*\*.*SKU:/i);
+      if (productMatch && !context.product) {
+        context.product = productMatch[1].trim();
+      }
+    }
+
+    // Extract category/product from user queries
+    if (isUser) {
+      const lowerContent = content.toLowerCase();
+      for (const cat of categoryNames) {
+        if (lowerContent.includes(cat) && !context.category) {
+          context.category = cat;
+        }
+      }
+    }
+
+    // Stop if we have all context
+    if (context.category && context.product && context.sku) break;
+  }
+
+  return context;
+}
+
 export function detectInventoryGptIntent(question, conversationHistory = []) {
   const raw = String(question || "").trim();
   const lower = raw.toLowerCase();
   const wantsExport = /excel|spreadsheet|csv|export|download|sheet|table/.test(
     lower,
   );
+
+  // Extract active context from conversation history
+  const activeContext = extractActiveContext(conversationHistory);
 
   // Follow-up like "?" should continue the last business context instead of failing.
   if (/^[?.!]+$/.test(lower)) {
@@ -151,30 +212,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
 
   // Follow-up with "this category" / "same category" / "that category" - inherit from conversation memory
   if (/this category|same category|that category|of this category|of that category/.test(lower) && /product|item|show|list/.test(lower)) {
-    // Extract active category from last assistant message
-    const lastAssistant = [...(conversationHistory || [])]
-      .reverse()
-      .find((m) => m?.role === "assistant");
-    if (lastAssistant?.content) {
-      for (const cat of categoryNames) {
-        // Handle markdown formatting: "**Category:** Clothing" or "Category: Clothing"
-        const catRegex = new RegExp(`\\*?\\*?category\\*?\\*?:\\s*\\*?\\*?${cat}\\*?\\*?`, 'i');
-        if (catRegex.test(lastAssistant.content)) {
-          return { type: "category_products", category: cat, wantsExport };
-        }
-      }
-    }
-    // Also check last user message for category context
-    const lastUser = [...(conversationHistory || [])]
-      .reverse()
-      .find((m) => m?.role === "user");
-    if (lastUser?.content) {
-      const userLower = lastUser.content.toLowerCase();
-      for (const cat of categoryNames) {
-        if (userLower.includes(cat)) {
-          return { type: "category_products", category: cat, wantsExport };
-        }
-      }
+    // Use extracted context from conversation history
+    if (activeContext.category) {
+      return { type: "category_products", category: activeContext.category, wantsExport };
     }
     // If we can't find the category in history, still don't fall through to product_category lookup
     // Return null so the LLM can handle it with context
@@ -247,16 +287,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     }
     // Check for "this category" / "that category" with inherited context
     if (/this category|that category|same category|of this|of that/.test(lower)) {
-      const lastAssistant = [...(conversationHistory || [])]
-        .reverse()
-        .find((m) => m?.role === "assistant");
-      if (lastAssistant?.content) {
-        for (const cat of categoryNames) {
-          const catRegex = new RegExp(`category:\\s*${cat}`, 'i');
-          if (catRegex.test(lastAssistant.content)) {
-            return { type: "category_products", category: cat, wantsExport };
-          }
-        }
+      // Use extracted active context from conversation history
+      if (activeContext.category) {
+        return { type: "category_products", category: activeContext.category, wantsExport };
       }
     }
   }
