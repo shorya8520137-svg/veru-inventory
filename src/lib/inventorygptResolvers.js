@@ -121,9 +121,16 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
 
   // Follow-up context: "ok then send me", "yes send it", "sure", "do it"
   // These should trigger the last action's export or continue the last context
+  // IMPORTANT: Exclude full queries that contain category names or are complete requests
+  const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+  const hasCategoryName = categoryNames.some(cat => lower.includes(cat));
+  const isFullRequest = /show.*all.*product|list.*product|get.*product|display.*product|see.*product/.test(lower);
+  
   if (
-    /^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please|do that|give me|show me|get it)/.test(lower) &&
-    lower.length < 50
+    /^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please|do that|give me|get it)/.test(lower) &&
+    lower.length < 50 &&
+    !hasCategoryName &&
+    !isFullRequest
   ) {
     // Check if last assistant message mentioned Excel export
     const lastAssistant = [...(conversationHistory || [])]
@@ -135,7 +142,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     // Check if last user question was about a category/warehouse/price
     const previousUser = [...(conversationHistory || [])]
       .reverse()
-      .find((m) => m?.role === "user" && !/^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please|do that|give me|show me|get it)/.test(String(m.content || "").trim().toLowerCase()));
+      .find((m) => m?.role === "user" && !/^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please|do that|give me|get it)/.test(String(m.content || "").trim().toLowerCase()));
     if (previousUser?.content) {
       return detectInventoryGptIntent(previousUser.content, []);
     }
