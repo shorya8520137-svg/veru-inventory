@@ -35,10 +35,16 @@ function rowsFromPayload(payload) {
   if (Array.isArray(payload.data?.inventory)) return payload.data.inventory;
   if (Array.isArray(payload.data?.orders)) return payload.data.orders;
   if (Array.isArray(payload.data?.logs)) return payload.data.logs;
+  if (Array.isArray(payload.data?.warehouses)) return payload.data.warehouses;
+  if (Array.isArray(payload.data?.stores)) return payload.data.stores;
+  if (Array.isArray(payload.data?.categories)) return payload.data.categories;
   if (Array.isArray(payload.data)) return payload.data;
   if (Array.isArray(payload.products)) return payload.products;
   if (Array.isArray(payload.orders)) return payload.orders;
   if (Array.isArray(payload.logs)) return payload.logs;
+  if (Array.isArray(payload.warehouses)) return payload.warehouses;
+  if (Array.isArray(payload.stores)) return payload.stores;
+  if (Array.isArray(payload.categories)) return payload.categories;
   if (payload.data && typeof payload.data === "object") return [payload.data];
   return [];
 }
@@ -101,6 +107,21 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   }
 
   // Global/list intents must be checked before SKU/product intents.
+  if (
+    /address|full address|location|phone|email|contact|manager/.test(lower) &&
+    /(store|warehouse|wearhouse|this|same|it)/.test(lower)
+  ) {
+    return {
+      type: "location_detail",
+      locationType: /store/.test(lower)
+        ? "stores"
+        : /warehouse|wearhouse/.test(lower)
+          ? "warehouses"
+          : "last",
+      wantsExport,
+    };
+  }
+
   if (/categor/.test(lower)) {
     return {
       type: /website|web site|websites|website product|site/.test(lower)
@@ -621,8 +642,16 @@ function normalizeLocation(row, type) {
       row.code ||
       row.store_code ||
       "Unnamed",
+    location: row.location || "",
+    address: row.address || "",
     city: row.city || "",
     state: row.state || "",
+    country: row.country || "",
+    pincode: row.pincode || "",
+    phone: row.phone || "",
+    email: row.email || "",
+    manager_name: row.manager_name || row.manager || "",
+    capacity: row.capacity ?? row.area_sqft ?? "",
     type,
   };
 }
@@ -637,15 +666,65 @@ export async function resolveInventoryGptLocations(token, type) {
         ]
       : ["/api/warehouse-management/stores", "/api/products/stores"];
 
+  const merged = [];
+  const seen = new Set();
+  let lastError = null;
+
   for (const path of paths) {
     const result = await apiGet(path, token);
-    const rows = result.error
-      ? []
-      : rowsFromPayload(result.data).map((row) => normalizeLocation(row, type));
-    if (rows.length) return { rows, error: null };
+    if (result.error) {
+      lastError = result.error;
+      continue;
+    }
+    const rows = rowsFromPayload(result.data).map((row) =>
+      normalizeLocation(row, type),
+    );
+    for (const row of rows) {
+      const key = `${row.code || row.name || row.id}`.toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(row);
+    }
   }
 
-  return { rows: [], error: null };
+  return { rows: merged, error: merged.length ? null : lastError };
+}
+
+function extractLastLocationContext(history) {
+  if (!Array.isArray(history)) return null;
+  for (const message of [...history].reverse()) {
+    const content = String(message?.content || "");
+    const storeSection = /store network|store inventory/i.test(content);
+    const warehouseSection = /warehouse network/i.test(content);
+    const code = content.match(/`([^`]+)`/)?.[1] || null;
+    const namedLine = content.match(/\d+\.\s+\*\*([^*]+)\*\*/)?.[1] || null;
+    if (code || namedLine) {
+      return {
+        type: storeSection ? "stores" : warehouseSection ? "warehouses" : null,
+        code,
+        name: namedLine,
+      };
+    }
+  }
+  return null;
+}
+
+function findLocation(rows, context) {
+  if (!context) return rows[0] || null;
+  const code = String(context.code || "").toLowerCase();
+  const name = String(context.name || "").toLowerCase();
+  return (
+    rows.find((row) => code && String(row.code || "").toLowerCase() === code) ||
+    rows.find(
+      (row) =>
+        name &&
+        String(row.name || "")
+          .toLowerCase()
+          .includes(name),
+    ) ||
+    rows[0] ||
+    null
+  );
 }
 
 export async function resolveInventoryGptStoreInventory(token) {
@@ -711,6 +790,66 @@ function buildCategoriesAnswer(categoriesResult, website, wantsExport) {
   };
 }
 
+function buildLocationDetailAnswer(location, type, wantsExport) {
+  const isWarehouse = type === "warehouses";
+  if (!location) {
+    return {
+      answer: `I could not find the ${isWarehouse ? "warehouse" : "store"} details from the live master data.`,
+      exportTsv: null,
+      exportFilename: null,
+    };
+  }
+  const lines = [
+    isWarehouse ? "🏬 **Warehouse Details**" : "🏪 **Store Details**",
+    "",
+  ];
+  lines.push(
+    `**${location.name}**${location.code ? ` (\`${location.code}\`)` : ""}`,
+  );
+  lines.push("");
+  if (location.location) lines.push(`📍 **Location:** ${location.location}`);
+  if (location.address) lines.push(`🏠 **Address:** ${location.address}`);
+  if (location.city || location.state || location.country || location.pincode) {
+    lines.push(
+      `🗺️ **Area:** ${[location.city, location.state, location.country, location.pincode].filter(Boolean).join(", ")}`,
+    );
+  }
+  if (location.phone) lines.push(`☎️ **Phone:** ${location.phone}`);
+  if (location.email) lines.push(`✉️ **Email:** ${location.email}`);
+  if (location.manager_name)
+    lines.push(`👤 **Manager:** ${location.manager_name}`);
+  if (location.capacity)
+    lines.push(
+      `${isWarehouse ? "📦 **Capacity**" : "📐 **Area/Capacity**"}: ${location.capacity}`,
+    );
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(
+          [location],
+          [
+            "id",
+            "code",
+            "name",
+            "location",
+            "address",
+            "city",
+            "state",
+            "country",
+            "pincode",
+            "phone",
+            "email",
+            "manager_name",
+            "type",
+          ],
+        )
+      : null,
+    exportFilename: wantsExport
+      ? `inventorygpt-${isWarehouse ? "warehouse" : "store"}-details.tsv`
+      : null,
+  };
+}
+
 function buildLocationsAnswer(locationsResult, type, wantsExport) {
   const rows = locationsResult.rows || [];
   const isWarehouse = type === "warehouses";
@@ -728,15 +867,32 @@ function buildLocationsAnswer(locationsResult, type, wantsExport) {
     );
   } else {
     rows.slice(0, 30).forEach((loc, index) => {
+      const place = [loc.location, loc.city, loc.state]
+        .filter(Boolean)
+        .join(", ");
       lines.push(
-        `${index + 1}. **${loc.name}**${loc.code ? ` · \`${loc.code}\`` : ""}${loc.city || loc.state ? ` · ${[loc.city, loc.state].filter(Boolean).join(", ")}` : ""}`,
+        `${index + 1}. **${loc.name}**${loc.code ? ` · \`${loc.code}\`` : ""}${place ? ` · ${place}` : ""}`,
       );
     });
   }
   return {
     answer: lines.join("\n"),
     exportTsv: wantsExport
-      ? rowsToTsv(rows, ["id", "code", "name", "city", "state", "type"])
+      ? rowsToTsv(rows, [
+          "id",
+          "code",
+          "name",
+          "location",
+          "address",
+          "city",
+          "state",
+          "country",
+          "pincode",
+          "phone",
+          "email",
+          "manager_name",
+          "type",
+        ])
       : null,
     exportFilename: wantsExport ? `inventorygpt-${type}.tsv` : null,
   };
@@ -946,6 +1102,20 @@ export async function tryInventoryGptDeterministicAnswer({
     );
     return {
       ...buildLocationsAnswer(locations, intent.type, intent.wantsExport),
+      render: "text",
+    };
+  }
+
+  if (intent.type === "location_detail") {
+    const lastContext = extractLastLocationContext(conversationHistory);
+    const type =
+      intent.locationType === "last"
+        ? lastContext?.type || "stores"
+        : intent.locationType;
+    const locations = await resolveInventoryGptLocations(authToken, type);
+    const location = findLocation(locations.rows || [], lastContext);
+    return {
+      ...buildLocationDetailAnswer(location, type, intent.wantsExport),
       render: "text",
     };
   }
