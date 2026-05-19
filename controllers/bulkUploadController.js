@@ -1,49 +1,101 @@
-const db = require('../db/connection');
+const db = require("../db/connection");
+
+function queryAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+  });
+}
+
+async function ensureDispatchWarehouse(warehouseCode) {
+  if (!warehouseCode) return;
+
+  const existing = await queryAsync(
+    "SELECT warehouse_code FROM dispatch_warehouse WHERE warehouse_code = ? LIMIT 1",
+    [warehouseCode],
+  );
+  if (existing.length) return;
+
+  const source = await queryAsync(
+    `SELECT code, name, address, city, state
+         FROM warehouses
+         WHERE code = ? AND is_active = TRUE
+         LIMIT 1`,
+    [warehouseCode],
+  );
+
+  if (!source.length) {
+    throw new Error(
+      `Warehouse ${warehouseCode} was not found in warehouse master`,
+    );
+  }
+
+  const warehouse = source[0];
+  const fullAddress = [warehouse.address, warehouse.city, warehouse.state]
+    .filter(Boolean)
+    .join(", ");
+
+  await queryAsync(
+    `INSERT INTO dispatch_warehouse (w_id, warehouse_code, Warehouse_name, address)
+         SELECT COALESCE(MAX(w_id), 0) + 1, ?, ?, ?
+         FROM dispatch_warehouse`,
+    [warehouse.code, warehouse.name || warehouse.code, fullAddress || null],
+  );
+}
 
 exports.bulkUpload = async (req, res) => {
-    const rows = req.body?.rows;
-    
-    if (!Array.isArray(rows) || rows.length === 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'rows array is required'
+  const rows = req.body?.rows;
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "rows array is required",
+    });
+  }
+
+  const success = [];
+  const failed = [];
+
+  try {
+    // Begin transaction
+    await new Promise((resolve, reject) => {
+      db.beginTransaction((err) => (err ? reject(err) : resolve()));
+    });
+
+    for (let i = 0; i < rows.length; i++) {
+      const {
+        barcode,
+        product_name,
+        variant = null,
+        warehouse, // ✅ COMING FROM FRONTEND
+        qty,
+        unit_cost = 0,
+      } = rows[i];
+
+      // ---------- VALIDATION ----------
+      if (
+        !barcode ||
+        !product_name ||
+        !warehouse ||
+        qty === null ||
+        qty === undefined ||
+        isNaN(qty)
+      ) {
+        failed.push({
+          row: i + 1,
+          reason:
+            "Missing or invalid required fields (barcode, product_name, warehouse required; qty must be a valid number)",
+          data: rows[i],
         });
-    }
+        continue;
+      }
 
-    const success = [];
-    const failed = [];
+      await ensureDispatchWarehouse(warehouse);
 
-    try {
-        // Begin transaction
-        await new Promise((resolve, reject) => {
-            db.beginTransaction(err => err ? reject(err) : resolve());
-        });
+      const reference = `BULK_UPLOAD_${barcode}_${Date.now()}`;
 
-        for (let i = 0; i < rows.length; i++) {
-            const {
-                barcode,
-                product_name,
-                variant = null,
-                warehouse,      // ✅ COMING FROM FRONTEND
-                qty,
-                unit_cost = 0
-            } = rows[i];
-
-            // ---------- VALIDATION ----------
-            if (!barcode || !product_name || !warehouse || qty === null || qty === undefined || isNaN(qty)) {
-                failed.push({
-                    row: i + 1,
-                    reason: 'Missing or invalid required fields (barcode, product_name, warehouse required; qty must be a valid number)',
-                    data: rows[i]
-                });
-                continue;
-            }
-
-            const reference = `BULK_UPLOAD_${barcode}_${Date.now()}`;
-
-            // ---------- LEDGER INSERT ----------
-            const ledgerId = await new Promise((resolve, reject) => {
-                const sql = `INSERT INTO inventory_ledger_base (
+      // ---------- LEDGER INSERT ----------
+      const ledgerId = await new Promise((resolve, reject) => {
+        const sql = `INSERT INTO inventory_ledger_base (
                     event_time,
                     movement_type,
                     barcode,
@@ -53,27 +105,31 @@ exports.bulkUpload = async (req, res) => {
                     direction,
                     reference
                 ) VALUES (NOW(), 'BULK_UPLOAD', ?, ?, ?, ?, 'IN', ?)`;
-                
-                db.query(sql, [barcode, product_name, warehouse, qty, reference], (err, result) => {
-                    err ? reject(err) : resolve(result.insertId);
-                });
-            });
 
-            // ---------- STOCK BATCH INSERT ----------
-            // Check if this is the first time this product is being added to this warehouse
-            const existingBatchCheck = await new Promise((resolve, reject) => {
-                const checkSql = `SELECT COUNT(*) as count FROM stock_batches 
+        db.query(
+          sql,
+          [barcode, product_name, warehouse, qty, reference],
+          (err, result) => {
+            err ? reject(err) : resolve(result.insertId);
+          },
+        );
+      });
+
+      // ---------- STOCK BATCH INSERT ----------
+      // Check if this is the first time this product is being added to this warehouse
+      const existingBatchCheck = await new Promise((resolve, reject) => {
+        const checkSql = `SELECT COUNT(*) as count FROM stock_batches
                                  WHERE barcode = ? AND warehouse = ?`;
-                db.query(checkSql, [barcode, warehouse], (err, result) => {
-                    err ? reject(err) : resolve(result[0].count > 0);
-                });
-            });
+        db.query(checkSql, [barcode, warehouse], (err, result) => {
+          err ? reject(err) : resolve(result[0].count > 0);
+        });
+      });
 
-            // Determine source type: OPENING for first entry, BULK_UPLOAD for subsequent
-            const sourceType = existingBatchCheck ? 'BULK_UPLOAD' : 'OPENING';
+      // Determine source type: OPENING for first entry, BULK_UPLOAD for subsequent
+      const sourceType = existingBatchCheck ? "BULK_UPLOAD" : "OPENING";
 
-            await new Promise((resolve, reject) => {
-                const sql = `INSERT INTO stock_batches (
+      await new Promise((resolve, reject) => {
+        const sql = `INSERT INTO stock_batches (
                     product_name,
                     barcode,
                     variant,
@@ -85,136 +141,158 @@ exports.bulkUpload = async (req, res) => {
                     unit_cost,
                     status
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`;
-                
-                db.query(sql, [
-                    product_name,
-                    barcode,
-                    variant,
-                    warehouse,
-                    sourceType,  // ✅ DYNAMIC: OPENING for first, BULK_UPLOAD for subsequent
-                    ledgerId,
-                    qty,
-                    qty,
-                    unit_cost
-                ], err => err ? reject(err) : resolve());
-            });
 
-            success.push({
-                row: i + 1,
-                barcode,
-                warehouse,
-                qty
-            });
-        }
+        db.query(
+          sql,
+          [
+            product_name,
+            barcode,
+            variant,
+            warehouse,
+            sourceType, // ✅ DYNAMIC: OPENING for first, BULK_UPLOAD for subsequent
+            ledgerId,
+            qty,
+            qty,
+            unit_cost,
+          ],
+          (err) => (err ? reject(err) : resolve()),
+        );
+      });
 
-        // Commit transaction
-        await new Promise((resolve, reject) => {
-            db.commit(err => err ? reject(err) : resolve());
-        });
-
-        res.json({
-            success: true,
-            inserted: success.length,
-            failed: failed.length,
-            successRows: success,
-            failedRows: failed
-        });
-
-    } catch (error) {
-        // Rollback transaction on error
-        await new Promise(resolve => db.rollback(() => resolve()));
-        
-        res.status(500).json({
-            success: false,
-            message: 'Bulk upload failed',
-            error: error.message
-        });
+      success.push({
+        row: i + 1,
+        barcode,
+        warehouse,
+        qty,
+      });
     }
+
+    // Commit transaction
+    await new Promise((resolve, reject) => {
+      db.commit((err) => (err ? reject(err) : resolve()));
+    });
+
+    res.json({
+      success: true,
+      inserted: success.length,
+      failed: failed.length,
+      successRows: success,
+      failedRows: failed,
+    });
+  } catch (error) {
+    // Rollback transaction on error
+    await new Promise((resolve) => db.rollback(() => resolve()));
+
+    res.status(500).json({
+      success: false,
+      message: "Bulk upload failed",
+      error: error.message,
+    });
+  }
 };
 
 // New endpoint for bulk upload with progress streaming
 exports.bulkUploadWithProgress = async (req, res) => {
-    const rows = req.body?.rows;
-    
-    if (!Array.isArray(rows) || rows.length === 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'rows array is required'
-        });
-    }
+  const rows = req.body?.rows;
 
-    // Set headers for Server-Sent Events
-    res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control'
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "rows array is required",
+    });
+  }
+
+  // Set headers for Server-Sent Events
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Cache-Control",
+  });
+
+  const success = [];
+  const failed = [];
+  const totalRows = rows.length;
+
+  // Send initial progress
+  res.write(
+    `data: ${JSON.stringify({
+      type: "start",
+      total: totalRows,
+      current: 0,
+      message: "Starting bulk upload...",
+    })}\n\n`,
+  );
+
+  try {
+    // Begin transaction
+    await new Promise((resolve, reject) => {
+      db.beginTransaction((err) => (err ? reject(err) : resolve()));
     });
 
-    const success = [];
-    const failed = [];
-    const totalRows = rows.length;
+    for (let i = 0; i < rows.length; i++) {
+      const {
+        barcode,
+        product_name,
+        variant = null,
+        warehouse,
+        qty,
+        unit_cost = 0,
+      } = rows[i];
 
-    // Send initial progress
-    res.write(`data: ${JSON.stringify({
-        type: 'start',
-        total: totalRows,
-        current: 0,
-        message: 'Starting bulk upload...'
-    })}\n\n`);
+      // Send progress update
+      res.write(
+        `data: ${JSON.stringify({
+          type: "progress",
+          total: totalRows,
+          current: i + 1,
+          percentage: Math.round(((i + 1) / totalRows) * 100),
+          message: `Processing ${product_name} (${barcode})...`,
+          barcode: barcode,
+          product_name: product_name,
+        })}\n\n`,
+      );
 
-    try {
-        // Begin transaction
-        await new Promise((resolve, reject) => {
-            db.beginTransaction(err => err ? reject(err) : resolve());
+      // ---------- VALIDATION ----------
+      if (
+        !barcode ||
+        !product_name ||
+        !warehouse ||
+        qty === null ||
+        qty === undefined ||
+        isNaN(qty)
+      ) {
+        failed.push({
+          row: i + 1,
+          reason:
+            "Missing or invalid required fields (barcode, product_name, warehouse required; qty must be a valid number)",
+          data: rows[i],
         });
 
-        for (let i = 0; i < rows.length; i++) {
-            const {
-                barcode,
-                product_name,
-                variant = null,
-                warehouse,
-                qty,
-                unit_cost = 0
-            } = rows[i];
+        // Send error update
+        res.write(
+          `data: ${JSON.stringify({
+            type: "error",
+            row: i + 1,
+            message:
+              "Validation failed for row " +
+              (i + 1) +
+              ": Missing required fields or invalid quantity",
+          })}\n\n`,
+        );
 
-            // Send progress update
-            res.write(`data: ${JSON.stringify({
-                type: 'progress',
-                total: totalRows,
-                current: i + 1,
-                percentage: Math.round(((i + 1) / totalRows) * 100),
-                message: `Processing ${product_name} (${barcode})...`,
-                barcode: barcode,
-                product_name: product_name
-            })}\n\n`);
+        continue;
+      }
 
-            // ---------- VALIDATION ----------
-            if (!barcode || !product_name || !warehouse || qty === null || qty === undefined || isNaN(qty)) {
-                failed.push({
-                    row: i + 1,
-                    reason: 'Missing or invalid required fields (barcode, product_name, warehouse required; qty must be a valid number)',
-                    data: rows[i]
-                });
-                
-                // Send error update
-                res.write(`data: ${JSON.stringify({
-                    type: 'error',
-                    row: i + 1,
-                    message: 'Validation failed for row ' + (i + 1) + ': Missing required fields or invalid quantity'
-                })}\n\n`);
-                
-                continue;
-            }
+      try {
+        await ensureDispatchWarehouse(warehouse);
 
-            const reference = `BULK_UPLOAD_${barcode}_${Date.now()}`;
+        const reference = `BULK_UPLOAD_${barcode}_${Date.now()}`;
 
-            try {
-                // ---------- LEDGER INSERT ----------
-                const ledgerId = await new Promise((resolve, reject) => {
-                    const sql = `INSERT INTO inventory_ledger_base (
+        // ---------- LEDGER INSERT ----------
+        const ledgerId = await new Promise((resolve, reject) => {
+          const sql = `INSERT INTO inventory_ledger_base (
                         event_time,
                         movement_type,
                         barcode,
@@ -224,27 +302,31 @@ exports.bulkUploadWithProgress = async (req, res) => {
                         direction,
                         reference
                     ) VALUES (NOW(), 'BULK_UPLOAD', ?, ?, ?, ?, 'IN', ?)`;
-                    
-                    db.query(sql, [barcode, product_name, warehouse, qty, reference], (err, result) => {
-                        err ? reject(err) : resolve(result.insertId);
-                    });
-                });
 
-                // ---------- STOCK BATCH INSERT ----------
-                // Check if this is the first time this product is being added to this warehouse
-                const existingBatchCheck = await new Promise((resolve, reject) => {
-                    const checkSql = `SELECT COUNT(*) as count FROM stock_batches 
+          db.query(
+            sql,
+            [barcode, product_name, warehouse, qty, reference],
+            (err, result) => {
+              err ? reject(err) : resolve(result.insertId);
+            },
+          );
+        });
+
+        // ---------- STOCK BATCH INSERT ----------
+        // Check if this is the first time this product is being added to this warehouse
+        const existingBatchCheck = await new Promise((resolve, reject) => {
+          const checkSql = `SELECT COUNT(*) as count FROM stock_batches
                                      WHERE barcode = ? AND warehouse = ?`;
-                    db.query(checkSql, [barcode, warehouse], (err, result) => {
-                        err ? reject(err) : resolve(result[0].count > 0);
-                    });
-                });
+          db.query(checkSql, [barcode, warehouse], (err, result) => {
+            err ? reject(err) : resolve(result[0].count > 0);
+          });
+        });
 
-                // Determine source type: OPENING for first entry, BULK_UPLOAD for subsequent
-                const sourceType = existingBatchCheck ? 'BULK_UPLOAD' : 'OPENING';
+        // Determine source type: OPENING for first entry, BULK_UPLOAD for subsequent
+        const sourceType = existingBatchCheck ? "BULK_UPLOAD" : "OPENING";
 
-                await new Promise((resolve, reject) => {
-                    const sql = `INSERT INTO stock_batches (
+        await new Promise((resolve, reject) => {
+          const sql = `INSERT INTO stock_batches (
                         product_name,
                         barcode,
                         variant,
@@ -256,148 +338,197 @@ exports.bulkUploadWithProgress = async (req, res) => {
                         unit_cost,
                         status
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`;
-                    
-                    db.query(sql, [
-                        product_name,
-                        barcode,
-                        variant,
-                        warehouse,
-                        sourceType,  // ✅ DYNAMIC: OPENING for first, BULK_UPLOAD for subsequent
-                        ledgerId,
-                        qty,
-                        qty,
-                        unit_cost
-                    ], err => err ? reject(err) : resolve());
-                });
 
-                success.push({
-                    row: i + 1,
-                    barcode,
-                    warehouse,
-                    qty,
-                    sourceType  // Include source type in response for debugging
-                });
-
-                // Send success update
-                res.write(`data: ${JSON.stringify({
-                    type: 'success',
-                    row: i + 1,
-                    message: `Successfully inserted ${product_name} (${sourceType})`
-                })}\n\n`);
-
-            } catch (rowError) {
-                failed.push({
-                    row: i + 1,
-                    reason: rowError.message,
-                    data: rows[i]
-                });
-
-                // Send error update
-                res.write(`data: ${JSON.stringify({
-                    type: 'error',
-                    row: i + 1,
-                    message: `Failed to insert row ${i + 1}: ${rowError.message}`
-                })}\n\n`);
-            }
-
-            // Add small delay to make progress visible for demo
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-
-        // Commit transaction
-        await new Promise((resolve, reject) => {
-            db.commit(err => err ? reject(err) : resolve());
+          db.query(
+            sql,
+            [
+              product_name,
+              barcode,
+              variant,
+              warehouse,
+              sourceType, // ✅ DYNAMIC: OPENING for first, BULK_UPLOAD for subsequent
+              ledgerId,
+              qty,
+              qty,
+              unit_cost,
+            ],
+            (err) => (err ? reject(err) : resolve()),
+          );
         });
 
-        // Send completion
-        res.write(`data: ${JSON.stringify({
-            type: 'complete',
-            total: totalRows,
-            inserted: success.length,
-            failed: failed.length,
-            successRows: success,
-            failedRows: failed,
-            message: `Upload complete! ${success.length} inserted, ${failed.length} failed`
-        })}\n\n`);
+        success.push({
+          row: i + 1,
+          barcode,
+          warehouse,
+          qty,
+          sourceType, // Include source type in response for debugging
+        });
 
-    } catch (error) {
-        // Rollback transaction on error
-        await new Promise(resolve => db.rollback(() => resolve()));
-        
-        // Send error
-        res.write(`data: ${JSON.stringify({
-            type: 'error',
-            message: 'Bulk upload failed: ' + error.message
-        })}\n\n`);
+        // Send success update
+        res.write(
+          `data: ${JSON.stringify({
+            type: "success",
+            row: i + 1,
+            message: `Successfully inserted ${product_name} (${sourceType})`,
+          })}\n\n`,
+        );
+      } catch (rowError) {
+        failed.push({
+          row: i + 1,
+          reason: rowError.message,
+          data: rows[i],
+        });
+
+        // Send error update
+        res.write(
+          `data: ${JSON.stringify({
+            type: "error",
+            row: i + 1,
+            message: `Failed to insert row ${i + 1}: ${rowError.message}`,
+          })}\n\n`,
+        );
+      }
+
+      // Add small delay to make progress visible for demo
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
 
-    res.end();
+    // Commit transaction
+    await new Promise((resolve, reject) => {
+      db.commit((err) => (err ? reject(err) : resolve()));
+    });
+
+    // Send completion
+    res.write(
+      `data: ${JSON.stringify({
+        type: "complete",
+        total: totalRows,
+        inserted: success.length,
+        failed: failed.length,
+        successRows: success,
+        failedRows: failed,
+        message: `Upload complete! ${success.length} inserted, ${failed.length} failed`,
+      })}\n\n`,
+    );
+  } catch (error) {
+    // Rollback transaction on error
+    await new Promise((resolve) => db.rollback(() => resolve()));
+
+    // Send error
+    res.write(
+      `data: ${JSON.stringify({
+        type: "error",
+        message: "Bulk upload failed: " + error.message,
+      })}\n\n`,
+    );
+  }
+
+  res.end();
 };
 
 // Get warehouses for dropdown
 exports.getWarehouses = async (req, res) => {
-    try {
-        const sql = 'SELECT w_id, warehouse_code, Warehouse_name FROM dispatch_warehouse ORDER BY Warehouse_name';
-        
-        db.query(sql, (err, results) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to fetch warehouses',
-                    error: err.message
-                });
-            }
+  try {
+    const sql = `
+            SELECT
+                w.id,
+                w.code AS warehouse_code,
+                w.name AS Warehouse_name,
+                w.location,
+                w.address,
+                w.city,
+                w.state,
+                w.country,
+                w.pincode,
+                w.phone,
+                w.email,
+                w.manager_name,
+                'warehouses' AS source
+            FROM warehouses w
+            WHERE w.is_active = TRUE
 
-            res.json({
-                success: true,
-                warehouses: results
-            });
+            UNION
+
+            SELECT
+                dw.w_id AS id,
+                dw.warehouse_code,
+                dw.Warehouse_name,
+                NULL AS location,
+                dw.address,
+                NULL AS city,
+                NULL AS state,
+                NULL AS country,
+                NULL AS pincode,
+                NULL AS phone,
+                NULL AS email,
+                NULL AS manager_name,
+                'dispatch_warehouse' AS source
+            FROM dispatch_warehouse dw
+            WHERE dw.warehouse_code NOT IN (
+                SELECT code FROM warehouses WHERE code IS NOT NULL AND is_active = TRUE
+            )
+            ORDER BY Warehouse_name
+        `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch warehouses",
+          error: err.message,
         });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch warehouses',
-            error: error.message
-        });
-    }
+      }
+
+      res.json({
+        success: true,
+        warehouses: results,
+      });
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch warehouses",
+      error: error.message,
+    });
+  }
 };
 
 // Get bulk upload history/logs
 exports.getBulkUploadHistory = async (req, res) => {
-    try {
-        const sql = `
-            SELECT 
+  try {
+    const sql = `
+            SELECT
                 reference,
                 COUNT(*) as total_items,
                 SUM(qty) as total_qty,
                 MIN(event_time) as upload_time,
                 location_code as warehouse
-            FROM inventory_ledger_base 
-            WHERE movement_type = 'BULK_UPLOAD' 
+            FROM inventory_ledger_base
+            WHERE movement_type = 'BULK_UPLOAD'
             GROUP BY reference, location_code
             ORDER BY upload_time DESC
             LIMIT 50
         `;
-        
-        db.query(sql, (err, results) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to fetch upload history',
-                    error: err.message
-                });
-            }
 
-            res.json({
-                success: true,
-                history: results
-            });
+    db.query(sql, (err, results) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch upload history",
+          error: err.message,
         });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch upload history',
-            error: error.message
-        });
-    }
+      }
+
+      res.json({
+        success: true,
+        history: results,
+      });
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch upload history",
+      error: error.message,
+    });
+  }
 };
