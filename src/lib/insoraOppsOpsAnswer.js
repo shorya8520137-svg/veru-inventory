@@ -122,7 +122,8 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
       .find((m) => m?.role === "assistant");
     if (lastAssistant?.content) {
       for (const cat of categoryNames) {
-        const catRegex = new RegExp(`category:\\s*${cat}`, 'i');
+        // Handle markdown formatting: "**Category:** Clothing" or "Category: Clothing"
+        const catRegex = new RegExp(`\\*?\\*?category\\*?\\*?:\\s*\\*?\\*?${cat}\\*?\\*?`, 'i');
         if (catRegex.test(lastAssistant.content)) {
           const prods = await apiGet(`/api/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
           if (!prods.error && prods.data) {

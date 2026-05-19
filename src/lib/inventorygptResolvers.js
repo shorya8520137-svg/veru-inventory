@@ -157,7 +157,8 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       .find((m) => m?.role === "assistant");
     if (lastAssistant?.content) {
       for (const cat of categoryNames) {
-        const catRegex = new RegExp(`category:\\s*${cat}`, 'i');
+        // Handle markdown formatting: "**Category:** Clothing" or "Category: Clothing"
+        const catRegex = new RegExp(`\\*?\\*?category\\*?\\*?:\\s*\\*?\\*?${cat}\\*?\\*?`, 'i');
         if (catRegex.test(lastAssistant.content)) {
           return { type: "category_products", category: cat, wantsExport };
         }
@@ -175,6 +176,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
         }
       }
     }
+    // If we can't find the category in history, still don't fall through to product_category lookup
+    // Return null so the LLM can handle it with context
+    return null;
   }
 
   // Global/list intents must be checked before SKU/product intents.
@@ -197,7 +201,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Must be checked BEFORE generic category listing
   // ONLY match when asking about a specific product's category
   if (/categor/.test(lower)) {
-    const isProductCategoryQuery = /belong|which.*categor|what.*categor|this.*categor|that.*categor/.test(lower);
+    // IMPORTANT: "this category/that category" in product requests is NOT a product category query
+    const isFollowUpCategoryReference = /this category|that category|same category|of this|of that/.test(lower);
+    const isProductCategoryQuery = !isFollowUpCategoryReference && /belong|which.*categor|what.*categor/.test(lower);
     const isShowAllProducts = /^(show|list|get|display|view|all)\s+(the\s+)?(all\s+)?product/.test(lower);
     
     if (isProductCategoryQuery && !isShowAllProducts) {
