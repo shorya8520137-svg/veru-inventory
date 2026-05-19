@@ -26,7 +26,18 @@ function extractWarehouse(q) {
 }
 
 function extractBarcode(q) {
-  const m = String(q).match(/\b(\d{4,16})\b/);
+  const raw = String(q || "");
+  
+  // First try alphanumeric SKU patterns like FG-082-5KG, ABC-123
+  const alphaSkuMatch = raw.match(/\b([A-Za-z]{1,5}[-_]?\d{1,6}[-_][A-Za-z0-9]{1,6}[-_]?\d{0,4}[A-Za-z0-9]{0,3})\b/);
+  if (alphaSkuMatch) {
+    const lower = raw.toLowerCase();
+    const looksLikeProductQuestion = /sku|barcode|product|catalog|category|item|name|price|stock|show|detail/.test(lower);
+    return looksLikeProductQuestion ? alphaSkuMatch[1] : null;
+  }
+  
+  // Then try pure numeric barcodes
+  const m = raw.match(/\b(\d{4,16})\b/);
   return m ? m[1] : null;
 }
 
@@ -214,6 +225,133 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
       answer: `I found the categories for you. Here they are:`,
       triggerVisual: true
     };
+  }
+
+  // --- CATEGORY PRODUCT LISTING ---
+  const categoryProductMatch = lower.match(/(?:show|list|get|find|all)?\s*(?:the\s*)?(?:product|item)s?\s*(?:of|in|from|for|under|belonging to)?\s*([\w\s-]+)/);
+  if (/product|item/.test(lower) && !/sku|barcode|single|specific|this product/.test(lower)) {
+    const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+    for (const cat of categoryNames) {
+      if (lower.includes(cat)) {
+        const prods = await apiGet(`/api/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
+        if (!prods.error && prods.data) {
+          const prodList = prods.data?.data?.products || prods.data?.products || (Array.isArray(prods.data?.data) ? prods.data.data : []);
+          if (prodList.length > 0) {
+            const lines = prodList.slice(0, 5).map((p, i) => {
+              const name = p.product_name || p.name || 'Product';
+              const sku = p.barcode || p.sku || '';
+              const price = p.price || p.selling_price || p.mrp;
+              const stock = p.total_stock || p.stock || 0;
+              return `${i + 1}. **${name}** (\`${sku}\`)${price ? ` · ${formatInr(price)}` : ''}${stock ? ` · ${stock} units` : ''}`;
+            });
+            const more = prodList.length > 5 ? `\n\n📋 **${prodList.length - 5} more products available** — [Read More]` : '';
+            return {
+              answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${prodList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`
+            };
+          }
+        }
+        // Try website products
+        const webProds = await apiGet(`/api/website/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
+        if (!webProds.error && webProds.data) {
+          const webList = webProds.data?.data || webProds.data?.products || (Array.isArray(webProds.data) ? webProds.data : []);
+          if (webList.length > 0) {
+            const lines = webList.slice(0, 5).map((p, i) => {
+              const name = p.product_name || p.name || 'Product';
+              const sku = p.barcode || p.sku || '';
+              const price = p.price || p.offer_price || p.final_price;
+              const stock = p.stock_quantity ?? p.stock ?? 0;
+              return `${i + 1}. **${name}** (\`${sku}\`)${price ? ` · ${formatInr(price)}` : ''}${stock ? ` · ${stock} units` : ''}`;
+            });
+            const more = webList.length > 5 ? `\n\n📋 **${webList.length - 5} more products available** — [Read More]` : '';
+            return {
+              answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${webList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`
+            };
+          }
+        }
+        return { answer: `No products found in the **${cat}** category.` };
+      }
+    }
+  }
+
+  // --- PRICE FILTER ---
+  const priceMatch = lower.match(/(?:less than|below|under|cheaper than|max|maximum)\s*₹?\s*(\d+)/) || lower.match(/(?:more than|above|over|greater than|higher than|min|minimum)\s*₹?\s*(\d+)/);
+  if (priceMatch && /product|item/.test(lower)) {
+    const isLessThan = /less than|below|under|cheaper than|max|maximum/.test(lower);
+    const priceValue = parseInt(priceMatch[1], 10);
+    const prods = await apiGet(`/api/products?limit=100`, authToken);
+    const webProds = await apiGet(`/api/website/products?limit=100`, authToken);
+    
+    const allProducts = [];
+    const seen = new Set();
+    
+    if (!prods.error && prods.data) {
+      const prodList = prods.data?.data?.products || prods.data?.products || (Array.isArray(prods.data?.data) ? prods.data.data : []);
+      for (const p of prodList) {
+        const price = Number(p.price || p.selling_price || p.mrp);
+        if (Number.isFinite(price) && ((isLessThan && price < priceValue) || (!isLessThan && price > priceValue))) {
+          const key = p.barcode || p.sku;
+          if (!seen.has(key)) {
+            seen.add(key);
+            allProducts.push({ ...p, source: 'dispatch' });
+          }
+        }
+      }
+    }
+    
+    if (!webProds.error && webProds.data) {
+      const webList = webProds.data?.data || webProds.data?.products || (Array.isArray(webProds.data) ? webProds.data : []);
+      for (const p of webList) {
+        const price = Number(p.price || p.offer_price || p.final_price);
+        if (Number.isFinite(price) && ((isLessThan && price < priceValue) || (!isLessThan && price > priceValue))) {
+          const key = p.barcode || p.sku;
+          if (!seen.has(key)) {
+            seen.add(key);
+            allProducts.push({ ...p, source: 'website' });
+          }
+        }
+      }
+    }
+    
+    if (allProducts.length > 0) {
+      const label = isLessThan ? `under ₹${priceValue}` : `above ₹${priceValue}`;
+      const lines = allProducts.slice(0, 5).map((p, i) => {
+        const name = p.product_name || p.name || 'Product';
+        const sku = p.barcode || p.sku || '';
+        const price = p.price || p.selling_price || p.offer_price || p.mrp;
+        const stock = p.total_stock || p.stock || p.stock_quantity ?? 0;
+        return `${i + 1}. **${name}** (\`${sku}\`) · ${formatInr(price)}${stock ? ` · ${stock} units` : ''}`;
+      });
+      const more = allProducts.length > 5 ? `\n\n📋 **${allProducts.length - 5} more products available** — [Read More]` : '';
+      return {
+        answer: `💰 **Products ${label}**\n\nTotal products found: **${allProducts.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`
+      };
+    }
+    return { answer: `No products found ${isLessThan ? `under` : `above`} ₹${priceValue}.` };
+  }
+
+  // --- WAREHOUSE PRODUCT LISTING ---
+  const whProductMatch = lower.match(/(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|wh|store)/);
+  if (whProductMatch && /product|item|stock|inventory/.test(lower)) {
+    const whName = whProductMatch[1].trim();
+    const whCode = whName.replace(/\s+/g, '_').toUpperCase();
+    const inv = await apiGet(`/api/inventory?warehouse=${encodeURIComponent(whCode)}&limit=20`, authToken);
+    if (!inv.error && inv.data) {
+      const invList = inv.data?.data?.inventory || inv.data?.inventory || (Array.isArray(inv.data?.data) ? inv.data.data : []);
+      if (invList.length > 0) {
+        const lines = invList.slice(0, 5).map((r, i) => {
+          const name = r.product || r.product_name || r.name || 'Product';
+          const sku = r.code || r.barcode || r.sku || '';
+          const stock = r.stock ?? r.qty_available ?? 0;
+          return `${i + 1}. **${name}** (\`${sku}\`) · ${stock} units`;
+        });
+        const more = invList.length > 5 ? `\n\n📋 **${invList.length - 5} more products available** — [Read More]` : '';
+        return {
+          answer: `🏬 **Products in ${whName} warehouse**\n\nTotal products found: **${invList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`
+        };
+      }
+      return { answer: `No products found in **${whName}** warehouse.` };
+    }
+    return { answer: `Could not fetch inventory for **${whName}** warehouse.` };
   }
 
   // --- WEBSITE PRODUCTS ---

@@ -58,11 +58,24 @@ function formatInr(value) {
 
 export function extractInventoryGptBarcode(text) {
   const raw = String(text || "");
+
+  // First try alphanumeric SKU patterns like FG-082-5KG, ABC-123, SKU-001
+  const alphaSkuMatch = raw.match(/\b([A-Za-z]{1,5}[-_]?\d{1,6}[-_][A-Za-z0-9]{1,6}[-_]?\d{0,4}[A-Za-z0-9]{0,3})\b/);
+  if (alphaSkuMatch) {
+    const lower = raw.toLowerCase();
+    const looksLikeProductQuestion =
+      /sku|barcode|product|catalog|category|item|name|price|stock|journey|timeline|ledger|order|audit|description|show|detail/.test(
+        lower,
+      );
+    return looksLikeProductQuestion ? alphaSkuMatch[1] : null;
+  }
+
+  // Then try pure numeric barcodes (4-16 digits)
   const m = raw.match(/\b(\d{4,16})\b/);
   if (!m) return null;
   const lower = raw.toLowerCase();
   const looksLikeProductQuestion =
-    /sku|barcode|product|catalog|category|item|name|price|stock|journey|timeline|ledger|order|audit|description/.test(
+    /sku|barcode|product|catalog|category|item|name|price|stock|journey|timeline|ledger|order|audit|description|show|detail/.test(
       lower,
     ) || raw.replace(/\D/g, "") === m[1];
   return looksLikeProductQuestion ? m[1] : null;
@@ -122,7 +135,60 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
 
-  if (/categor/.test(lower)) {
+  // Category-based product listing: "grocery show me all the product", "show all products in electronics"
+  const categoryProductMatch = lower.match(
+    /(?:show|list|get|find|display|see|all)?\s*(?:the\s*)?(?:product|item)s?\s*(?:of|in|from|for|under|belonging to|category)?\s*([\w\s-]+)/
+  ) || lower.match(
+    /([\w\s-]+)\s*(?:category|cat)?\s*(?:show|list|get|find|display|see|all)?\s*(?:the\s*)?(?:product|item)s?/
+  );
+  if (
+    (/product|item/.test(lower)) &&
+    !/sku|barcode|single|specific|this product|this item|one product/.test(lower)
+  ) {
+    // Check if a category name is mentioned
+    const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+    for (const cat of categoryNames) {
+      if (lower.includes(cat)) {
+        return { type: "category_products", category: cat, wantsExport };
+      }
+    }
+  }
+
+  // Price-based product filtering: "products less than 300", "items above 500"
+  const priceFilterMatch = lower.match(
+    /(?:product|item|show|all).*(?:less than|below|under|cheaper than|max|maximum|upto|up to)\s*₹?\s*(\d+)/
+  ) || lower.match(
+    /(?:product|item|show|all).*(?:more than|above|over|greater than|higher than|min|minimum)\s*₹?\s*(\d+)/
+  ) || lower.match(
+    /(?:less than|below|under|cheaper than|max|maximum)\s*₹?\s*(\d+).*(?:product|item)/
+  ) || lower.match(
+    /(?:more than|above|over|greater than|higher than|min|minimum)\s*₹?\s*(\d+).*(?:product|item)/
+  );
+  if (priceFilterMatch) {
+    const isLessThan = /less than|below|under|cheaper than|max|maximum|upto|up to/.test(lower);
+    return {
+      type: "price_filter",
+      priceOperator: isLessThan ? "<" : ">",
+      priceValue: parseInt(priceFilterMatch[1], 10),
+      wantsExport,
+    };
+  }
+
+  // Warehouse-based product listing: "show all products in gandu nagar warehouse"
+  const warehouseProductMatch = lower.match(
+    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|wh|store)/
+  ) || lower.match(
+    /(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|wh|store).*(?:product|item|stock|inventory)/
+  );
+  if (warehouseProductMatch && /product|item|stock|inventory/.test(lower)) {
+    return {
+      type: "warehouse_products",
+      warehouseName: warehouseProductMatch[1].trim(),
+      wantsExport,
+    };
+  }
+
+  if (/categor/.test(lower) && !/product|item|show.*product/.test(lower)) {
     return {
       type: /website|web site|websites|website product|site/.test(lower)
         ? "website_categories"
@@ -629,6 +695,102 @@ export async function resolveInventoryGptCategories(token, website = false) {
   return { rows: [], error: null };
 }
 
+export async function resolveInventoryGptCategoryProducts(token, category, limit = 20) {
+  const endpoints = [
+    { source: "dispatch_product", path: `/api/products?category=${encodeURIComponent(category)}&limit=${limit}` },
+    { source: "website_products", path: `/api/website/products?category=${encodeURIComponent(category)}&limit=${limit}` },
+  ];
+
+  const merged = [];
+  const seen = new Set();
+
+  for (const endpoint of endpoints) {
+    const result = await apiGet(endpoint.path, token);
+    if (result.error) continue;
+    const rows = rowsFromPayload(result.data);
+    for (const row of rows) {
+      const normalized = normalizeProduct(row, endpoint.source);
+      const key = normalized.sku || normalized.barcode || normalized.product_name;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(normalized);
+      }
+    }
+  }
+
+  return { rows: merged, total: merged.length, error: merged.length ? null : "No products found" };
+}
+
+export async function resolveInventoryGptPriceFilter(token, operator, priceValue, limit = 20) {
+  const endpoints = [
+    { source: "dispatch_product", path: `/api/products?limit=100` },
+    { source: "website_products", path: `/api/website/products?limit=100` },
+  ];
+
+  const merged = [];
+  const seen = new Set();
+
+  for (const endpoint of endpoints) {
+    const result = await apiGet(endpoint.path, token);
+    if (result.error) continue;
+    const rows = rowsFromPayload(result.data);
+    for (const row of rows) {
+      const normalized = normalizeProduct(row, endpoint.source);
+      const price = Number(normalized.price);
+      if (!Number.isFinite(price)) continue;
+      if ((operator === "<" && price < priceValue) || (operator === ">" && price > priceValue)) {
+        const key = normalized.sku || normalized.barcode;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(normalized);
+        }
+      }
+    }
+  }
+
+  return { rows: merged.slice(0, limit), total: merged.length, error: merged.length ? null : "No products found" };
+}
+
+export async function resolveInventoryGptWarehouseProducts(token, warehouseName, limit = 20) {
+  // First try to find the warehouse code by name
+  const locations = await resolveInventoryGptLocations(token, "warehouses");
+  let warehouseCode = null;
+
+  if (locations.rows && locations.rows.length) {
+    const lowerName = warehouseName.toLowerCase();
+    const found = locations.rows.find(
+      (loc) =>
+        loc.name.toLowerCase().includes(lowerName) ||
+        loc.code.toLowerCase().includes(lowerName) ||
+        loc.location.toLowerCase().includes(lowerName)
+    );
+    if (found) warehouseCode = found.code;
+  }
+
+  if (!warehouseCode) {
+    // Try using the name directly as code
+    warehouseCode = warehouseName.replace(/\s+/g, "_").toUpperCase();
+  }
+
+  // Get inventory for this warehouse
+  const invResult = await apiGet(`/api/inventory?warehouse=${encodeURIComponent(warehouseCode)}&limit=${limit}`, token);
+  if (invResult.error) {
+    return { rows: [], total: 0, error: invResult.error };
+  }
+
+  const invRows = rowsFromPayload(invResult.data);
+  const products = invRows.map((row) => ({
+    product_name: row.product || row.product_name || row.name || "Product",
+    sku: row.code || row.barcode || row.sku || "",
+    stock: Number(row.stock ?? row.qty_available ?? 0),
+    price: row.price ?? row.mrp ?? null,
+    warehouse: row.warehouse || warehouseCode,
+    source: "inventory",
+  }));
+
+  return { rows: products, total: products.length, error: products.length ? null : null };
+}
+
 function normalizeLocation(row, type) {
   return {
     id: row.id ?? row.w_id ?? "",
@@ -778,7 +940,7 @@ function buildCategoriesAnswer(categoriesResult, website, wantsExport) {
     });
   }
   lines.push("");
-  lines.push("You can ask me to filter products by any category name.");
+  lines.push("You can ask me to show products from any category, like **show all products in grocery**.");
   return {
     answer: lines.join("\n"),
     exportTsv: wantsExport
@@ -787,6 +949,120 @@ function buildCategoriesAnswer(categoriesResult, website, wantsExport) {
     exportFilename: wantsExport
       ? `inventorygpt-${website ? "website" : "product"}-categories.tsv`
       : null,
+  };
+}
+
+function buildCategoryProductsAnswer(category, result, wantsExport) {
+  const rows = result.rows || [];
+  const lines = [`📦 **Products in "${category}" category**`, ""];
+  lines.push(`Total products found: **${result.total || rows.length}**`);
+  lines.push("");
+
+  if (!rows.length) {
+    lines.push(`No products found in the **${category}** category.`);
+    lines.push("");
+    lines.push("Would you like me to check another category or show all categories?");
+  } else {
+    const visible = rows.slice(0, 5);
+    visible.forEach((p, index) => {
+      const priceStr = p.price != null ? ` · ${formatInr(p.price)}` : "";
+      const stockStr = p.stock != null ? ` · ${p.stock} units` : "";
+      lines.push(
+        `${index + 1}. **${p.product_name}** (\`${p.sku || p.barcode}\`)${priceStr}${stockStr}`,
+      );
+    });
+
+    if (rows.length > 5) {
+      lines.push("");
+      lines.push(`📋 **${rows.length - 5} more products available** — [Read More]`);
+    }
+
+    lines.push("");
+    lines.push("Would you like this data exported as an Excel sheet?");
+  }
+
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
+      : null,
+    exportFilename: wantsExport ? `inventorygpt-category-${category}.tsv` : null,
+  };
+}
+
+function buildPriceFilterAnswer(operator, priceValue, result, wantsExport) {
+  const rows = result.rows || [];
+  const label = operator === "<" ? `under ₹${priceValue}` : `above ₹${priceValue}`;
+  const lines = [`💰 **Products ${label}**`, ""];
+  lines.push(`Total products found: **${result.total || rows.length}**`);
+  lines.push("");
+
+  if (!rows.length) {
+    lines.push(`No products found ${label}.`);
+    lines.push("");
+    lines.push("Would you like me to try a different price range?");
+  } else {
+    const visible = rows.slice(0, 5);
+    visible.forEach((p, index) => {
+      const priceStr = p.price != null ? ` · ${formatInr(p.price)}` : "";
+      const stockStr = p.stock != null ? ` · ${p.stock} units` : "";
+      lines.push(
+        `${index + 1}. **${p.product_name}** (\`${p.sku || p.barcode}\`)${priceStr}${stockStr}`,
+      );
+    });
+
+    if (rows.length > 5) {
+      lines.push("");
+      lines.push(`📋 **${rows.length - 5} more products available** — [Read More]`);
+    }
+
+    lines.push("");
+    lines.push("Would you like this data exported as an Excel sheet?");
+  }
+
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
+      : null,
+    exportFilename: wantsExport ? `inventorygpt-price-${operator}${priceValue}.tsv` : null,
+  };
+}
+
+function buildWarehouseProductsAnswer(warehouseName, result, wantsExport) {
+  const rows = result.rows || [];
+  const lines = [`🏬 **Products in ${warehouseName} warehouse**`, ""];
+  lines.push(`Total products found: **${result.total || rows.length}**`);
+  lines.push("");
+
+  if (!rows.length) {
+    lines.push(`No products found in **${warehouseName}** warehouse.`);
+    lines.push("");
+    lines.push("Would you like me to check another warehouse?");
+  } else {
+    const visible = rows.slice(0, 5);
+    visible.forEach((p, index) => {
+      const priceStr = p.price != null ? ` · ${formatInr(p.price)}` : "";
+      lines.push(
+        `${index + 1}. **${p.product_name}** (\`${p.sku || p.barcode}\`) · ${p.stock} units${priceStr}`,
+      );
+    });
+
+    if (rows.length > 5) {
+      lines.push("");
+      lines.push(`📋 **${rows.length - 5} more products available** — [Read More]`);
+    }
+
+    lines.push("");
+    lines.push("Would you like this data exported as an Excel sheet?");
+  }
+
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["sku", "product_name", "warehouse", "stock", "price"])
+      : null,
+    exportFilename: wantsExport ? `inventorygpt-warehouse-${warehouseName}.tsv` : null,
   };
 }
 
@@ -1060,6 +1336,58 @@ export async function tryInventoryGptDeterministicAnswer({
     };
   }
 
+  // Category-based product listing
+  if (intent.type === "category_products") {
+    const categoryProducts = await resolveInventoryGptCategoryProducts(
+      authToken,
+      intent.category,
+    );
+    return {
+      ...buildCategoryProductsAnswer(
+        intent.category,
+        categoryProducts,
+        intent.wantsExport,
+      ),
+      render: "text",
+    };
+  }
+
+  // Price-based product filtering
+  if (intent.type === "price_filter") {
+    const priceResult = await resolveInventoryGptPriceFilter(
+      authToken,
+      intent.priceOperator,
+      intent.priceValue,
+    );
+    return {
+      ...buildPriceFilterAnswer(
+        intent.priceOperator,
+        intent.priceValue,
+        priceResult,
+        intent.wantsExport,
+      ),
+      render: "text",
+    };
+  }
+
+  // Warehouse-based product listing
+  if (intent.type === "warehouse_products") {
+    const warehouseResult = await resolveInventoryGptWarehouseProducts(
+      authToken,
+      intent.warehouseName,
+    );
+    return {
+      ...buildWarehouseProductsAnswer(
+        intent.warehouseName,
+        warehouseResult,
+        intent.wantsExport,
+      ),
+      render: "text",
+    };
+  }
+
+  // Only ask for SKU for single-product operations (product, stock, timeline)
+  // Do NOT ask for SKU for bulk/list operations
   if (["product", "stock", "timeline"].includes(intent.type) && !barcode) {
     return {
       answer:
