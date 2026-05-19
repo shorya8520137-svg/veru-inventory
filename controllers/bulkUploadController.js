@@ -1,17 +1,48 @@
 const db = require("../db/connection");
 
-function queryAsync(sql, params = []) {
+function queryAsync(sql, params = [], connection = db) {
   return new Promise((resolve, reject) => {
-    db.query(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+    connection.query(sql, params, (err, rows) =>
+      err ? reject(err) : resolve(rows),
+    );
   });
 }
 
-async function ensureDispatchWarehouse(warehouseCode) {
+function getConnectionAsync() {
+  return new Promise((resolve, reject) => {
+    db.getConnection((err, connection) =>
+      err ? reject(err) : resolve(connection),
+    );
+  });
+}
+
+function beginTransactionAsync(connection) {
+  return new Promise((resolve, reject) => {
+    connection.beginTransaction((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function commitAsync(connection) {
+  return new Promise((resolve, reject) => {
+    connection.commit((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function rollbackAsync(connection) {
+  return new Promise((resolve) => {
+    if (!connection || typeof connection.rollback !== "function")
+      return resolve();
+    connection.rollback(() => resolve());
+  });
+}
+
+async function ensureDispatchWarehouse(warehouseCode, connection = db) {
   if (!warehouseCode) return;
 
   const existing = await queryAsync(
     "SELECT warehouse_code FROM dispatch_warehouse WHERE warehouse_code = ? LIMIT 1",
     [warehouseCode],
+    connection,
   );
   if (existing.length) return;
 
@@ -21,6 +52,7 @@ async function ensureDispatchWarehouse(warehouseCode) {
          WHERE code = ? AND is_active = TRUE
          LIMIT 1`,
     [warehouseCode],
+    connection,
   );
 
   if (!source.length) {
@@ -39,6 +71,7 @@ async function ensureDispatchWarehouse(warehouseCode) {
          SELECT COALESCE(MAX(w_id), 0) + 1, ?, ?, ?
          FROM dispatch_warehouse`,
     [warehouse.code, warehouse.name || warehouse.code, fullAddress || null],
+    connection,
   );
 }
 
@@ -54,12 +87,11 @@ exports.bulkUpload = async (req, res) => {
 
   const success = [];
   const failed = [];
+  let connection;
 
   try {
-    // Begin transaction
-    await new Promise((resolve, reject) => {
-      db.beginTransaction((err) => (err ? reject(err) : resolve()));
-    });
+    connection = await getConnectionAsync();
+    await beginTransactionAsync(connection);
 
     for (let i = 0; i < rows.length; i++) {
       const {
@@ -225,10 +257,18 @@ exports.bulkUploadWithProgress = async (req, res) => {
     })}\n\n`,
   );
 
+  // Get a connection from the pool for transaction
+  let connection;
+  
   try {
+    // Get connection from pool
+    connection = await new Promise((resolve, reject) => {
+      db.getConnection((err, conn) => (err ? reject(err) : resolve(conn)));
+    });
+
     // Begin transaction
     await new Promise((resolve, reject) => {
-      db.beginTransaction((err) => (err ? reject(err) : resolve()));
+      connection.beginTransaction((err) => (err ? reject(err) : resolve()));
     });
 
     for (let i = 0; i < rows.length; i++) {
@@ -303,7 +343,7 @@ exports.bulkUploadWithProgress = async (req, res) => {
                         reference
                     ) VALUES (NOW(), 'BULK_UPLOAD', ?, ?, ?, ?, 'IN', ?)`;
 
-          db.query(
+          connection.query(
             sql,
             [barcode, product_name, warehouse, qty, reference],
             (err, result) => {
@@ -317,7 +357,7 @@ exports.bulkUploadWithProgress = async (req, res) => {
         const existingBatchCheck = await new Promise((resolve, reject) => {
           const checkSql = `SELECT COUNT(*) as count FROM stock_batches
                                      WHERE barcode = ? AND warehouse = ?`;
-          db.query(checkSql, [barcode, warehouse], (err, result) => {
+          connection.query(checkSql, [barcode, warehouse], (err, result) => {
             err ? reject(err) : resolve(result[0].count > 0);
           });
         });
@@ -339,7 +379,7 @@ exports.bulkUploadWithProgress = async (req, res) => {
                         status
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`;
 
-          db.query(
+          connection.query(
             sql,
             [
               product_name,
@@ -395,8 +435,11 @@ exports.bulkUploadWithProgress = async (req, res) => {
 
     // Commit transaction
     await new Promise((resolve, reject) => {
-      db.commit((err) => (err ? reject(err) : resolve()));
+      connection.commit((err) => (err ? reject(err) : resolve()));
     });
+
+    // Release connection back to pool
+    connection.release();
 
     // Send completion
     res.write(
@@ -412,7 +455,10 @@ exports.bulkUploadWithProgress = async (req, res) => {
     );
   } catch (error) {
     // Rollback transaction on error
-    await new Promise((resolve) => db.rollback(() => resolve()));
+    if (connection) {
+      await new Promise((resolve) => connection.rollback(() => resolve()));
+      connection.release();
+    }
 
     // Send error
     res.write(
