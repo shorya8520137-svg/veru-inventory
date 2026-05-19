@@ -27,9 +27,11 @@ import {
   ChevronRight,
   ArrowRight,
   X,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import MarkdownBody from "./MarkdownBody";
+import * as XLSX from "xlsx";
 
 const STORAGE_KEY = "inventorygpt_chat_sessions_v1";
 const AGENT_NAME = "InsoraOpps";
@@ -795,6 +797,30 @@ function AssistantMessage({
     }
   }
 
+  function downloadExcel() {
+    if (!message.exportTsv) return;
+    try {
+      const tsv = message.exportTsv;
+      const rows = tsv.split("\n");
+      const headers = rows[0].split("\t");
+      const data = rows.slice(1).map((row) => {
+        const cells = row.split("\t");
+        const obj = {};
+        headers.forEach((h, i) => {
+          obj[h] = cells[i] || "";
+        });
+        return obj;
+      });
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inventory Data");
+      const filename = message.exportFilename || "inventorygpt-export.xlsx";
+      XLSX.writeFile(wb, filename.replace(".tsv", ".xlsx"));
+    } catch (error) {
+      console.error("Excel download failed:", error);
+    }
+  }
+
   return (
     <motion.div
       className="group flex gap-3"
@@ -883,6 +909,16 @@ function AssistantMessage({
                   )}
                   {copied ? "Copied" : "Copy"}
                 </button>
+                {message.exportTsv ? (
+                  <button
+                    type="button"
+                    onClick={downloadExcel}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-700"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Excel
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -898,17 +934,6 @@ function AssistantMessage({
                   <ThumbsUp className="h-3.5 w-3.5" />
                   Helpful
                 </button>
-                {message.exportTsv ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigator.clipboard.writeText(message.exportTsv)
-                    }
-                    className="text-xs text-slate-400 hover:text-slate-600"
-                  >
-                    Copy table
-                  </button>
-                ) : null}
               </div>
             ) : null}
           </>

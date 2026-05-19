@@ -160,12 +160,15 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
 
   // Product category lookup: "Aashirvaad Atta belong to which category"
   // Must be checked BEFORE generic category listing
-  if (/categor/.test(lower) && /belong|which|what|this|that|product|item|name/.test(lower)) {
-    // Check if there's a product name (not just "category" keyword)
-    const hasProductName = !/^(show|list|get|display|view|all)\s+(the\s+)?categor/.test(lower);
-    if (hasProductName) {
-      // Extract potential product name - everything before "belong" or "which" or "category"
-      const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what|category)/);
+  // ONLY match when asking about a specific product's category
+  if (/categor/.test(lower)) {
+    const isProductCategoryQuery = /belong|which.*categor|what.*categor.*product|this.*product.*categor|that.*product.*categor/.test(lower);
+    const isShowAllProducts = /^(show|list|get|display|view|all)\s+(the\s+)?(all\s+)?product/.test(lower);
+    const isCategoryProductListing = /product.*(of|in|from|for)\s+[\w\s]+categor|categor.*product/.test(lower) && !isProductCategoryQuery;
+    
+    if (isProductCategoryQuery && !isShowAllProducts) {
+      // Extract potential product name - everything before "belong" or "which"
+      const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
       if (productMatch) {
         return {
           type: "product_category",
