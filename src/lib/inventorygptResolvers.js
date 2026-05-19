@@ -1,25 +1,29 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.API_BASE ||
-  'https://api.giftgala.in';
+  "https://api.giftgala.in";
 
 function authHeaders(token) {
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+  return token
+    ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+    : { "Content-Type": "application/json" };
 }
 
 async function apiGet(path, token) {
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       headers: authHeaders(token),
-      cache: 'no-store'
+      cache: "no-store",
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      return { error: data?.message || data?.error || `HTTP ${response.status}` };
+      return {
+        error: data?.message || data?.error || `HTTP ${response.status}`,
+      };
     }
     return { data };
   } catch (error) {
-    return { error: error?.message || 'Network error' };
+    return { error: error?.message || "Network error" };
   }
 }
 
@@ -35,37 +39,38 @@ function rowsFromPayload(payload) {
   if (Array.isArray(payload.products)) return payload.products;
   if (Array.isArray(payload.orders)) return payload.orders;
   if (Array.isArray(payload.logs)) return payload.logs;
-  if (payload.data && typeof payload.data === 'object') return [payload.data];
+  if (payload.data && typeof payload.data === "object") return [payload.data];
   return [];
 }
 
 function formatInr(value) {
-  if (value == null || value === '') return null;
+  if (value == null || value === "") return null;
   const numeric = Number(value);
-  if (Number.isFinite(numeric)) return `₹${numeric.toLocaleString('en-IN')}`;
+  if (Number.isFinite(numeric)) return `₹${numeric.toLocaleString("en-IN")}`;
   return String(value);
 }
 
 export function extractInventoryGptBarcode(text) {
-  const raw = String(text || '');
+  const raw = String(text || "");
   const m = raw.match(/\b(\d{4,16})\b/);
   if (!m) return null;
   const lower = raw.toLowerCase();
   const looksLikeProductQuestion =
-    /sku|barcode|product|catalog|category|item|name|price|stock|journey|timeline|ledger|order|audit|description/.test(lower) ||
-    raw.replace(/\D/g, '') === m[1];
+    /sku|barcode|product|catalog|category|item|name|price|stock|journey|timeline|ledger|order|audit|description/.test(
+      lower,
+    ) || raw.replace(/\D/g, "") === m[1];
   return looksLikeProductQuestion ? m[1] : null;
 }
 
 export function extractInventoryGptWarehouse(text) {
-  const m = String(text || '').match(/\b([A-Z]{2,8}_WH)\b/i);
+  const m = String(text || "").match(/\b([A-Z]{2,8}_WH)\b/i);
   return m ? m[1].toUpperCase() : null;
 }
 
 export function extractLastInventoryGptBarcode(history) {
   if (!Array.isArray(history)) return null;
   for (const message of [...history].reverse()) {
-    const content = String(message?.content || '');
+    const content = String(message?.content || "");
     const skuMatch = content.match(/SKU:\s*`?(\d{4,16})`?/i);
     if (skuMatch) return skuMatch[1];
     const anyBarcode = content.match(/\b(\d{8,16})\b/);
@@ -74,49 +79,124 @@ export function extractLastInventoryGptBarcode(history) {
   return null;
 }
 
-export function detectInventoryGptIntent(question) {
-  const lower = String(question || '').toLowerCase();
-  const wantsExport = /excel|spreadsheet|csv|export|download|sheet|table/.test(lower);
+export function detectInventoryGptIntent(question, conversationHistory = []) {
+  const raw = String(question || "").trim();
+  const lower = raw.toLowerCase();
+  const wantsExport = /excel|spreadsheet|csv|export|download|sheet|table/.test(
+    lower,
+  );
 
-  if (/journey|timeline|ledger|movement|in and out|history/.test(lower)) return { type: 'timeline', wantsExport };
-  if (/audit|who changed|who update|who updated|activity|log/.test(lower)) return { type: 'audit', wantsExport };
-  if (/order|sale|revenue|regional|region/.test(lower)) return { type: 'orders', wantsExport };
-  if (/description|describe|details?|about this|about product/.test(lower)) return { type: 'product', field: 'description', wantsExport };
-  if (/price|cost|mrp|rate|amount/.test(lower)) return { type: 'product', field: 'price', wantsExport };
-  if (/stock|quantity|qty|available|availability|warehouse|store/.test(lower)) return { type: 'stock', wantsExport };
-  if (/category|belong|catalog|sku|barcode|product|item|name/.test(lower)) return { type: 'product', field: 'summary', wantsExport };
-  if (wantsExport) return { type: 'export_help', wantsExport };
+  // Follow-up like "?" should continue the last business context instead of failing.
+  if (/^[?.!]+$/.test(lower)) {
+    const previousUser = [...(conversationHistory || [])]
+      .reverse()
+      .find(
+        (m) =>
+          m?.role === "user" &&
+          !/^[?.!]+$/.test(String(m.content || "").trim()),
+      );
+    if (previousUser?.content)
+      return detectInventoryGptIntent(previousUser.content, []);
+    return { type: "context_help", wantsExport };
+  }
+
+  // Global/list intents must be checked before SKU/product intents.
+  if (/categor/.test(lower)) {
+    return {
+      type: /website|web site|websites|website product|site/.test(lower)
+        ? "website_categories"
+        : "categories",
+      wantsExport,
+    };
+  }
+  if (
+    /how\s*(many|much|may).*(warehouse|wearhouse)|total.*(warehouse|wearhouse)|list.*(warehouse|wearhouse)|show.*(warehouse|wearhouse)|(warehouse|warehouses|wearhouse|wearhouses)\s*(i have|count|list)?$/.test(
+      lower,
+    )
+  ) {
+    return { type: "warehouses", wantsExport };
+  }
+  if (
+    /how\s*(many|much|may).*store|total.*store|list.*store|show.*store|stores?\s*(i have|count|list)?$/.test(
+      lower,
+    )
+  ) {
+    return { type: "stores", wantsExport };
+  }
+  if (/store inventory|inventory.*store|stores inventory/.test(lower))
+    return { type: "store_inventory", wantsExport };
+  if (/graph|chart|visual/.test(lower)) return { type: "graph", wantsExport };
+  if (wantsExport && /this|it|same|current|last/.test(lower))
+    return { type: "product", field: "summary", wantsExport };
+  if (/journey|timeline|ledger|movement|in and out|history/.test(lower))
+    return { type: "timeline", wantsExport };
+  if (
+    /audit|who changed|who update|who updated|activity|log|login.*user|which user|by which user/.test(
+      lower,
+    )
+  )
+    return { type: "audit", wantsExport };
+  if (/order|sale|revenue|regional|region/.test(lower))
+    return { type: "orders", wantsExport };
+  if (/description|describe|details?|about this|about product/.test(lower))
+    return { type: "product", field: "description", wantsExport };
+  if (/price|cost|mrp|rate|amount/.test(lower))
+    return { type: "product", field: "price", wantsExport };
+  if (/stock|quantity|qty|available|availability/.test(lower))
+    return { type: "stock", wantsExport };
+  if (/sku|barcode|product|item|name|what about this/.test(lower))
+    return { type: "product", field: "summary", wantsExport };
+  if (wantsExport) return { type: "export_help", wantsExport };
   return null;
 }
 
-function normalizeProduct(product, source = '') {
+function normalizeProduct(product, source = "") {
   if (!product) return null;
-  const sku = (product.barcode || product.sku || product.code || product.sku_id || '').toString();
-  const stock = product.total_stock ?? product.stock ?? product.quantity ?? product.stock_quantity ?? product.qty_available ?? null;
-  const price = product.price ?? product.selling_price ?? product.offer_price ?? product.final_price ?? product.mrp ?? null;
+  const sku = (
+    product.barcode ||
+    product.sku ||
+    product.code ||
+    product.sku_id ||
+    ""
+  ).toString();
+  const stock =
+    product.total_stock ??
+    product.stock ??
+    product.quantity ??
+    product.stock_quantity ??
+    product.qty_available ??
+    null;
+  const price =
+    product.price ??
+    product.selling_price ??
+    product.offer_price ??
+    product.final_price ??
+    product.mrp ??
+    null;
   return {
     ...product,
     source: product.source || source,
     sku,
     barcode: product.barcode || product.sku || sku,
-    product_name: product.product_name || product.name || product.title || sku || 'Product',
+    product_name:
+      product.product_name || product.name || product.title || sku || "Product",
     category:
       product.category ||
       product.category_display_name ||
       product.category_name ||
       product.category_slug ||
       product.product_category ||
-      'Uncategorized',
+      "Uncategorized",
     description:
       product.description ||
       product.short_description ||
       product.product_description ||
-      'No description is available for this product yet.',
+      "No description is available for this product yet.",
     price,
     cost_price: product.cost_price ?? product.unit_cost ?? null,
     stock,
     weight: product.weight ?? null,
-    dimensions: product.dimensions ?? null
+    dimensions: product.dimensions ?? null,
   };
 }
 
@@ -125,64 +205,100 @@ function findProduct(list, barcode) {
   const needle = barcode.toString().trim().toLowerCase();
   const rows = list.map((p) => normalizeProduct(p)).filter(Boolean);
   return (
-    rows.find((p) => [p.barcode, p.sku, p.code, p.sku_id].some((v) => v?.toString().trim().toLowerCase() === needle)) ||
-    rows.find((p) => [p.barcode, p.sku, p.code, p.sku_id].some((v) => v?.toString().trim().toLowerCase().includes(needle))) ||
+    rows.find((p) =>
+      [p.barcode, p.sku, p.code, p.sku_id].some(
+        (v) => v?.toString().trim().toLowerCase() === needle,
+      ),
+    ) ||
+    rows.find((p) =>
+      [p.barcode, p.sku, p.code, p.sku_id].some((v) =>
+        v?.toString().trim().toLowerCase().includes(needle),
+      ),
+    ) ||
     null
   );
 }
 
-export async function resolveInventoryGptProduct(barcode, token, localProducts = []) {
+export async function resolveInventoryGptProduct(
+  barcode,
+  token,
+  localProducts = [],
+) {
   const local = findProduct(localProducts, barcode);
   if (local) return local;
 
   const candidates = [];
   const code = encodeURIComponent(barcode);
   const endpoints = [
-    { source: 'dispatch_product', path: `/api/products/search/${code}` },
-    { source: 'dispatch_product', path: `/api/products?search=${code}&limit=10` },
-    { source: 'website_products', path: `/api/website/products?search=${code}&limit=10` }
+    { source: "dispatch_product", path: `/api/products/search/${code}` },
+    {
+      source: "dispatch_product",
+      path: `/api/products?search=${code}&limit=10`,
+    },
+    {
+      source: "website_products",
+      path: `/api/website/products?search=${code}&limit=10`,
+    },
   ];
 
   for (const endpoint of endpoints) {
     const result = await apiGet(endpoint.path, token);
     if (!result.error) {
-      candidates.push(...rowsFromPayload(result.data).map((row) => normalizeProduct(row, endpoint.source)));
+      candidates.push(
+        ...rowsFromPayload(result.data).map((row) =>
+          normalizeProduct(row, endpoint.source),
+        ),
+      );
     }
   }
 
   return findProduct(candidates, barcode);
 }
 
-export async function resolveInventoryGptStock(barcode, token, warehouse = null) {
+export async function resolveInventoryGptStock(
+  barcode,
+  token,
+  warehouse = null,
+) {
   if (!barcode) return { rows: [], total: 0 };
-  const params = new URLSearchParams({ search: barcode, limit: '100' });
-  if (warehouse) params.set('warehouse', warehouse);
+  const params = new URLSearchParams({ search: barcode, limit: "100" });
+  if (warehouse) params.set("warehouse", warehouse);
 
   const inv = await apiGet(`/api/inventory?${params.toString()}`, token);
   const rows = inv.error ? [] : rowsFromPayload(inv.data);
   const normalized = rows
-    .filter((row) => String(row.code || row.barcode || row.sku || '').includes(barcode))
+    .filter((row) =>
+      String(row.code || row.barcode || row.sku || "").includes(barcode),
+    )
     .map((row) => ({
       sku: row.code || row.barcode || row.sku || barcode,
       product_name: row.product_name || row.product || row.name || barcode,
-      warehouse: row.warehouse || row.warehouse_code || '—',
+      warehouse: row.warehouse || row.warehouse_code || "—",
       stock: Number(row.stock ?? row.quantity ?? row.qty_available ?? 0),
-      source: 'stock_batches/api_inventory'
+      source: "stock_batches/api_inventory",
     }));
 
   return {
     rows: normalized,
     total: normalized.reduce((sum, row) => sum + Number(row.stock || 0), 0),
-    error: inv.error || null
+    error: inv.error || null,
   };
 }
 
-export async function resolveInventoryGptTimeline(barcode, token, warehouse = null) {
+export async function resolveInventoryGptTimeline(
+  barcode,
+  token,
+  warehouse = null,
+) {
   if (!barcode) return { events: [], summary: null };
-  const params = new URLSearchParams({ limit: '25' });
-  if (warehouse) params.set('warehouse', warehouse);
-  const timeline = await apiGet(`/api/timeline/${encodeURIComponent(barcode)}?${params.toString()}`, token);
-  if (timeline.error) return { events: [], summary: null, error: timeline.error };
+  const params = new URLSearchParams({ limit: "25" });
+  if (warehouse) params.set("warehouse", warehouse);
+  const timeline = await apiGet(
+    `/api/timeline/${encodeURIComponent(barcode)}?${params.toString()}`,
+    token,
+  );
+  if (timeline.error)
+    return { events: [], summary: null, error: timeline.error };
   const container = timeline.data?.data || timeline.data || {};
   const events = Array.isArray(container.timeline)
     ? container.timeline
@@ -193,48 +309,71 @@ export async function resolveInventoryGptTimeline(barcode, token, warehouse = nu
 }
 
 export async function resolveInventoryGptOrders(token) {
-  const stats = await apiGet('/api/website/orders/stats', token);
-  const orders = await apiGet('/api/website/orders?limit=20', token);
+  const stats = await apiGet("/api/website/orders/stats", token);
+  const orders = await apiGet("/api/website/orders?limit=20", token);
   return {
     stats: stats.error ? null : stats.data?.data || stats.data,
     orders: orders.error ? [] : rowsFromPayload(orders.data),
-    error: stats.error || orders.error || null
+    error: stats.error || orders.error || null,
   };
 }
 
-export async function resolveInventoryGptAudit(token) {
-  const audit = await apiGet('/api/audit-logs?limit=20&page=1', token);
+export async function resolveInventoryGptAudit(token, question = "") {
+  const lower = String(question || "").toLowerCase();
+  const params = new URLSearchParams({ limit: "20", page: "1" });
+  if (/login/.test(lower)) params.set("action", "LOGIN");
+  if (/logout/.test(lower)) params.set("action", "LOGOUT");
+  if (/product/.test(lower)) params.set("resource", "PRODUCT");
+  if (/inventory|stock/.test(lower)) params.set("resource", "INVENTORY");
+  const audit = await apiGet(`/api/audit-logs?${params.toString()}`, token);
   return {
     logs: audit.error ? [] : rowsFromPayload(audit.data),
     stats: audit.data?.stats || audit.data?.data?.stats || null,
-    error: audit.error || null
+    error: audit.error || null,
   };
 }
 
 function catalogLabel(source) {
-  return source === 'website_products' ? 'Website Product catalog' : 'Product catalog';
+  return source === "website_products"
+    ? "Website Product catalog"
+    : "Product catalog";
 }
 
 function productToTsv(product) {
-  const header = ['sku', 'product_name', 'category', 'catalog', 'price', 'cost_price', 'stock', 'description'];
-  const row = [
-    product.sku || product.barcode || '',
-    product.product_name || '',
-    product.category || '',
-    catalogLabel(product.source),
-    product.price ?? '',
-    product.cost_price ?? '',
-    product.stock ?? '',
-    String(product.description || '').replace(/\r?\n/g, ' ')
+  const header = [
+    "sku",
+    "product_name",
+    "category",
+    "catalog",
+    "price",
+    "cost_price",
+    "stock",
+    "description",
   ];
-  return `${header.join('\t')}\n${row.join('\t')}`;
+  const row = [
+    product.sku || product.barcode || "",
+    product.product_name || "",
+    product.category || "",
+    catalogLabel(product.source),
+    product.price ?? "",
+    product.cost_price ?? "",
+    product.stock ?? "",
+    String(product.description || "").replace(/\r?\n/g, " "),
+  ];
+  return `${header.join("\t")}\n${row.join("\t")}`;
 }
 
 function rowsToTsv(rows, headers) {
   const safeRows = Array.isArray(rows) ? rows : [];
-  return [headers.join('\t')]
-    .concat(safeRows.map((row) => headers.map((h) => String(row[h] ?? '').replace(/\r?\n/g, ' ')).join('\t')))
-    .join('\n');
+  return [headers.join("\t")]
+    .concat(
+      safeRows.map((row) =>
+        headers
+          .map((h) => String(row[h] ?? "").replace(/\r?\n/g, " "))
+          .join("\t"),
+      ),
+    )
+    .join("\n");
 }
 
 function buildProductAnswer(product, field, wantsExport) {
@@ -244,13 +383,13 @@ function buildProductAnswer(product, field, wantsExport) {
   const title = `✨ **${p.product_name}** (SKU: \`${p.sku || p.barcode}\`)`;
   const formattedPrice = formatInr(p.price);
   const formattedCost = formatInr(p.cost_price);
-  const lines = [title, ''];
+  const lines = [title, ""];
 
-  if (field === 'description') {
+  if (field === "description") {
     lines.push(`📝 **Description:** ${p.description}`);
     lines.push(`🏷️ **Category:** ${p.category}`);
-  } else if (field === 'price') {
-    lines.push(`💰 **Price:** ${formattedPrice || 'Price not available'}`);
+  } else if (field === "price") {
+    lines.push(`💰 **Price:** ${formattedPrice || "Price not available"}`);
     if (formattedCost) lines.push(`🧾 **Cost Price:** ${formattedCost}`);
     lines.push(`🏷️ **Category:** ${p.category}`);
   } else {
@@ -258,147 +397,483 @@ function buildProductAnswer(product, field, wantsExport) {
     lines.push(`📚 **Catalog:** ${catalogLabel(p.source)}`);
     if (formattedPrice) lines.push(`💰 **Price:** ${formattedPrice}`);
     if (formattedCost) lines.push(`🧾 **Cost Price:** ${formattedCost}`);
-    if (p.stock != null) lines.push(`📦 **Stock:** ${Number(p.stock) > 0 ? `${p.stock} units` : 'Out of Stock'}`);
+    if (p.stock != null)
+      lines.push(
+        `📦 **Stock:** ${Number(p.stock) > 0 ? `${p.stock} units` : "Out of Stock"}`,
+      );
     if (p.weight) lines.push(`⚖️ **Weight:** ${p.weight}`);
     if (p.dimensions) lines.push(`📐 **Dimensions:** ${p.dimensions}`);
   }
 
-  lines.push('');
-  lines.push('I can also show the **journey**, **warehouse stock**, **audit trail**, or create an **Excel-ready table** for this product.');
+  lines.push("");
+  lines.push(
+    "I can also show the **journey**, **warehouse stock**, **audit trail**, or create an **Excel-ready table** for this product.",
+  );
 
   return {
-    answer: lines.join('\n'),
+    answer: lines.join("\n"),
     exportTsv: wantsExport ? productToTsv(p) : null,
-    exportFilename: wantsExport ? `inventorygpt-product-${p.sku || p.barcode}.tsv` : null
+    exportFilename: wantsExport
+      ? `inventorygpt-product-${p.sku || p.barcode}.tsv`
+      : null,
   };
 }
 
 function buildStockAnswer(product, stockResult, wantsExport) {
   const p = product ? normalizeProduct(product) : null;
   const rows = stockResult.rows || [];
-  const lines = [`📦 **Stock Intelligence${p ? ` — ${p.product_name}` : ''}**`, ''];
+  const lines = [
+    `📦 **Stock Intelligence${p ? ` — ${p.product_name}` : ""}**`,
+    "",
+  ];
   if (!rows.length) {
-    lines.push('No live warehouse stock rows were found from the inventory API.');
-    if (p?.stock != null) lines.push(`Catalog stock says: **${Number(p.stock) > 0 ? `${p.stock} units` : 'Out of Stock'}**`);
+    lines.push(
+      "No live warehouse stock rows were found from the inventory API.",
+    );
+    if (p?.stock != null)
+      lines.push(
+        `Catalog stock says: **${Number(p.stock) > 0 ? `${p.stock} units` : "Out of Stock"}**`,
+      );
   } else {
-    lines.push(`Total physical warehouse stock found: **${stockResult.total.toLocaleString('en-IN')} units**`);
-    lines.push('');
+    lines.push(
+      `Total physical warehouse stock found: **${stockResult.total.toLocaleString("en-IN")} units**`,
+    );
+    lines.push("");
     rows.slice(0, 12).forEach((row) => {
-      lines.push(`- **${row.warehouse}** · ${row.stock} units · \`${row.sku}\``);
+      lines.push(
+        `- **${row.warehouse}** · ${row.stock} units · \`${row.sku}\``,
+      );
     });
   }
-  lines.push('');
-  lines.push('For deeper investigation, ask: **show product journey** or **show audit trail**.');
+  lines.push("");
+  lines.push(
+    "For deeper investigation, ask: **show product journey** or **show audit trail**.",
+  );
 
   return {
-    answer: lines.join('\n'),
-    exportTsv: wantsExport ? rowsToTsv(rows, ['sku', 'product_name', 'warehouse', 'stock', 'source']) : null,
-    exportFilename: wantsExport ? 'inventorygpt-stock.tsv' : null
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["sku", "product_name", "warehouse", "stock", "source"])
+      : null,
+    exportFilename: wantsExport ? "inventorygpt-stock.tsv" : null,
   };
 }
 
 function buildTimelineAnswer(barcode, product, timelineResult, wantsExport) {
   const p = product ? normalizeProduct(product) : null;
   const events = timelineResult.events || [];
-  const lines = [`🧭 **Product Journey${p ? ` — ${p.product_name}` : ''}** (SKU: \`${barcode}\`)`, ''];
+  const lines = [
+    `🧭 **Product Journey${p ? ` — ${p.product_name}` : ""}** (SKU: \`${barcode}\`)`,
+    "",
+  ];
 
   if (!events.length) {
-    lines.push('No timeline/ledger events were found for this SKU yet.');
-    lines.push('I checked the product timeline endpoint backed by `inventory_ledger_base`.');
+    lines.push("No timeline/ledger events were found for this SKU yet.");
+    lines.push(
+      "I checked the product timeline endpoint backed by `inventory_ledger_base`.",
+    );
   } else {
     if (timelineResult.summary) {
-      lines.push(`Current stock from timeline summary: **${timelineResult.summary.current_stock ?? '—'}**`);
-      lines.push(`Total IN: **${timelineResult.summary.total_in ?? '—'}** · Total OUT: **${timelineResult.summary.total_out ?? '—'}**`);
-      lines.push('');
+      lines.push(
+        `Current stock from timeline summary: **${timelineResult.summary.current_stock ?? "—"}**`,
+      );
+      lines.push(
+        `Total IN: **${timelineResult.summary.total_in ?? "—"}** · Total OUT: **${timelineResult.summary.total_out ?? "—"}**`,
+      );
+      lines.push("");
     }
     events.slice(0, 12).forEach((event) => {
-      const type = event.type || event.movement_type || event.event_type || 'EVENT';
-      const qty = event.quantity ?? event.qty ?? '—';
-      const direction = event.direction === 'IN' ? '+' : event.direction === 'OUT' ? '-' : '';
-      const when = event.timestamp || event.event_time || event.created_at || '';
-      const where = event.warehouse || event.location_code || event.store_code || '';
-      lines.push(`- **${type}** · ${direction}${qty}${where ? ` · ${where}` : ''}${when ? ` · ${new Date(when).toLocaleString('en-IN')}` : ''}`);
+      const type =
+        event.type || event.movement_type || event.event_type || "EVENT";
+      const qty = event.quantity ?? event.qty ?? "—";
+      const direction =
+        event.direction === "IN" ? "+" : event.direction === "OUT" ? "-" : "";
+      const when =
+        event.timestamp || event.event_time || event.created_at || "";
+      const where =
+        event.warehouse || event.location_code || event.store_code || "";
+      lines.push(
+        `- **${type}** · ${direction}${qty}${where ? ` · ${where}` : ""}${when ? ` · ${new Date(when).toLocaleString("en-IN")}` : ""}`,
+      );
     });
   }
 
-  lines.push('');
-  lines.push('This is the operational truth trail. If needed, I can also compare it with stock batches and audit logs.');
+  lines.push("");
+  lines.push(
+    "This is the operational truth trail. If needed, I can also compare it with stock batches and audit logs.",
+  );
 
   const exportRows = events.map((event) => ({
-    time: event.timestamp || event.event_time || event.created_at || '',
-    type: event.type || event.movement_type || event.event_type || '',
-    direction: event.direction || '',
-    quantity: event.quantity ?? event.qty ?? '',
-    location: event.warehouse || event.location_code || event.store_code || '',
-    reference: event.reference || ''
+    time: event.timestamp || event.event_time || event.created_at || "",
+    type: event.type || event.movement_type || event.event_type || "",
+    direction: event.direction || "",
+    quantity: event.quantity ?? event.qty ?? "",
+    location: event.warehouse || event.location_code || event.store_code || "",
+    reference: event.reference || "",
   }));
 
   return {
-    answer: lines.join('\n'),
-    exportTsv: wantsExport ? rowsToTsv(exportRows, ['time', 'type', 'direction', 'quantity', 'location', 'reference']) : null,
-    exportFilename: wantsExport ? `inventorygpt-journey-${barcode}.tsv` : null
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(exportRows, [
+          "time",
+          "type",
+          "direction",
+          "quantity",
+          "location",
+          "reference",
+        ])
+      : null,
+    exportFilename: wantsExport ? `inventorygpt-journey-${barcode}.tsv` : null,
   };
 }
 
 function buildOrdersAnswer(orderResult, wantsExport) {
   const orders = orderResult.orders || [];
   const stats = orderResult.stats || {};
-  const lines = ['🧾 **Order Intelligence**', ''];
-  lines.push(`Total orders: **${stats.total_orders ?? stats.total ?? orders.length ?? 0}**`);
-  if (stats.total_revenue != null || stats.revenue != null) lines.push(`Revenue: **${formatInr(stats.total_revenue ?? stats.revenue)}**`);
-  if (stats.pending_orders != null || stats.pending != null) lines.push(`Pending: **${stats.pending_orders ?? stats.pending}**`);
-  lines.push('');
+  const lines = ["🧾 **Order Intelligence**", ""];
+  lines.push(
+    `Total orders: **${stats.total_orders ?? stats.total ?? orders.length ?? 0}**`,
+  );
+  if (stats.total_revenue != null || stats.revenue != null)
+    lines.push(
+      `Revenue: **${formatInr(stats.total_revenue ?? stats.revenue)}**`,
+    );
+  if (stats.pending_orders != null || stats.pending != null)
+    lines.push(`Pending: **${stats.pending_orders ?? stats.pending}**`);
+  lines.push("");
 
   if (!orders.length) {
-    lines.push('No website order rows were returned yet.');
+    lines.push("No website order rows were returned yet.");
   } else {
     orders.slice(0, 10).forEach((order) => {
-      lines.push(`- **${order.order_number || order.order_id || order.id || 'Order'}** · ${order.status || '—'} · ${formatInr(order.total_amount ?? order.total ?? order.amount) || '—'}`);
+      lines.push(
+        `- **${order.order_number || order.order_id || order.id || "Order"}** · ${order.status || "—"} · ${formatInr(order.total_amount ?? order.total ?? order.amount) || "—"}`,
+      );
     });
   }
 
-  lines.push('');
-  lines.push('Next step: regional demand can be calculated from shipping address + order items when order data is available.');
+  lines.push("");
+  lines.push(
+    "Next step: regional demand can be calculated from shipping address + order items when order data is available.",
+  );
 
   const exportRows = orders.map((order) => ({
-    order: order.order_number || order.order_id || order.id || '',
-    status: order.status || '',
-    amount: order.total_amount ?? order.total ?? order.amount ?? '',
-    date: order.order_date || order.created_at || ''
+    order: order.order_number || order.order_id || order.id || "",
+    status: order.status || "",
+    amount: order.total_amount ?? order.total ?? order.amount ?? "",
+    date: order.order_date || order.created_at || "",
   }));
 
   return {
-    answer: lines.join('\n'),
-    exportTsv: wantsExport ? rowsToTsv(exportRows, ['order', 'status', 'amount', 'date']) : null,
-    exportFilename: wantsExport ? 'inventorygpt-orders.tsv' : null
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(exportRows, ["order", "status", "amount", "date"])
+      : null,
+    exportFilename: wantsExport ? "inventorygpt-orders.tsv" : null,
+  };
+}
+
+function normalizeCategory(row) {
+  return {
+    id: row.id ?? row.category_id ?? "",
+    name:
+      row.name ||
+      row.display_name ||
+      row.category ||
+      row.category_name ||
+      row.slug ||
+      "Uncategorized",
+    slug: row.slug || row.name || "",
+    product_count: Number(
+      row.product_count ?? row.count ?? row.total_products ?? 0,
+    ),
+    source: row.source || "",
+  };
+}
+
+export async function resolveInventoryGptCategories(token, website = false) {
+  const endpoints = website
+    ? ["/api/website/products/categories", "/api/website/categories"]
+    : ["/api/products/categories/all"];
+
+  for (const path of endpoints) {
+    const result = await apiGet(path, token);
+    const rows = result.error
+      ? []
+      : rowsFromPayload(result.data).map(normalizeCategory);
+    if (rows.length) return { rows, error: null };
+  }
+
+  return { rows: [], error: null };
+}
+
+function normalizeLocation(row, type) {
+  return {
+    id: row.id ?? row.w_id ?? "",
+    code:
+      row.warehouse_code || row.code || row.store_code || row.warehouse || "",
+    name:
+      row.warehouse_name ||
+      row.Warehouse_name ||
+      row.name ||
+      row.store_name ||
+      row.code ||
+      row.store_code ||
+      "Unnamed",
+    city: row.city || "",
+    state: row.state || "",
+    type,
+  };
+}
+
+export async function resolveInventoryGptLocations(token, type) {
+  const paths =
+    type === "warehouses"
+      ? [
+          "/api/warehouse-management/warehouses",
+          "/api/products/warehouses",
+          "/api/dispatch/warehouses",
+        ]
+      : ["/api/warehouse-management/stores", "/api/products/stores"];
+
+  for (const path of paths) {
+    const result = await apiGet(path, token);
+    const rows = result.error
+      ? []
+      : rowsFromPayload(result.data).map((row) => normalizeLocation(row, type));
+    if (rows.length) return { rows, error: null };
+  }
+
+  return { rows: [], error: null };
+}
+
+export async function resolveInventoryGptStoreInventory(token) {
+  const result = await apiGet(
+    "/api/billing/store-inventory?limit=50&page=1",
+    token,
+  );
+  const rows = result.error
+    ? []
+    : rowsFromPayload(result.data).map((row) => ({
+        store_code: row.store_code || row.warehouse_id || "—",
+        product_name: row.product_name || row.name || row.barcode || "Product",
+        barcode: row.barcode || row.sku || "",
+        category: row.category || "—",
+        stock: Number(row.stock ?? row.quantity ?? 0),
+        price: row.price ?? "",
+      }));
+  return { rows, error: result.error || null };
+}
+
+export async function resolveInventoryGptGraph({
+  barcode,
+  authToken,
+  localProducts = [],
+}) {
+  const product = barcode
+    ? await resolveInventoryGptProduct(barcode, authToken, localProducts)
+    : null;
+  const timeline = barcode
+    ? await resolveInventoryGptTimeline(barcode, authToken)
+    : { events: [] };
+  const orders = await resolveInventoryGptOrders(authToken);
+  return { product, timeline, orders };
+}
+
+function buildCategoriesAnswer(categoriesResult, website, wantsExport) {
+  const rows = categoriesResult.rows || [];
+  const label = website
+    ? "Website Product Categories"
+    : "Product Catalog Categories";
+  const lines = [`🏷️ **${label}**`, ""];
+  lines.push(`Total categories found: **${rows.length}**`);
+  lines.push("");
+  if (!rows.length) {
+    lines.push("No categories were returned from the live API.");
+  } else {
+    rows.slice(0, 30).forEach((cat, index) => {
+      lines.push(
+        `${index + 1}. **${cat.name}**${cat.product_count ? ` · ${cat.product_count} products` : ""}`,
+      );
+    });
+  }
+  lines.push("");
+  lines.push("You can ask me to filter products by any category name.");
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["id", "name", "slug", "product_count", "source"])
+      : null,
+    exportFilename: wantsExport
+      ? `inventorygpt-${website ? "website" : "product"}-categories.tsv`
+      : null,
+  };
+}
+
+function buildLocationsAnswer(locationsResult, type, wantsExport) {
+  const rows = locationsResult.rows || [];
+  const isWarehouse = type === "warehouses";
+  const lines = [
+    isWarehouse ? "🏬 **Warehouse Network**" : "🏪 **Store Network**",
+    "",
+  ];
+  lines.push(
+    `Total ${isWarehouse ? "warehouses" : "stores"} found: **${rows.length}**`,
+  );
+  lines.push("");
+  if (!rows.length) {
+    lines.push(
+      `No ${isWarehouse ? "warehouse" : "store"} master rows were returned from the live API.`,
+    );
+  } else {
+    rows.slice(0, 30).forEach((loc, index) => {
+      lines.push(
+        `${index + 1}. **${loc.name}**${loc.code ? ` · \`${loc.code}\`` : ""}${loc.city || loc.state ? ` · ${[loc.city, loc.state].filter(Boolean).join(", ")}` : ""}`,
+      );
+    });
+  }
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["id", "code", "name", "city", "state", "type"])
+      : null,
+    exportFilename: wantsExport ? `inventorygpt-${type}.tsv` : null,
+  };
+}
+
+function buildStoreInventoryAnswer(storeInventoryResult, wantsExport) {
+  const rows = storeInventoryResult.rows || [];
+  const lines = ["🏪 **Store Inventory**", ""];
+  lines.push(`Store inventory rows found: **${rows.length}**`);
+  lines.push("");
+  if (!rows.length) {
+    lines.push("No store inventory rows were returned from the live API.");
+  } else {
+    const totalUnits = rows.reduce(
+      (sum, row) => sum + Number(row.stock || 0),
+      0,
+    );
+    lines.push(
+      `Total store units in returned rows: **${totalUnits.toLocaleString("en-IN")}**`,
+    );
+    lines.push("");
+    rows.slice(0, 15).forEach((row) => {
+      lines.push(
+        `- **${row.product_name}** · \`${row.barcode || "no-sku"}\` · ${row.stock} units · ${row.store_code}`,
+      );
+    });
+  }
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, [
+          "store_code",
+          "product_name",
+          "barcode",
+          "category",
+          "stock",
+          "price",
+        ])
+      : null,
+    exportFilename: wantsExport ? "inventorygpt-store-inventory.tsv" : null,
+  };
+}
+
+function buildGraphAnswer(graphResult, barcode, wantsExport) {
+  const product = graphResult.product
+    ? normalizeProduct(graphResult.product)
+    : null;
+  const events = graphResult.timeline?.events || [];
+  const orders = graphResult.orders?.orders || [];
+  const lines = [
+    `📈 **Graph Intelligence${product ? ` — ${product.product_name}` : ""}**`,
+    "",
+  ];
+  if (!barcode) {
+    lines.push(
+      "To build a product-specific graph, share the SKU/barcode. I can then use timeline + order data as graph points.",
+    );
+  } else {
+    lines.push(`SKU: \`${barcode}\``);
+    lines.push(`Timeline points available: **${events.length}**`);
+    lines.push(`Order rows available: **${orders.length}**`);
+    lines.push("");
+    lines.push("Graph-ready series I can prepare:");
+    lines.push("- Stock movement over time from timeline/ledger events.");
+    lines.push(
+      "- Sales/order quantity trend from order items when order data exists.",
+    );
+    lines.push("- IN vs OUT movement comparison.");
+  }
+  lines.push("");
+  lines.push(
+    "The current chat can return graph-ready data; the visual chart panel is the next UI execution step.",
+  );
+  const exportRows = events.map((event) => ({
+    time: event.timestamp || event.event_time || event.created_at || "",
+    type: event.type || event.movement_type || event.event_type || "",
+    quantity: event.quantity ?? event.qty ?? "",
+    direction: event.direction || "",
+  }));
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(exportRows, ["time", "type", "quantity", "direction"])
+      : null,
+    exportFilename: wantsExport
+      ? `inventorygpt-graph-${barcode || "data"}.tsv`
+      : null,
   };
 }
 
 function buildAuditAnswer(auditResult, wantsExport) {
   const logs = auditResult.logs || [];
-  const lines = ['🛡️ **Audit Intelligence**', ''];
+  const lines = ["🛡️ **Audit Intelligence**", ""];
   if (!logs.length) {
-    lines.push('No audit rows were returned for this request.');
+    lines.push("No audit rows were returned for this request.");
   } else {
     logs.slice(0, 10).forEach((log) => {
-      lines.push(`- **${log.action || log.event_type || 'EVENT'}** · ${log.resource_type || log.resource || 'resource'} · ${log.status || '—'} · ${log.user_name || log.joined_user_name || 'system'}`);
+      const details =
+        log.details && typeof log.details === "object" ? log.details : {};
+      const actor =
+        log.user_name ||
+        log.joined_user_name ||
+        log.user_email ||
+        details.user_name ||
+        details.name ||
+        details.email ||
+        "system";
+      lines.push(
+        `- **${log.action || log.event_type || "EVENT"}** · ${log.resource_type || log.resource || "resource"} · ${log.status || "—"} · ${actor}`,
+      );
     });
   }
-  lines.push('');
-  lines.push('Audit logs help prove who changed what, when, and whether it succeeded.');
+  lines.push("");
+  lines.push(
+    "Audit logs help prove who changed what, when, and whether it succeeded.",
+  );
 
   const exportRows = logs.map((log) => ({
-    time: log.created_at || '',
-    action: log.action || log.event_type || '',
-    resource: log.resource_type || log.resource || '',
-    status: log.status || '',
-    user: log.user_name || log.joined_user_name || log.user_email || ''
+    time: log.created_at || "",
+    action: log.action || log.event_type || "",
+    resource: log.resource_type || log.resource || "",
+    status: log.status || "",
+    user:
+      log.user_name ||
+      log.joined_user_name ||
+      log.user_email ||
+      log.details?.user_name ||
+      log.details?.email ||
+      "",
   }));
 
   return {
-    answer: lines.join('\n'),
-    exportTsv: wantsExport ? rowsToTsv(exportRows, ['time', 'action', 'resource', 'status', 'user']) : null,
-    exportFilename: wantsExport ? 'inventorygpt-audit.tsv' : null
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(exportRows, ["time", "action", "resource", "status", "user"])
+      : null,
+    exportFilename: wantsExport ? "inventorygpt-audit.tsv" : null,
   };
 }
 
@@ -406,69 +881,140 @@ export async function tryInventoryGptDeterministicAnswer({
   question,
   authToken,
   localProducts = [],
-  conversationHistory = []
+  conversationHistory = [],
 }) {
-  const q = String(question || '').trim();
+  const q = String(question || "").trim();
   if (!q) return null;
 
-  const intent = detectInventoryGptIntent(q);
+  const intent = detectInventoryGptIntent(q, conversationHistory);
   if (!intent) return null;
 
   const directBarcode = extractInventoryGptBarcode(q);
-  const historyBarcode = !directBarcode ? extractLastInventoryGptBarcode(conversationHistory) : null;
+  const historyBarcode = !directBarcode
+    ? extractLastInventoryGptBarcode(conversationHistory)
+    : null;
   const barcode = directBarcode || historyBarcode;
   const warehouse = extractInventoryGptWarehouse(q);
 
-  if (intent.type === 'export_help') {
+  if (intent.type === "export_help") {
     return {
       answer:
-        '📊 I can prepare **Excel-ready TSV tables** from live operational data now. PDF/Word/graph exports are part of the next premium export phase. Ask like: `export stock for SKU 12345` or `make excel for product journey 12345`.',
-      render: 'text'
+        "📊 I can prepare **Excel-ready TSV tables** from live operational data now. PDF/Word/graph exports are part of the next premium export phase. Ask like: `export stock for SKU 12345` or `make excel for product journey 12345`.",
+      render: "text",
     };
   }
 
-  if (['product', 'stock', 'timeline'].includes(intent.type) && !barcode) {
+  if (["product", "stock", "timeline"].includes(intent.type) && !barcode) {
     return {
       answer:
-        'Please share the SKU/barcode so I can read live catalog, stock, and timeline data accurately. I will not guess operational data.',
-      render: 'text'
+        "Please share the SKU/barcode so I can read live catalog, stock, and timeline data accurately. I will not guess operational data.",
+      render: "text",
     };
   }
 
-  const product = barcode ? await resolveInventoryGptProduct(barcode, authToken, localProducts) : null;
+  const product = barcode
+    ? await resolveInventoryGptProduct(barcode, authToken, localProducts)
+    : null;
 
-  if (intent.type === 'product') {
+  if (intent.type === "context_help") {
+    return {
+      answer:
+        "I’m following the last conversation context. Ask me like **show timeline**, **export this to Excel**, **show audit by user**, **show website categories**, or **how many warehouses/stores do I have** — I’ll use the recent chat context where it fits.",
+      render: "text",
+    };
+  }
+
+  if (intent.type === "categories" || intent.type === "website_categories") {
+    const categories = await resolveInventoryGptCategories(
+      authToken,
+      intent.type === "website_categories",
+    );
+    return {
+      ...buildCategoriesAnswer(
+        categories,
+        intent.type === "website_categories",
+        intent.wantsExport,
+      ),
+      render: "text",
+    };
+  }
+
+  if (intent.type === "warehouses" || intent.type === "stores") {
+    const locations = await resolveInventoryGptLocations(
+      authToken,
+      intent.type,
+    );
+    return {
+      ...buildLocationsAnswer(locations, intent.type, intent.wantsExport),
+      render: "text",
+    };
+  }
+
+  if (intent.type === "store_inventory") {
+    const storeInventory = await resolveInventoryGptStoreInventory(authToken);
+    return {
+      ...buildStoreInventoryAnswer(storeInventory, intent.wantsExport),
+      render: "text",
+    };
+  }
+
+  if (intent.type === "graph") {
+    const graph = await resolveInventoryGptGraph({
+      barcode,
+      authToken,
+      localProducts,
+    });
+    return {
+      ...buildGraphAnswer(graph, barcode, intent.wantsExport),
+      render: "text",
+    };
+  }
+
+  if (intent.type === "product") {
     if (!product) {
       return {
         answer:
           `I checked both catalogs for SKU \`${barcode}\`, but I could not find this product.\n\n` +
-          '- Checked: **Product catalog** (dispatch products)\n' +
-          '- Checked: **Website Product catalog**\n\n' +
-          'Please confirm the SKU/barcode, or ask me to show categories/products separately.',
-        render: 'text'
+          "- Checked: **Product catalog** (dispatch products)\n" +
+          "- Checked: **Website Product catalog**\n\n" +
+          "Please confirm the SKU/barcode, or ask me to show categories/products separately.",
+        render: "text",
       };
     }
-    return { ...buildProductAnswer(product, intent.field, intent.wantsExport), render: 'text' };
+    return {
+      ...buildProductAnswer(product, intent.field, intent.wantsExport),
+      render: "text",
+    };
   }
 
-  if (intent.type === 'stock') {
+  if (intent.type === "stock") {
     const stock = await resolveInventoryGptStock(barcode, authToken, warehouse);
-    return { ...buildStockAnswer(product, stock, intent.wantsExport), render: 'text' };
+    return {
+      ...buildStockAnswer(product, stock, intent.wantsExport),
+      render: "text",
+    };
   }
 
-  if (intent.type === 'timeline') {
-    const timeline = await resolveInventoryGptTimeline(barcode, authToken, warehouse);
-    return { ...buildTimelineAnswer(barcode, product, timeline, intent.wantsExport), render: 'text' };
+  if (intent.type === "timeline") {
+    const timeline = await resolveInventoryGptTimeline(
+      barcode,
+      authToken,
+      warehouse,
+    );
+    return {
+      ...buildTimelineAnswer(barcode, product, timeline, intent.wantsExport),
+      render: "text",
+    };
   }
 
-  if (intent.type === 'orders') {
+  if (intent.type === "orders") {
     const orders = await resolveInventoryGptOrders(authToken);
-    return { ...buildOrdersAnswer(orders, intent.wantsExport), render: 'text' };
+    return { ...buildOrdersAnswer(orders, intent.wantsExport), render: "text" };
   }
 
-  if (intent.type === 'audit') {
-    const audit = await resolveInventoryGptAudit(authToken);
-    return { ...buildAuditAnswer(audit, intent.wantsExport), render: 'text' };
+  if (intent.type === "audit") {
+    const audit = await resolveInventoryGptAudit(authToken, q);
+    return { ...buildAuditAnswer(audit, intent.wantsExport), render: "text" };
   }
 
   return null;
