@@ -1,7 +1,7 @@
-﻿'use client';
+﻿"use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
   Loader2,
@@ -26,63 +26,82 @@ import {
   MessageCircle,
   ChevronRight,
   ArrowRight,
-  X
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import MarkdownBody from './MarkdownBody';
+  X,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import MarkdownBody from "./MarkdownBody";
 
-const STORAGE_KEY = 'inventorygpt_chat_sessions_v1';
-const AGENT_NAME = 'InsoraOpps';
-const BRAND_PURPLE = '#5850EC';
-const CHAT_COLUMN = 'mx-auto w-full max-w-5xl min-w-0 px-6';
+const STORAGE_KEY = "inventorygpt_chat_sessions_v1";
+const AGENT_NAME = "InsoraOpps";
+const BRAND_PURPLE = "#5850EC";
+const CHAT_COLUMN = "mx-auto w-full max-w-5xl min-w-0 px-6";
 const READ_MORE_CHAR_LIMIT = 1600;
 const TYPING_WORD_MS = 24;
 const TYPING_CHAR_MS = 14;
 const WELCOME_TYPE_MS = 18;
 
 const QUICK_EXAMPLES = [
-  { label: 'Show categories', prompt: 'show categories' },
-  { label: 'Website categories', prompt: 'show website categories' },
-  { label: 'BLR_WH stock', prompt: 'show stock of BLR_WH' },
-  { label: 'Analyze dead stock', prompt: 'Analyze dead stock at BLR_WH' },
-  { label: 'Website orders', prompt: 'show website orders' }
+  { label: "Show categories", prompt: "show categories" },
+  { label: "Website categories", prompt: "show website categories" },
+  { label: "BLR_WH stock", prompt: "show stock of BLR_WH" },
+  { label: "Analyze dead stock", prompt: "Analyze dead stock at BLR_WH" },
+  { label: "Website orders", prompt: "show website orders" },
 ];
 
 function isGreetingOnly(text) {
-  const raw = String(text || '').trim();
+  const raw = String(text || "").trim();
   if (!raw || raw.length > 48) return false;
-  const t = raw.replace(/[!?.]+$/g, '').trim().toLowerCase();
-  const oneWord = ['hi', 'hello', 'hey', 'hii', 'yo', 'namaste', 'howdy', 'gm', 'ga', 'ge'];
+  const t = raw
+    .replace(/[!?.]+$/g, "")
+    .trim()
+    .toLowerCase();
+  const oneWord = [
+    "hi",
+    "hello",
+    "hey",
+    "hii",
+    "yo",
+    "namaste",
+    "howdy",
+    "gm",
+    "ga",
+    "ge",
+  ];
   if (oneWord.includes(t)) return true;
   if (/^(good\s+(morning|afternoon|evening))$/.test(t)) return true;
-  if (/^(hi|hello|hey)\s+(there|all|team|bro|buddy|sir|madam)$/.test(t)) return true;
+  if (/^(hi|hello|hey)\s+(there|all|team|bro|buddy|sir|madam)$/.test(t))
+    return true;
   return false;
 }
 
 function insoraOppsGreeting(brain) {
-  const wh = brain?.warehouses ? Object.keys(brain.warehouses).join(', ') : 'GGM_WH, BLR_WH';
+  const wh = brain?.warehouses
+    ? Object.keys(brain.warehouses).join(", ")
+    : "GGM_WH, BLR_WH";
   return (
     `Hi — I'm **${AGENT_NAME}**, your inventory intelligence copilot. I read **live warehouse stock**, **timeline/ledger movements**, **dispatch products**, and **website products** — not catalog totals alone.` +
     (brain?.inventoryRowCount
       ? `\n\n**Connected:** ${brain.inventoryRowCount} batch rows · ${brain.inventoryTotalUnits?.toLocaleString?.() ?? brain.inventoryTotalUnits} units · warehouses: ${wh}`
-      : '\n\nSign in to connect live inventory APIs.')
+      : "\n\nSign in to connect live inventory APIs.")
   );
 }
 
 function insoraOppsGreetingPlain(brain) {
-  const wh = brain?.warehouses ? Object.keys(brain.warehouses).join(', ') : 'GGM_WH, BLR_WH';
+  const wh = brain?.warehouses
+    ? Object.keys(brain.warehouses).join(", ")
+    : "GGM_WH, BLR_WH";
   let text = `Hi — I'm ${AGENT_NAME}, your inventory intelligence copilot. I read live warehouse stock, timeline/ledger movements, dispatch products, and website products — not catalog totals alone.`;
   if (brain?.inventoryRowCount) {
     text += ` Connected: ${brain.inventoryRowCount} batch rows, ${brain.inventoryTotalUnits?.toLocaleString?.() ?? brain.inventoryTotalUnits} units. Warehouses: ${wh}.`;
   } else {
-    text += ' Sign in to connect live inventory APIs.';
+    text += " Sign in to connect live inventory APIs.";
   }
   return text;
 }
 
 function useTypewriter(fullText, charMs = WELCOME_TYPE_MS, enabled = true) {
   const [count, setCount] = useState(0);
-  const text = String(fullText ?? '');
+  const text = String(fullText ?? "");
 
   useEffect(() => {
     setCount(0);
@@ -96,7 +115,7 @@ function useTypewriter(fullText, charMs = WELCOME_TYPE_MS, enabled = true) {
 
   return {
     visible: text.slice(0, count),
-    done: count >= text.length
+    done: count >= text.length,
   };
 }
 
@@ -117,7 +136,7 @@ function ThinkingIndicator() {
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white"
         style={{ backgroundColor: BRAND_PURPLE }}
         animate={{ scale: [1, 1.04, 1] }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
       >
         <Sparkles className="h-4 w-4" />
       </motion.span>
@@ -130,7 +149,10 @@ function ThinkingIndicator() {
           <span
             key={i}
             className="h-2 w-2 rounded-full animate-[igpt-dot-bounce_1.2s_ease-in-out_infinite]"
-            style={{ animationDelay: `${i * 0.15}s`, backgroundColor: BRAND_PURPLE }}
+            style={{
+              animationDelay: `${i * 0.15}s`,
+              backgroundColor: BRAND_PURPLE,
+            }}
           />
         ))}
         <span className="ml-2 text-sm text-slate-500">Thinking</span>
@@ -140,57 +162,60 @@ function ThinkingIndicator() {
 }
 
 function sanitizeForUser(text) {
-  let s = String(text ?? '').trim();
-  s = s.replace(/\n*Source:\s*[^\n]+/gi, '').trim();
+  let s = String(text ?? "").trim();
+  s = s.replace(/\n*Source:\s*[^\n]+/gi, "").trim();
   if (
     /unknown column|sql|syntax error|er_|select\s+.+\s+from|\/api\/|processed_by|errno/i.test(
-      s
+      s,
     )
   ) {
-    return 'That request could not be completed right now. Please try again or rephrase your question.';
+    return "That request could not be completed right now. Please try again or rephrase your question.";
   }
   return s;
 }
 
 function tokenizeForTyping(text) {
-  const s = String(text ?? '');
+  const s = String(text ?? "");
   const parts = s.match(/\S+|\s+/g);
   return parts && parts.length ? parts : [s];
 }
 
 function deriveTitle(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return 'Inventory Status';
-  const lastUser = [...messages].reverse().find((message) => message.role === 'user');
+  if (!Array.isArray(messages) || messages.length === 0)
+    return "Inventory Status";
+  const lastUser = [...messages]
+    .reverse()
+    .find((message) => message.role === "user");
   if (lastUser?.content) {
     const trimmed = lastUser.content.trim();
     return trimmed.length > 36 ? `${trimmed.slice(0, 36).trim()}...` : trimmed;
   }
-  return 'Inventory Status';
+  return "Inventory Status";
 }
 
 function catalogAuthHeaders() {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('token') || '';
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token") || "";
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function userInitials(name) {
-  const parts = String(name || 'U')
+  const parts = String(name || "U")
     .trim()
     .split(/\s+/)
     .filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (parts[0]?.[0] || 'U').toUpperCase();
+  return (parts[0]?.[0] || "U").toUpperCase();
 }
 
 function userRoleLabel(user) {
-  if (!user) return 'Team member';
+  if (!user) return "Team member";
   return (
     user.role_display_name ||
     user.role_label ||
     user.role_name ||
     user.role ||
-    'Team member'
+    "Team member"
   );
 }
 
@@ -205,7 +230,8 @@ function CategoryGrid({ categories, onCategoryClick }) {
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
     >
       {categories.map((cat, i) => {
-        const catName = cat.name || cat.category || cat.category_name || cat.slug || '';
+        const catName =
+          cat.name || cat.category || cat.category_name || cat.slug || "";
         const count = cat.count || cat.product_count || cat.total_products || 0;
         return (
           <motion.div
@@ -248,14 +274,28 @@ function ProductCard({ product, index = 0, onAskAI }) {
 
   if (!product) return null;
 
-  const title = product.product_name || product.name || product.title || 'Unknown Product';
-  const sku = product.sku || product.barcode || product.sku_id || '';
-  const stock = parseInt(product.stock || product.quantity || product.qty || 0, 10);
-  const price = parseFloat(product.price || product.selling_price || product.unit_price || 0);
-  const secondaryPrice = parseFloat(product.secondary_price || product.compare_price || product.mrp || 0);
-  const image = product.image || product.image_url || product.product_image || product.thumbnail || '';
-  const warehouse = product.warehouse || product.warehouse_code || product.location || '';
-  
+  const title =
+    product.product_name || product.name || product.title || "Unknown Product";
+  const sku = product.sku || product.barcode || product.sku_id || "";
+  const stock = parseInt(
+    product.stock || product.quantity || product.qty || 0,
+    10,
+  );
+  const price = parseFloat(
+    product.price || product.selling_price || product.unit_price || 0,
+  );
+  const secondaryPrice = parseFloat(
+    product.secondary_price || product.compare_price || product.mrp || 0,
+  );
+  const image =
+    product.image ||
+    product.image_url ||
+    product.product_image ||
+    product.thumbnail ||
+    "";
+  const warehouse =
+    product.warehouse || product.warehouse_code || product.location || "";
+
   const isInStock = stock > 0;
   const isLowStock = stock > 0 && stock < 10;
 
@@ -277,27 +317,34 @@ function ProductCard({ product, index = 0, onAskAI }) {
             style={{ opacity: 0 }}
             loading="lazy"
             onLoad={(e) => {
-              e.target.style.opacity = '1';
+              e.target.style.opacity = "1";
             }}
             onError={(e) => {
-              e.target.style.display = 'none';
+              e.target.style.display = "none";
               const placeholder = e.target.nextElementSibling;
-              if (placeholder) placeholder.style.display = 'flex';
+              if (placeholder) placeholder.style.display = "flex";
             }}
           />
         ) : null}
-        
+
         {/* Placeholder when no image or image fails */}
-        <div className={`w-full h-full flex items-center justify-center text-slate-400 ${image ? 'absolute inset-0' : ''}`} style={{ display: image ? 'none' : 'flex' }}>
+        <div
+          className={`w-full h-full flex items-center justify-center text-slate-400 ${image ? "absolute inset-0" : ""}`}
+          style={{ display: image ? "none" : "flex" }}
+        >
           <Package className="h-12 w-12" />
         </div>
-        
+
         {/* Stock Badge */}
         <div className="absolute top-3 right-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-            isInStock ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-          }`}>
-            {isInStock ? `${stock} in stock` : 'Out of Stock'}
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-bold ${
+              isInStock
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {isInStock ? `${stock} in stock` : "Out of Stock"}
           </span>
         </div>
       </div>
@@ -308,27 +355,27 @@ function ProductCard({ product, index = 0, onAskAI }) {
         <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 leading-tight min-h-[2.8rem]">
           {title}
         </h3>
-        
+
         {/* SKU */}
-        {sku && (
-          <p className="text-xs text-slate-500">SKU: {sku}</p>
-        )}
-        
+        {sku && <p className="text-xs text-slate-500">SKU: {sku}</p>}
+
         {/* Warehouse */}
-        {warehouse && (
-          <p className="text-xs text-slate-500">📍 {warehouse}</p>
-        )}
-        
+        {warehouse && <p className="text-xs text-slate-500">📍 {warehouse}</p>}
+
         {/* Price */}
         <div className="flex items-baseline gap-2 mt-1">
           {price > 0 && (
-            <span className="text-xl font-bold text-slate-900">₹{price.toFixed(2)}</span>
+            <span className="text-xl font-bold text-slate-900">
+              ₹{price.toFixed(2)}
+            </span>
           )}
           {secondaryPrice > 0 && secondaryPrice > price && (
-            <span className="text-sm text-slate-400 line-through">₹{secondaryPrice.toFixed(2)}</span>
+            <span className="text-sm text-slate-400 line-through">
+              ₹{secondaryPrice.toFixed(2)}
+            </span>
           )}
         </div>
-        
+
         {/* Badges */}
         <div className="flex flex-wrap gap-1.5 mt-1">
           {isLowStock && (
@@ -347,7 +394,7 @@ function ProductCard({ product, index = 0, onAskAI }) {
             </span>
           )}
         </div>
-        
+
         {/* Action Button */}
         <div className="mt-auto pt-3">
           <button
@@ -359,7 +406,7 @@ function ProductCard({ product, index = 0, onAskAI }) {
             Ask AI
           </button>
         </div>
-        
+
         {/* Nested Chat */}
         {showNestedChat && <NestedChat product={product} />}
       </div>
@@ -370,32 +417,37 @@ function ProductCard({ product, index = 0, onAskAI }) {
 // ==================== NESTED AI CHAT ====================
 function NestedChat({ product }) {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
-    const userMsg = { role: 'user', content: input.trim() };
+    const userMsg = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMsg]);
-    setInput('');
+    setInput("");
     setLoading(true);
 
     try {
-      const productContext = `Product: ${product.product_name || product.name || product.title}, SKU: ${product.sku || product.barcode || ''}, Stock: ${product.stock || product.quantity || 0}, Warehouse: ${product.warehouse || ''}, Price: ${product.price || 0}`;
-      const response = await fetch('/api/inventorygpt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const productContext = `Product: ${product.product_name || product.name || product.title}, SKU: ${product.sku || product.barcode || ""}, Stock: ${product.stock || product.quantity || 0}, Warehouse: ${product.warehouse || ""}, Price: ${product.price || 0}`;
+      const response = await fetch("/api/inventorygpt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: `${userMsg.content}\n\n[Context: ${productContext}]`,
-          conversationHistory: messages.slice(-3).map((m) => ({ role: m.role, content: m.content }))
-        })
+          conversationHistory: messages
+            .slice(-3)
+            .map((m) => ({ role: m.role, content: m.content })),
+        }),
       });
       const data = await response.json();
       if (data.success && data.answer) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.answer },
+        ]);
       }
     } catch (error) {
-      console.error('Nested chat error:', error);
+      console.error("Nested chat error:", error);
     } finally {
       setLoading(false);
     }
@@ -409,8 +461,13 @@ function NestedChat({ product }) {
     >
       <div className="max-h-48 space-y-2 overflow-y-auto">
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${m.role === 'user' ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700'}`}>
+          <div
+            key={i}
+            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${m.role === "user" ? "bg-violet-100 text-violet-900" : "bg-slate-100 text-slate-700"}`}
+            >
               {m.content}
             </div>
           </div>
@@ -427,7 +484,7 @@ function NestedChat({ product }) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Ask about this product..."
           className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-violet-300 focus:outline-none"
         />
@@ -457,14 +514,19 @@ function ProductMatrix({ products, title, onAskAI }) {
       {title && (
         <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
       )}
-      
+
       {/* CSS Grid: 3 cols desktop, 2 tablet, 1 mobile */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {products.slice(0, 9).map((product, i) => (
-          <ProductCard key={`${product.id || product.sku || `prod-${i}`}`} product={product} index={i} onAskAI={onAskAI} />
+          <ProductCard
+            key={`${product.id || product.sku || `prod-${i}`}`}
+            product={product}
+            index={i}
+            onAskAI={onAskAI}
+          />
         ))}
       </div>
-      
+
       {products.length > 9 && (
         <p className="text-center text-sm text-slate-500 mt-4">
           Showing 9 of {products.length} products. Ask for more details!
@@ -476,25 +538,52 @@ function ProductMatrix({ products, title, onAskAI }) {
 
 // ==================== INTENT DETECTION ====================
 function detectIntent(text) {
-  const t = text.toLowerCase();
-  
-  // Check website categories
-  if (/show.*all.*categor.*website|show.*website.*categor|website.*categor|all.*categor.*website/.test(t)) {
-    return { type: 'website_categories', raw: text };
+  const t = String(text || "")
+    .toLowerCase()
+    .trim();
+  const hasSku = /\b\d{4,16}\b/.test(t);
+
+  // SKU questions often contain the word category ("which category does 123 belong to?").
+  // Those must stay as normal answer text, not category grids.
+  if (hasSku) return null;
+
+  // Check website categories only when user explicitly asks for a website category list.
+  if (
+    /^(show|list|get|display|view)\s+(all\s+)?(website\s+)?categor/.test(t) ||
+    /website\s+categor/.test(t)
+  ) {
+    return { type: "website_categories", raw: text };
   }
-  // Show categories grid
-  if (/show.*categor|categor/.test(t)) return { type: 'categories', raw: text };
-  
-  // Show products grid - ONLY when user explicitly says "show me products"
-  if (/show.*(all\s+)?product/.test(t) || /products.*(of|from|in)/.test(t)) {
+
+  // Show regular categories only for explicit list/show category commands.
+  if (
+    /^(show|list|get|display|view)\s+(all\s+)?categor/.test(t) ||
+    /^categor(y|ies)$/.test(t)
+  ) {
+    return { type: "categories", raw: text };
+  }
+
+  // Show products grid only when user explicitly asks to browse/list products.
+  if (
+    /^(show|list|get|display|view)\s+(all\s+)?product/.test(t) ||
+    /products\s+(of|from|in)\s+/.test(t)
+  ) {
     const match = t.match(/(?:of|from|in)\s+([a-z\s]+)/);
-    if (match) return { type: 'products', category: match[1].trim(), raw: text };
-    return { type: 'products', raw: text };
+    if (match)
+      return { type: "products", category: match[1].trim(), raw: text };
+    return { type: "products", raw: text };
   }
-  if (/show.*stock|warehouse.*stock|stock.*warehouse|inventory/.test(t)) return { type: 'stock', raw: text };
-  if (/dead\s*stock|slow\s*moving|excess/.test(t)) return { type: 'dead_stock', raw: text };
-  if (/transfer|movement/.test(t)) return { type: 'transfers', raw: text };
-  if (/how\s*(many|much).*warehouse|how\s*(many|much).*store|total\s*(warehouse|store)/.test(t)) return { type: 'warehouse_count', raw: text };
+  if (/show.*stock|warehouse.*stock|stock.*warehouse|inventory/.test(t))
+    return { type: "stock", raw: text };
+  if (/dead\s*stock|slow\s*moving|excess/.test(t))
+    return { type: "dead_stock", raw: text };
+  if (/transfer|movement/.test(t)) return { type: "transfers", raw: text };
+  if (
+    /how\s*(many|much).*warehouse|how\s*(many|much).*store|total\s*(warehouse|store)/.test(
+      t,
+    )
+  )
+    return { type: "warehouse_count", raw: text };
   // Everything else goes to AI as text response (no UI cards)
   return null;
 }
@@ -508,7 +597,9 @@ function InsoraLogo() {
       >
         <Sparkles className="h-4.5 w-4.5" strokeWidth={2.2} />
       </span>
-      <span className="text-lg font-semibold tracking-tight text-slate-900">{AGENT_NAME}</span>
+      <span className="text-lg font-semibold tracking-tight text-slate-900">
+        {AGENT_NAME}
+      </span>
     </div>
   );
 }
@@ -517,7 +608,7 @@ function StatusPill({ label, ok }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
       <span
-        className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-emerald-500' : 'bg-slate-300'}`}
+        className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-slate-300"}`}
         aria-hidden
       />
       {label}
@@ -540,7 +631,9 @@ function QuickExampleCard({ label, onClick, index = 0 }) {
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
         Quick example
       </p>
-      <p className="mt-1 text-sm italic text-slate-600">&ldquo;{label}&rdquo;</p>
+      <p className="mt-1 text-sm italic text-slate-600">
+        &ldquo;{label}&rdquo;
+      </p>
     </motion.button>
   );
 }
@@ -550,11 +643,21 @@ function WelcomePanel({ brain, onPickExample }) {
   const { visible, done } = useTypewriter(plain, WELCOME_TYPE_MS, true);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex gap-3"
+    >
       <motion.span
         className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-md"
         style={{ backgroundColor: BRAND_PURPLE }}
-        animate={{ boxShadow: ['0 0 0 0 rgba(88,80,236,0.35)', '0 0 0 10px rgba(88,80,236,0)', '0 0 0 0 rgba(88,80,236,0)'] }}
+        animate={{
+          boxShadow: [
+            "0 0 0 0 rgba(88,80,236,0.35)",
+            "0 0 0 10px rgba(88,80,236,0)",
+            "0 0 0 0 rgba(88,80,236,0)",
+          ],
+        }}
         transition={{ duration: 2, repeat: Infinity }}
       >
         <Info className="h-4 w-4" strokeWidth={2.5} />
@@ -595,21 +698,43 @@ function WelcomePanel({ brain, onPickExample }) {
   );
 }
 
-function AssistantMessage({ message, isStreaming = false, onHelpful, categories, websiteCategories, products, onCategoryClick }) {
+function AssistantMessage({
+  message,
+  isStreaming = false,
+  onHelpful,
+  categories,
+  websiteCategories,
+  products,
+  onCategoryClick,
+}) {
   const [copied, setCopied] = useState(false);
   const [helpful, setHelpful] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const fullContent = String(message.content ?? '');
+  const fullContent = String(message.content ?? "");
   const isLong = fullContent.length > READ_MORE_CHAR_LIMIT && !isStreaming;
   const displayContent =
-    isLong && !expanded ? `${fullContent.slice(0, READ_MORE_CHAR_LIMIT)}…` : fullContent;
+    isLong && !expanded
+      ? `${fullContent.slice(0, READ_MORE_CHAR_LIMIT)}…`
+      : fullContent;
 
-  // Detect intent and render visual components
-  const intent = detectIntent(message.userPrompt || '');
-  const showCategoryGrid = intent?.type === 'categories' && Array.isArray(categories) && categories.length > 0;
-  const showWebsiteCategoryGrid = intent?.type === 'website_categories' && Array.isArray(websiteCategories) && websiteCategories.length > 0;
-  const showProductMatrix = intent?.type === 'products' && Array.isArray(products) && products.length > 0;
+  // Detect intent and render visual components. Backend can force text rendering for SKU lookup/not-found answers.
+  const allowVisualRender = message.render !== "text";
+  const intent = allowVisualRender
+    ? detectIntent(message.userPrompt || "")
+    : null;
+  const showCategoryGrid =
+    intent?.type === "categories" &&
+    Array.isArray(categories) &&
+    categories.length > 0;
+  const showWebsiteCategoryGrid =
+    intent?.type === "website_categories" &&
+    Array.isArray(websiteCategories) &&
+    websiteCategories.length > 0;
+  const showProductMatrix =
+    intent?.type === "products" &&
+    Array.isArray(products) &&
+    products.length > 0;
 
   // Filter products by category if needed
   const filteredProducts = useMemo(() => {
@@ -617,9 +742,20 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
     const cat = intent.category.toLowerCase();
     return products.filter((p) => {
       // Check multiple possible category fields
-      const pCat = (p.category || p.category_name || p.product_category || p.type || p.category_name || p.category_id || p.category_display_name || '').toString().toLowerCase();
-      const pName = (p.product_name || p.name || p.title || '').toLowerCase();
-      const pSku = (p.sku || p.barcode || '').toLowerCase();
+      const pCat = (
+        p.category ||
+        p.category_name ||
+        p.product_category ||
+        p.type ||
+        p.category_name ||
+        p.category_id ||
+        p.category_display_name ||
+        ""
+      )
+        .toString()
+        .toLowerCase();
+      const pName = (p.product_name || p.name || p.title || "").toLowerCase();
+      const pSku = (p.sku || p.barcode || "").toLowerCase();
       // Match by category name OR product name containing the category
       return pCat.includes(cat) || pName.includes(cat) || pSku.includes(cat);
     });
@@ -640,7 +776,7 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
       className="group flex gap-3"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: 'easeOut' }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
     >
       <span
         className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
@@ -651,13 +787,23 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
       <div className="min-w-0 flex-1 space-y-4">
         {/* Regular Category Grid */}
         {showCategoryGrid ? (
-          <CategoryGrid categories={categories} onCategoryClick={onCategoryClick} />
+          <CategoryGrid
+            categories={categories}
+            onCategoryClick={onCategoryClick}
+          />
         ) : showWebsiteCategoryGrid ? (
           /* Website Category Grid */
-          <CategoryGrid categories={websiteCategories} onCategoryClick={onCategoryClick} />
+          <CategoryGrid
+            categories={websiteCategories}
+            onCategoryClick={onCategoryClick}
+          />
         ) : showProductMatrix ? (
           /* Product Matrix ONLY - no markdown text */
-          <ProductMatrix products={filteredProducts} title={`${intent?.category ? `${intent.category} Products` : 'Products'}`} onAskAI={() => {}} />
+          <ProductMatrix
+            products={filteredProducts}
+            title={`${intent?.category ? `${intent.category} Products` : "Products"}`}
+            onAskAI={() => {}}
+          />
         ) : (
           /* Regular text response */
           <>
@@ -695,8 +841,12 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
                   onClick={copyText}
                   className="inline-flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-600"
                 >
-                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {copied ? "Copied" : "Copy"}
                 </button>
                 <button
                   type="button"
@@ -705,7 +855,9 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
                     onHelpful?.();
                   }}
                   className={`inline-flex items-center gap-1.5 text-xs transition ${
-                    helpful ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600'
+                    helpful
+                      ? "text-violet-600"
+                      : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
                   <ThumbsUp className="h-3.5 w-3.5" />
@@ -714,7 +866,9 @@ function AssistantMessage({ message, isStreaming = false, onHelpful, categories,
                 {message.exportTsv ? (
                   <button
                     type="button"
-                    onClick={() => navigator.clipboard.writeText(message.exportTsv)}
+                    onClick={() =>
+                      navigator.clipboard.writeText(message.exportTsv)
+                    }
                     className="text-xs text-slate-400 hover:text-slate-600"
                   >
                     Copy table
@@ -735,7 +889,7 @@ function UserMessage({ content }) {
       className="flex items-end justify-end gap-2"
       initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
     >
       <motion.div
         className="max-w-[85%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed text-white shadow-md"
@@ -757,7 +911,7 @@ export default function InventoryGPTPage() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState(null);
   const [activeSessionId, setActiveSessionId] = useState(null);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -770,11 +924,11 @@ export default function InventoryGPTPage() {
 
   const activeSession = useMemo(
     () => sessions?.find((s) => s.id === activeSessionId),
-    [sessions, activeSessionId]
+    [sessions, activeSessionId],
   );
   const messages = activeSession?.messages ?? [];
 
-  const displayName = user?.name || 'User';
+  const displayName = user?.name || "User";
   const displayRole = userRoleLabel(user);
 
   useEffect(() => {
@@ -792,10 +946,12 @@ export default function InventoryGPTPage() {
       /* ignore */
     }
     const id =
-      typeof crypto !== 'undefined' && crypto.randomUUID
+      typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : `s-${Date.now()}`;
-    const initial = [{ id, title: 'Inventory Status', updatedAt: Date.now(), messages: [] }];
+    const initial = [
+      { id, title: "Inventory Status", updatedAt: Date.now(), messages: [] },
+    ];
     setSessions(initial);
     setActiveSessionId(id);
   }, []);
@@ -803,14 +959,17 @@ export default function InventoryGPTPage() {
   useEffect(() => {
     if (!sessions?.length || !activeSessionId) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions, activeSessionId }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ sessions, activeSessionId }),
+      );
     } catch {
       /* ignore */
     }
   }, [sessions, activeSessionId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, streamingMsg]);
 
   useEffect(() => {
@@ -819,88 +978,97 @@ export default function InventoryGPTPage() {
     };
   }, []);
 
-  const appendAssistantWithTyping = useCallback((sessionId, fullText, meta = {}) => {
-    const safeText = sanitizeForUser(fullText);
-    const timestamp = Date.now();
-    const useChars = safeText.length < 220;
-    const tokens = useChars ? safeText.split('') : tokenizeForTyping(safeText);
-    const tickMs = useChars ? TYPING_CHAR_MS : TYPING_WORD_MS;
-    const baseMeta = { ...meta, isStreaming: true };
+  const appendAssistantWithTyping = useCallback(
+    (sessionId, fullText, meta = {}) => {
+      const safeText = sanitizeForUser(fullText);
+      const timestamp = Date.now();
+      const useChars = safeText.length < 220;
+      const tokens = useChars
+        ? safeText.split("")
+        : tokenizeForTyping(safeText);
+      const tickMs = useChars ? TYPING_CHAR_MS : TYPING_WORD_MS;
+      const baseMeta = { ...meta, isStreaming: true };
 
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id !== sessionId) return s;
-        const assistantMessage = {
-          role: 'assistant',
-          content: '',
-          timestamp,
-          ...baseMeta
-        };
-        const nextMessages = [...s.messages, assistantMessage];
-        return {
-          ...s,
-          messages: nextMessages,
-          title: deriveTitle(nextMessages),
-          updatedAt: Date.now()
-        };
-      })
-    );
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== sessionId) return s;
+          const assistantMessage = {
+            role: "assistant",
+            content: "",
+            timestamp,
+            ...baseMeta,
+          };
+          const nextMessages = [...s.messages, assistantMessage];
+          return {
+            ...s,
+            messages: nextMessages,
+            title: deriveTitle(nextMessages),
+            updatedAt: Date.now(),
+          };
+        }),
+      );
 
-    setStreamingMsg({ sessionId, timestamp, tokens, index: 0, tickMs });
+      setStreamingMsg({ sessionId, timestamp, tokens, index: 0, tickMs });
 
-    if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
 
-    typingTimerRef.current = setInterval(() => {
-      setStreamingMsg((prev) => {
-        if (!prev) return null;
-        const nextIndex = prev.index + 1;
-        const visible = prev.tokens.slice(0, nextIndex).join('');
+      typingTimerRef.current = setInterval(() => {
+        setStreamingMsg((prev) => {
+          if (!prev) return null;
+          const nextIndex = prev.index + 1;
+          const visible = prev.tokens.slice(0, nextIndex).join("");
 
-        setSessions((sessions) =>
-          sessions.map((s) => {
-            if (s.id !== prev.sessionId) return s;
-            const msgs = [...s.messages];
-            const idx = msgs.findIndex((m) => m.timestamp === prev.timestamp);
-            if (idx < 0) return s;
-            msgs[idx] = {
-              ...msgs[idx],
-              content: visible,
-              isStreaming: nextIndex < prev.tokens.length
-            };
-            return { ...s, messages: msgs, updatedAt: Date.now() };
-          })
-        );
-
-        if (nextIndex >= prev.tokens.length) {
-          const full = prev.tokens.join('');
           setSessions((sessions) =>
             sessions.map((s) => {
               if (s.id !== prev.sessionId) return s;
               const msgs = [...s.messages];
               const idx = msgs.findIndex((m) => m.timestamp === prev.timestamp);
               if (idx < 0) return s;
-              msgs[idx] = { ...msgs[idx], content: full, isStreaming: false };
+              msgs[idx] = {
+                ...msgs[idx],
+                content: visible,
+                isStreaming: nextIndex < prev.tokens.length,
+              };
               return { ...s, messages: msgs, updatedAt: Date.now() };
-            })
+            }),
           );
-          if (typingTimerRef.current) {
-            clearInterval(typingTimerRef.current);
-            typingTimerRef.current = null;
+
+          if (nextIndex >= prev.tokens.length) {
+            const full = prev.tokens.join("");
+            setSessions((sessions) =>
+              sessions.map((s) => {
+                if (s.id !== prev.sessionId) return s;
+                const msgs = [...s.messages];
+                const idx = msgs.findIndex(
+                  (m) => m.timestamp === prev.timestamp,
+                );
+                if (idx < 0) return s;
+                msgs[idx] = { ...msgs[idx], content: full, isStreaming: false };
+                return { ...s, messages: msgs, updatedAt: Date.now() };
+              }),
+            );
+            if (typingTimerRef.current) {
+              clearInterval(typingTimerRef.current);
+              typingTimerRef.current = null;
+            }
+            return null;
           }
-          return null;
-        }
-        return { ...prev, index: nextIndex };
-      });
-    }, tickMs);
-  }, []);
+          return { ...prev, index: nextIndex };
+        });
+      }, tickMs);
+    },
+    [],
+  );
 
   const loadBrain = useCallback(async () => {
     setBrainLoading(true);
     try {
       const token =
-        typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        typeof window !== "undefined"
+          ? localStorage.getItem("token") || ""
+          : "";
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch('/api/inventorygpt/context', { headers });
+      const res = await fetch("/api/inventorygpt/context", { headers });
       const data = await res.json().catch(() => ({}));
       if (data.success && data.brain) {
         setBrain(data.brain);
@@ -909,65 +1077,94 @@ export default function InventoryGPTPage() {
         const web = data.preview?.website ?? [];
         setProducts(inv.length ? inv : disp.length ? disp : web);
       }
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+      const apiBase =
+        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
       const h = catalogAuthHeaders();
-      
+
       // Fetch REGULAR products AND website products
-      const [productsRes, categoriesRes, websiteProductsRes, websiteCategoriesRes] = await Promise.all([
-        fetch(`${apiBase}/api/products?limit=100`, { headers: h }).catch(() => ({ ok: false })),
-        fetch(`${apiBase}/api/products/categories/all`, { headers: h }).catch(() => ({ ok: false })),
-        fetch(`${apiBase}/api/website/products?limit=100`, { headers: h }).catch(() => ({ ok: false })),
-        fetch(`${apiBase}/api/website/products/categories`, { headers: h }).catch(() => ({ ok: false }))
+      const [
+        productsRes,
+        categoriesRes,
+        websiteProductsRes,
+        websiteCategoriesRes,
+      ] = await Promise.all([
+        fetch(`${apiBase}/api/products?limit=100`, { headers: h }).catch(
+          () => ({ ok: false }),
+        ),
+        fetch(`${apiBase}/api/products/categories/all`, { headers: h }).catch(
+          () => ({ ok: false }),
+        ),
+        fetch(`${apiBase}/api/website/products?limit=100`, {
+          headers: h,
+        }).catch(() => ({ ok: false })),
+        fetch(`${apiBase}/api/website/products/categories`, {
+          headers: h,
+        }).catch(() => ({ ok: false })),
       ]);
-      
+
       // Merge products from both sources
       const allProducts = [];
       if (productsRes.ok) {
         const pdata = await productsRes.json().catch(() => ({}));
-        const list = pdata?.data?.products ?? pdata?.products ?? pdata?.data ?? [];
-        if (Array.isArray(list)) allProducts.push(...list.map(p => ({ ...p, source: 'regular' })));
+        const list =
+          pdata?.data?.products ?? pdata?.products ?? pdata?.data ?? [];
+        if (Array.isArray(list))
+          allProducts.push(...list.map((p) => ({ ...p, source: "regular" })));
       }
       if (websiteProductsRes.ok) {
         const wdata = await websiteProductsRes.json().catch(() => ({}));
-        const wlist = wdata?.data?.products ?? wdata?.products ?? wdata?.data ?? [];
-        if (Array.isArray(wlist)) allProducts.push(...wlist.map(p => ({ ...p, source: 'website' })));
+        const wlist =
+          wdata?.data?.products ?? wdata?.products ?? wdata?.data ?? [];
+        if (Array.isArray(wlist))
+          allProducts.push(...wlist.map((p) => ({ ...p, source: "website" })));
       }
       if (allProducts.length) setProducts(allProducts);
-      
+
       // Store categories separately
       const regularCats = [];
       if (categoriesRes.ok) {
         const cdata = await categoriesRes.json().catch(() => ({}));
         const clist = cdata?.data ?? cdata?.categories ?? [];
         if (Array.isArray(clist)) {
-          regularCats.push(...clist.map(c => ({
-            name: c.name || c.display_name || c.category || '',
-            count: c.count || c.product_count || 0,
-            source: 'regular',
-            ...c
-          })));
+          regularCats.push(
+            ...clist.map((c) => ({
+              name: c.name || c.display_name || c.category || "",
+              count: c.count || c.product_count || 0,
+              source: "regular",
+              ...c,
+            })),
+          );
         }
       }
       if (regularCats.length) setCategories(regularCats);
-      
+
       const webCats = [];
       if (websiteCategoriesRes.ok) {
         const wcdata = await websiteCategoriesRes.json().catch(() => ({}));
         const wclist = wcdata?.data ?? wcdata?.categories ?? [];
         if (Array.isArray(wclist)) {
-          webCats.push(...wclist.map(c => ({
-            name: c.name || c.slug || c.category || '',
-            count: c.product_count || c.count || 0,
-            source: 'website',
-            ...c
-          })));
+          webCats.push(
+            ...wclist.map((c) => ({
+              name: c.name || c.slug || c.category || "",
+              count: c.product_count || c.count || 0,
+              source: "website",
+              ...c,
+            })),
+          );
         }
       }
       if (webCats.length) setWebsiteCategories(webCats);
-      
-      console.log('Loaded regular categories:', regularCats.length, 'Website categories:', webCats.length, 'Products:', allProducts.length);
+
+      console.log(
+        "Loaded regular categories:",
+        regularCats.length,
+        "Website categories:",
+        webCats.length,
+        "Products:",
+        allProducts.length,
+      );
     } catch (error) {
-      console.error('Failed to load brain context:', error);
+      console.error("Failed to load brain context:", error);
     } finally {
       setBrainLoading(false);
     }
@@ -978,13 +1175,13 @@ export default function InventoryGPTPage() {
   }, [loadBrain]);
 
   const sendMessage = async (text) => {
-    const trimmed = String(text || '').trim();
+    const trimmed = String(text || "").trim();
     if (!trimmed || isLoading || !activeSessionId || !sessions) return;
 
     const userMessage = {
-      role: 'user',
+      role: "user",
       content: trimmed,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     const priorMessages = messages;
@@ -997,61 +1194,78 @@ export default function InventoryGPTPage() {
               ...s,
               messages: [...s.messages, userMessage],
               title: deriveTitle([...s.messages, userMessage]),
-              updatedAt: Date.now()
+              updatedAt: Date.now(),
             }
-          : s
-      )
+          : s,
+      ),
     );
-    setInput('');
+    setInput("");
     setIsLoading(true);
 
     if (isGreetingOnly(trimmed)) {
-      appendAssistantWithTyping(sessionIdForRequest, insoraOppsGreeting(brain), {
-        error: false,
-        fromAgent: AGENT_NAME
-      });
+      appendAssistantWithTyping(
+        sessionIdForRequest,
+        insoraOppsGreeting(brain),
+        {
+          error: false,
+          fromAgent: AGENT_NAME,
+        },
+      );
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('/api/inventorygpt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/inventorygpt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: trimmed,
           products,
           categories,
           authToken:
-            typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '',
+            typeof window !== "undefined"
+              ? localStorage.getItem("token") || ""
+              : "",
           conversationHistory: priorMessages.slice(-5).map((m) => ({
             role: m.role,
-            content: m.content
-          }))
-        })
+            content: m.content,
+          })),
+        }),
       });
       const data = await response.json().catch(() => ({}));
 
       if (data.success && data.answer) {
-        appendAssistantWithTyping(sessionIdForRequest, String(data.answer).trim(), {
-          error: false,
-          fromAgent: AGENT_NAME,
-          exportTsv: data.exportTsv || null,
-          exportFilename: data.exportFilename || null,
-          userPrompt: trimmed // Track user prompt for intent detection
-        });
+        appendAssistantWithTyping(
+          sessionIdForRequest,
+          String(data.answer).trim(),
+          {
+            error: false,
+            fromAgent: AGENT_NAME,
+            exportTsv: data.exportTsv || null,
+            exportFilename: data.exportFilename || null,
+            render: data.render || null,
+            userPrompt: trimmed, // Track user prompt for intent detection
+          },
+        );
       } else {
         appendAssistantWithTyping(
           sessionIdForRequest,
-          sanitizeForUser(data.fallback || data.error || 'Something went wrong.'),
-          { error: true, userPrompt: trimmed }
+          sanitizeForUser(
+            data.fallback || data.error || "Something went wrong.",
+          ),
+          { error: true, userPrompt: trimmed },
         );
       }
     } catch {
-      appendAssistantWithTyping(sessionIdForRequest, 'Connection error. Try again.', {
-        error: true,
-        userPrompt: trimmed
-      });
+      appendAssistantWithTyping(
+        sessionIdForRequest,
+        "Connection error. Try again.",
+        {
+          error: true,
+          userPrompt: trimmed,
+        },
+      );
     } finally {
       setIsLoading(false);
     }
@@ -1064,15 +1278,15 @@ export default function InventoryGPTPage() {
 
   const newChat = () => {
     const id =
-      typeof crypto !== 'undefined' && crypto.randomUUID
+      typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : `s-${Date.now()}`;
     setSessions((prev) => [
-      { id, title: 'Inventory Status', updatedAt: Date.now(), messages: [] },
-      ...prev
+      { id, title: "Inventory Status", updatedAt: Date.now(), messages: [] },
+      ...prev,
     ]);
     setActiveSessionId(id);
-    setInput('');
+    setInput("");
   };
 
   const selectSession = (id) => {
@@ -1083,7 +1297,7 @@ export default function InventoryGPTPage() {
     }
     setStreamingMsg(null);
     setActiveSessionId(id);
-    setInput('');
+    setInput("");
   };
 
   const deleteSession = (id, e) => {
@@ -1094,13 +1308,13 @@ export default function InventoryGPTPage() {
         ? [
             {
               id:
-                typeof crypto !== 'undefined' && crypto.randomUUID
+                typeof crypto !== "undefined" && crypto.randomUUID
                   ? crypto.randomUUID()
                   : `s-${Date.now()}`,
-              title: 'Inventory Status',
+              title: "Inventory Status",
               updatedAt: Date.now(),
-              messages: []
-            }
+              messages: [],
+            },
           ]
         : filtered;
     const newActive = id === activeSessionId ? next[0].id : activeSessionId;
@@ -1111,13 +1325,19 @@ export default function InventoryGPTPage() {
   if (!sessions) {
     return (
       <div className="flex flex-1 items-center justify-center bg-[#f8f9fc] text-slate-700">
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: BRAND_PURPLE }} aria-label="Loading" />
+        <Loader2
+          className="h-8 w-8 animate-spin"
+          style={{ color: BRAND_PURPLE }}
+          aria-label="Loading"
+        />
       </div>
     );
   }
 
-  const orderedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
-  const headerTitle = activeSession?.title || 'Inventory Status';
+  const orderedSessions = [...sessions].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
+  const headerTitle = activeSession?.title || "Inventory Status";
 
   const inventoryOk = Boolean(brain?.inventoryRowCount);
   const dispatchOk = Boolean(brain?.dispatchProductCount);
@@ -1157,24 +1377,26 @@ export default function InventoryGPTPage() {
                     tabIndex={0}
                     onClick={() => selectSession(s.id)}
                     onKeyDown={(ev) => {
-                      if (ev.key === 'Enter' || ev.key === ' ') {
+                      if (ev.key === "Enter" || ev.key === " ") {
                         ev.preventDefault();
                         selectSession(s.id);
                       }
                     }}
                     className={`group flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition ${
-                      active ? 'bg-violet-50' : 'hover:bg-slate-50'
+                      active ? "bg-violet-50" : "hover:bg-slate-50"
                     }`}
                   >
                     <MessageSquare
-                      className={`h-4 w-4 shrink-0 ${active ? 'text-violet-600' : 'text-slate-400'}`}
+                      className={`h-4 w-4 shrink-0 ${active ? "text-violet-600" : "text-slate-400"}`}
                     />
                     <span
                       className={`min-w-0 flex-1 truncate text-sm ${
-                        active ? 'font-medium text-violet-700' : 'text-slate-700'
+                        active
+                          ? "font-medium text-violet-700"
+                          : "text-slate-700"
                       }`}
                     >
-                      {s.title || 'Inventory Status'}
+                      {s.title || "Inventory Status"}
                     </span>
                     <button
                       type="button"
@@ -1200,7 +1422,9 @@ export default function InventoryGPTPage() {
               {userInitials(displayName)}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-900">{displayName}</p>
+              <p className="truncate text-sm font-medium text-slate-900">
+                {displayName}
+              </p>
               <p className="truncate text-xs text-slate-500">{displayRole}</p>
             </div>
             <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
@@ -1210,13 +1434,17 @@ export default function InventoryGPTPage() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#f8f9fc]">
         <header className="shrink-0 border-b border-slate-200/80 bg-white">
-          <div className={`${CHAT_COLUMN} flex flex-wrap items-center justify-between gap-3 py-4`}>
-            <h1 className="text-lg font-semibold text-slate-900">{headerTitle}</h1>
+          <div
+            className={`${CHAT_COLUMN} flex flex-wrap items-center justify-between gap-3 py-4`}
+          >
+            <h1 className="text-lg font-semibold text-slate-900">
+              {headerTitle}
+            </h1>
             <div className="flex flex-wrap items-center gap-2">
               <StatusPill label="Inventory" ok={inventoryOk} />
               <StatusPill label="Dispatch" ok={dispatchOk} />
               <StatusPill label="Website" ok={websiteOk} />
-              <StatusPill label={aiOk ? 'AI Online' : 'AI Offline'} ok={aiOk} />
+              <StatusPill label={aiOk ? "AI Online" : "AI Offline"} ok={aiOk} />
               {brainLoading ? (
                 <span className="text-xs text-slate-400">Syncing…</span>
               ) : null}
@@ -1227,7 +1455,7 @@ export default function InventoryGPTPage() {
                 className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${brainLoading ? 'animate-spin' : ''}`}
+                  className={`h-3.5 w-3.5 ${brainLoading ? "animate-spin" : ""}`}
                 />
                 Refresh
               </button>
@@ -1238,15 +1466,20 @@ export default function InventoryGPTPage() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div
             className={`${CHAT_COLUMN} space-y-8 py-8 ${
-              messages.length === 0 ? 'flex min-h-[min(58vh,calc(100vh-260px))] flex-col justify-center' : ''
+              messages.length === 0
+                ? "flex min-h-[min(58vh,calc(100vh-260px))] flex-col justify-center"
+                : ""
             }`}
           >
             {messages.length === 0 ? (
-              <WelcomePanel brain={brain} onPickExample={(prompt) => sendMessage(prompt)} />
+              <WelcomePanel
+                brain={brain}
+                onPickExample={(prompt) => sendMessage(prompt)}
+              />
             ) : (
               <>
                 {messages.map((message, index) => {
-                  if (message.role === 'assistant') {
+                  if (message.role === "assistant") {
                     return (
                       <AssistantMessage
                         key={`${message.timestamp}-${index}`}

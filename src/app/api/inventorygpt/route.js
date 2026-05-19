@@ -1,59 +1,165 @@
-import { NextResponse } from 'next/server';
-import { tryInsoraOppsDataAnswer } from '@/lib/insoraOppsOpsAnswer';
-import { buildInventoryGptBrainContext } from '@/lib/inventorygptBrainContext';
+import { NextResponse } from "next/server";
+import { tryInsoraOppsDataAnswer } from "@/lib/insoraOppsOpsAnswer";
+import { buildInventoryGptBrainContext } from "@/lib/inventorygptBrainContext";
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct-v0.1';
-const OPENROUTER_URL = 'https://api.openrouter.ai/v1/chat/completions';
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || 'https://api.giftgala.in';
+const OPENROUTER_API_KEY =
+  process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY;
+const OPENROUTER_MODEL =
+  process.env.OPENROUTER_MODEL || "mistralai/mistral-7b-instruct-v0.1";
+const OPENROUTER_URL = "https://api.openrouter.ai/v1/chat/completions";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  process.env.API_BASE ||
+  "https://api.giftgala.in";
 
-async function fetchWebsiteProductByBarcode(barcode, token) {
-  try {
-    const response = await fetch(
-      `${API_BASE}/api/website/products?search=${encodeURIComponent(barcode)}&limit=5`,
-      {
-        headers: token
-          ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-          : { 'Content-Type': 'application/json' }
-      }
-    );
-    if (!response.ok) return null;
-    const data = await response.json().catch(() => ({}));
-    const list = Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data?.products)
-        ? data.products
-        : Array.isArray(data)
-          ? data
-          : [];
-    return list.find((p) => (p.barcode || p.sku || p.code || '').toString().includes(barcode)) || null;
-  } catch {
-    return null;
+function apiHeaders(token) {
+  return token
+    ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+    : { "Content-Type": "application/json" };
+}
+
+function rowsFromPayload(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data?.products)) return payload.data.products;
+  if (Array.isArray(payload.data?.items)) return payload.data.items;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.products)) return payload.products;
+  if (payload.data && typeof payload.data === "object") return [payload.data];
+  return [];
+}
+
+function normalizeProductForAnswer(product, source = "") {
+  if (!product) return null;
+  const sku = (
+    product.barcode ||
+    product.sku ||
+    product.code ||
+    product.sku_id ||
+    ""
+  ).toString();
+  return {
+    ...product,
+    source: product.source || source,
+    sku,
+    barcode: product.barcode || product.sku || sku,
+    product_name:
+      product.product_name || product.name || product.title || sku || "Product",
+    category:
+      product.category ||
+      product.category_display_name ||
+      product.category_name ||
+      product.category_slug ||
+      "Uncategorized",
+    price:
+      product.price ??
+      product.selling_price ??
+      product.offer_price ??
+      product.final_price ??
+      product.mrp ??
+      null,
+    total_stock:
+      product.total_stock ??
+      product.stock ??
+      product.quantity ??
+      product.stock_quantity ??
+      product.qty_available ??
+      null,
+  };
+}
+
+function findProduct(list, code) {
+  if (!Array.isArray(list) || !code) return null;
+  const needle = code.toString().trim().toLowerCase();
+  const normalized = list
+    .map((p) => normalizeProductForAnswer(p))
+    .filter(Boolean);
+  return (
+    normalized.find((p) =>
+      [p.barcode, p.sku, p.code, p.sku_id].some(
+        (v) => v?.toString().trim().toLowerCase() === needle,
+      ),
+    ) ||
+    normalized.find((p) =>
+      [p.barcode, p.sku, p.code, p.sku_id].some((v) =>
+        v?.toString().trim().toLowerCase().includes(needle),
+      ),
+    ) ||
+    null
+  );
+}
+
+async function fetchJson(url, token) {
+  const response = await fetch(url, {
+    headers: apiHeaders(token),
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  return response.json().catch(() => null);
+}
+
+async function fetchProductByBarcodeFromCatalogs(barcode, token) {
+  const code = encodeURIComponent(barcode);
+  const candidates = [];
+
+  const endpoints = [
+    {
+      source: "dispatch_product",
+      url: `${API_BASE}/api/products/search/${code}`,
+    },
+    {
+      source: "dispatch_product",
+      url: `${API_BASE}/api/products?search=${code}&limit=10`,
+    },
+    {
+      source: "website_products",
+      url: `${API_BASE}/api/website/products?search=${code}&limit=10`,
+    },
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const payload = await fetchJson(endpoint.url, token);
+      const rows = rowsFromPayload(payload).map((p) =>
+        normalizeProductForAnswer(p, endpoint.source),
+      );
+      candidates.push(...rows);
+    } catch (error) {
+      console.warn(
+        `[InventoryGPT] product lookup failed for ${endpoint.source}:`,
+        error?.message,
+      );
+    }
   }
+
+  return findProduct(candidates, barcode);
 }
 
 async function requestOpenRouterCompletion(messages) {
   if (!OPENROUTER_API_KEY) {
-    throw new Error('OpenRouter API key is not configured. Set OPENROUTER_API_KEY in environment.');
+    throw new Error(
+      "OpenRouter API key is not configured. Set OPENROUTER_API_KEY in environment.",
+    );
   }
 
   const response = await fetch(OPENROUTER_URL, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
       temperature: 0,
       max_tokens: 1000,
-      messages
-    })
+      messages,
+    }),
   });
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const errorMessage = data?.error?.message || data?.message || `HTTP ${response.status}`;
+    const errorMessage =
+      data?.error?.message || data?.message || `HTTP ${response.status}`;
     throw new Error(`OpenRouter API error: ${errorMessage}`);
   }
 
@@ -61,16 +167,16 @@ async function requestOpenRouterCompletion(messages) {
 }
 
 function extractBarcode(text) {
-  const m = String(text || '').match(/\b(\d{4,16})\b/);
-  return m ? m[1] : null;
-}
+  const raw = String(text || "");
+  const m = raw.match(/\b(\d{4,16})\b/);
+  if (!m) return null;
 
-function findProduct(list, code) {
-  if (!Array.isArray(list) || !code) return null;
-  return list.find((p) => {
-    const b = (p.barcode || p.sku || p.code || '').toString();
-    return b && b.includes(code);
-  }) || null;
+  const lower = raw.toLowerCase();
+  const looksLikeProductQuestion =
+    /sku|barcode|product|catalog|category|item|name|price|stock/.test(lower) ||
+    raw.replace(/\D/g, "") === m[1];
+
+  return looksLikeProductQuestion ? m[1] : null;
 }
 
 export async function POST(req) {
@@ -79,7 +185,10 @@ export async function POST(req) {
       await req.json();
 
     if (!question) {
-      return NextResponse.json({ success: false, error: 'Question is required' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Question is required" },
+        { status: 400 },
+      );
     }
 
     const prods = Array.isArray(products) ? products : [];
@@ -89,68 +198,87 @@ export async function POST(req) {
     if (localBarcode) {
       let found = findProduct(prods, localBarcode);
       if (!found) {
-        found = await fetchWebsiteProductByBarcode(localBarcode, authToken || '');
+        found = await fetchProductByBarcodeFromCatalogs(
+          localBarcode,
+          authToken || "",
+        );
       }
       if (found) {
-        const name = found.product_name || found.name || found.title || 'Product';
-        const cat = found.category || found.category_name || found.category_display_name || 'Uncategorized';
-        const price = found.price ?? found.selling_price ?? found.mrp ?? found.final_price ?? null;
-        const stock = found.total_stock ?? found.stock ?? found.quantity ?? found.stock_quantity ?? null;
+        const name =
+          found.product_name || found.name || found.title || "Product";
+        const cat =
+          found.category ||
+          found.category_name ||
+          found.category_display_name ||
+          "Uncategorized";
+        const price =
+          found.price ??
+          found.selling_price ??
+          found.mrp ??
+          found.final_price ??
+          null;
+        const stock =
+          found.total_stock ??
+          found.stock ??
+          found.quantity ??
+          found.stock_quantity ??
+          null;
+        const sourceLabel =
+          found.source === "website_products"
+            ? "Website Product catalog"
+            : "Product catalog";
         return NextResponse.json({
           success: true,
           answer:
-            `**${name}** (SKU: \`${localBarcode}\`)\n\n` +
+            `**${name}** (SKU: \`${found.sku || localBarcode}\`)\n\n` +
             `- **Category:** ${cat}\n` +
-            `${price != null ? `- **Price:** ${typeof price === 'number' ? `₹${price.toLocaleString('en-IN')}` : price}\n` : ''}` +
-            `${stock != null ? `- **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}\n` : ''}` +
-            `\nWould you like anything else about this product?`,
-          model: 'local-lookup'
+            `- **Catalog:** ${sourceLabel}\n` +
+            `${price != null ? `- **Price:** ${typeof price === "number" ? `₹${price.toLocaleString("en-IN")}` : price}\n` : ""}` +
+            `${stock != null ? `- **Stock:** ${Number(stock) > 0 ? stock + " units" : "Out of Stock"}\n` : ""}` +
+            `\nIf you want description, warehouse breakup, or similar products, just ask me.`,
+          model: "local-lookup",
+          render: "text",
         });
       }
+
+      return NextResponse.json({
+        success: true,
+        answer:
+          `I checked both catalogs for SKU \`${localBarcode}\`, but I could not find this product.\n\n` +
+          `- Checked: **Product catalog** (dispatch products)\n` +
+          `- Checked: **Website Product catalog**\n\n` +
+          `Please confirm the SKU/barcode, or ask me to show categories/products separately.`,
+        model: "local-lookup",
+        render: "text",
+      });
     }
 
-    const opsAnswer = await tryInsoraOppsDataAnswer(question, authToken || '');
+    const opsAnswer = await tryInsoraOppsDataAnswer(question, authToken || "");
     if (opsAnswer?.answer) {
       return NextResponse.json({
         success: true,
         answer: opsAnswer.answer,
-        model: 'deterministic',
+        model: "deterministic",
         exportTsv: opsAnswer.exportTsv || undefined,
-        exportFilename: opsAnswer.exportFilename || undefined
+        exportFilename: opsAnswer.exportFilename || undefined,
       });
     }
 
     let brain = null;
     if (authToken) {
       try {
-        brain = await buildInventoryGptBrainContext(authToken, { productLimit: 40 });
-      } catch (e) {
-        console.warn('[InventoryGPT] brain:', e?.message);
-      }
-    }
-
-    const liveProducts = brain?.inventoryPreview?.length ? brain.inventoryPreview : prods;
-    const liveCategories = cats;
-
-    if (localBarcode) {
-      const found = findProduct(liveProducts, localBarcode);
-      if (found) {
-        const name = found.product_name || found.name || found.title || 'Product';
-        const cat = found.category || found.category_name || found.category_display_name || 'Uncategorized';
-        const price = found.price ?? found.selling_price ?? found.mrp ?? null;
-        const stock = found.total_stock ?? found.stock ?? found.quantity ?? null;
-        return NextResponse.json({
-          success: true,
-          answer:
-            `**${name}** (SKU: \`${localBarcode}\`)\n\n` +
-            `- **Category:** ${cat}\n` +
-            `${price != null ? `- **Price:** ${typeof price === 'number' ? `₹${price.toLocaleString('en-IN')}` : price}\n` : ''}` +
-            `${stock != null ? `- **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}\n` : ''}` +
-            `\nWould you like anything else about this product?`,
-          model: 'local-lookup'
+        brain = await buildInventoryGptBrainContext(authToken, {
+          productLimit: 40,
         });
+      } catch (e) {
+        console.warn("[InventoryGPT] brain:", e?.message);
       }
     }
+
+    const liveProducts = brain?.inventoryPreview?.length
+      ? brain.inventoryPreview
+      : prods;
+    const liveCategories = cats;
 
     if (!OPENROUTER_API_KEY) {
       const p = liveProducts.length;
@@ -161,26 +289,29 @@ export async function POST(req) {
           `I'd love to help you with that! \n\n` +
           `I have access to **${p}** live inventory items and **${c}** categories. ` +
           `Please set OPENROUTER_API_KEY in your environment to enable the Mistral model.`,
-        model: 'fallback'
+        model: "fallback",
+        render: "text",
       });
     }
 
     const productContext =
       liveProducts.length > 0
         ? `Live inventory sample:\n${JSON.stringify(liveProducts.slice(0, 30), null, 2)}`
-        : 'No live inventory rows in context.';
+        : "No live inventory rows in context.";
 
     const categoryContext =
-      liveCategories.length > 0 ? `\nCategories:\n${JSON.stringify(liveCategories.slice(0, 20), null, 2)}` : '';
+      liveCategories.length > 0
+        ? `\nCategories:\n${JSON.stringify(liveCategories.slice(0, 20), null, 2)}`
+        : "";
 
     const historyContext =
       conversationHistory?.length > 0
-        ? `\nPrevious:\n${conversationHistory.map((m) => `${m.role}: ${m.content}`).join('\n')}`
-        : '';
+        ? `\nPrevious:\n${conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}`
+        : "";
 
     const completion = await requestOpenRouterCompletion([
       {
-        role: 'system',
+        role: "system",
         content: `You are InsoraOpps (InventoryGPT), an inventory intelligence copilot for Indian e-commerce ops.
 Use live inventory data when provided. Default currency is INR (). Be concise and practical.
 Never expose SQL errors, internal APIs, or "Source:" labels. If data is missing, say so clearly.
@@ -195,31 +326,33 @@ IMPORTANT BEHAVIOR:
 - Do not return generic category lists when the user asked about a specific SKU
 - If the user asks a SKU question like "11232 show me the name of product and it belong to which category", answer like: "This belongs to X category and the product name is Y. If you want description or price, I can share that next."
 - Always include one follow-up suggestion at the end of the response.
-        `
+        `,
       },
       {
-        role: 'user',
-        content: `${productContext}${categoryContext}${historyContext}\n\nQuestion: ${question}`
-      }
+        role: "user",
+        content: `${productContext}${categoryContext}${historyContext}\n\nQuestion: ${question}`,
+      },
     ]);
 
-    const answer = completion.choices?.[0]?.message?.content || completion.choices?.[0]?.text;
-    if (!answer) throw new Error('No response from AI model');
+    const answer =
+      completion.choices?.[0]?.message?.content ||
+      completion.choices?.[0]?.text;
+    if (!answer) throw new Error("No response from AI model");
 
     return NextResponse.json({
       success: true,
       answer,
-      model: OPENROUTER_MODEL
+      model: OPENROUTER_MODEL,
     });
   } catch (error) {
-    console.error('InventoryGPT Error:', error);
+    console.error("InventoryGPT Error:", error);
     return NextResponse.json(
       {
         success: false,
         fallback:
-          "I'm having trouble right now. Please try again in a moment or ask about warehouse stock (e.g. stock at GGM_WH)."
+          "I'm having trouble right now. Please try again in a moment or ask about warehouse stock (e.g. stock at GGM_WH).",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -227,7 +360,7 @@ IMPORTANT BEHAVIOR:
 export async function GET() {
   return NextResponse.json({
     success: true,
-    service: 'InsoraOpps / InventoryGPT',
-    status: 'operational'
+    service: "InsoraOpps / InventoryGPT",
+    status: "operational",
   });
 }
