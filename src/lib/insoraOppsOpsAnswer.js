@@ -318,7 +318,7 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
         const name = p.product_name || p.name || 'Product';
         const sku = p.barcode || p.sku || '';
         const price = p.price || p.selling_price || p.offer_price || p.mrp;
-        const stock = p.total_stock || p.stock || p.stock_quantity ?? 0;
+        const stock = p.total_stock || p.stock || (p.stock_quantity ?? 0);
         return `${i + 1}. **${name}** (\`${sku}\`) · ${formatInr(price)}${stock ? ` · ${stock} units` : ''}`;
       });
       const more = allProducts.length > 5 ? `\n\n📋 **${allProducts.length - 5} more products available** — [Read More]` : '';
