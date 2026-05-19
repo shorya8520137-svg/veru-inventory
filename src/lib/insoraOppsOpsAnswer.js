@@ -114,15 +114,17 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
   }
 
   // Follow-up with "this category" / "that category" - inherit from conversation memory
-  const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+  // IMPORTANT: Multi-word categories MUST come first to avoid partial matches
+  const categoryNames = ["home & kitchen", "home--kitchen", "electronics", "sports", "clothing", "home", "kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
   if (/this category|that category|same category|of this category|of that category/.test(lower) && /product|item|show|list/.test(lower)) {
     // Extract active category from conversation history
     for (const message of [...(conversationHistory || [])].reverse()) {
       if (message?.role === "assistant") {
         const content = message.content || "";
         for (const cat of categoryNames) {
-          // Simple regex: look for "Category" followed by category name
-          const catRegex = new RegExp(`Category[^\\n]*${cat}`, 'i');
+          // Escape special regex characters in category name (e.g., "&")
+          const escapedCat = cat.replace(/[&]/g, '\\$&');
+          const catRegex = new RegExp(`Category[^\\n]*${escapedCat}`, 'i');
           if (catRegex.test(content)) {
             const prods = await apiGet(`/api/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
             if (!prods.error && prods.data) {

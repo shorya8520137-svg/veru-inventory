@@ -109,7 +109,9 @@ export function extractActiveContext(conversationHistory = []) {
 
   if (!Array.isArray(conversationHistory)) return context;
 
-  const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+  // IMPORTANT: Multi-word categories MUST come first to avoid partial matches
+  // "home & kitchen" must be checked before "home" or "kitchen"
+  const categoryNames = ["home & kitchen", "home--kitchen", "electronics", "sports", "clothing", "home", "kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
 
   // Search from most recent to oldest
   for (const message of [...conversationHistory].reverse()) {
@@ -119,10 +121,12 @@ export function extractActiveContext(conversationHistory = []) {
 
     // Extract category from assistant responses
     if (isAssistant) {
-      // Match: "**Category:** Clothing" or "Category: Clothing" or "category: sports"
-      // Simplified regex: look for "Category" followed by category name anywhere in content
+      // Match: "**Category:** Home & Kitchen" or "Category: beauty"
+      // Check multi-word categories first to avoid partial matches
       for (const cat of categoryNames) {
-        const catRegex = new RegExp(`Category[^\\n]*${cat}`, 'i');
+        // Escape special regex characters in category name (e.g., "&")
+        const escapedCat = cat.replace(/[&]/g, '\\$&');
+        const catRegex = new RegExp(`Category[^\\n]*${escapedCat}`, 'i');
         if (catRegex.test(content) && !context.category) {
           context.category = cat;
         }
@@ -1525,7 +1529,7 @@ export async function tryInventoryGptDeterministicAnswer({
         return m?.role === "user" && /grocery|electronics|sports|clothing|beauty|books|toys|health|home.*kitchen/.test(c);
       });
     if (lastUserWithCategory) {
-      const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+  const categoryNames = ["home & kitchen", "home--kitchen", "electronics", "sports", "clothing", "home", "kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
       for (const cat of categoryNames) {
         if (lastUserWithCategory.content.toLowerCase().includes(cat)) {
           const categoryProducts = await resolveInventoryGptCategoryProducts(authToken, cat, 50);
