@@ -119,6 +119,29 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "context_help", wantsExport };
   }
 
+  // Follow-up context: "ok then send me", "yes send it", "sure", "do it"
+  // These should trigger the last action's export or continue the last context
+  if (
+    /^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please|do that|give me|show me|get it)/.test(lower) &&
+    lower.length < 50
+  ) {
+    // Check if last assistant message mentioned Excel export
+    const lastAssistant = [...(conversationHistory || [])]
+      .reverse()
+      .find((m) => m?.role === "assistant");
+    if (lastAssistant?.content && /excel|sheet|export|tsv/i.test(lastAssistant.content)) {
+      return { type: "export_followup", wantsExport: true };
+    }
+    // Check if last user question was about a category/warehouse/price
+    const previousUser = [...(conversationHistory || [])]
+      .reverse()
+      .find((m) => m?.role === "user" && !/^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please|do that|give me|show me|get it)/.test(String(m.content || "").trim().toLowerCase()));
+    if (previousUser?.content) {
+      return detectInventoryGptIntent(previousUser.content, []);
+    }
+    return { type: "context_help", wantsExport };
+  }
+
   // Global/list intents must be checked before SKU/product intents.
   if (
     /address|full address|location|phone|email|contact|manager/.test(lower) &&
@@ -133,6 +156,30 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
           : "last",
       wantsExport,
     };
+  }
+
+  // Product category lookup: "Aashirvaad Atta belong to which category"
+  // Must be checked BEFORE generic category listing
+  if (/categor/.test(lower) && /belong|which|what|this|that|product|item|name/.test(lower)) {
+    // Check if there's a product name (not just "category" keyword)
+    const hasProductName = !/^(show|list|get|display|view|all)\s+(the\s+)?categor/.test(lower);
+    if (hasProductName) {
+      // Extract potential product name - everything before "belong" or "which" or "category"
+      const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what|category)/);
+      if (productMatch) {
+        return {
+          type: "product_category",
+          productName: productMatch[1].trim(),
+          wantsExport,
+        };
+      }
+      // If no clear product name but mentions category question, try to extract from context
+      return {
+        type: "product_category",
+        productName: null,
+        wantsExport,
+      };
+    }
   }
 
   // Category-based product listing: "grocery show me all the product", "show all products in electronics"
@@ -974,7 +1021,7 @@ function buildCategoryProductsAnswer(category, result, wantsExport) {
 
     if (rows.length > 5) {
       lines.push("");
-      lines.push(`📋 **${rows.length - 5} more products available** — [Read More]`);
+      lines.push(`[READ_MORE:${rows.length - 5}:category:${category}]`);
     }
 
     lines.push("");
@@ -987,6 +1034,14 @@ function buildCategoryProductsAnswer(category, result, wantsExport) {
       ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
       : null,
     exportFilename: wantsExport ? `inventorygpt-category-${category}.tsv` : null,
+    extraData: {
+      type: "category_products",
+      category,
+      total: result.total,
+      shown: Math.min(5, rows.length),
+      remaining: Math.max(0, rows.length - 5),
+      allRows: rows,
+    },
   };
 }
 
@@ -1013,7 +1068,7 @@ function buildPriceFilterAnswer(operator, priceValue, result, wantsExport) {
 
     if (rows.length > 5) {
       lines.push("");
-      lines.push(`📋 **${rows.length - 5} more products available** — [Read More]`);
+      lines.push(`[READ_MORE:${rows.length - 5}:price:${operator}${priceValue}]`);
     }
 
     lines.push("");
@@ -1026,6 +1081,15 @@ function buildPriceFilterAnswer(operator, priceValue, result, wantsExport) {
       ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
       : null,
     exportFilename: wantsExport ? `inventorygpt-price-${operator}${priceValue}.tsv` : null,
+    extraData: {
+      type: "price_filter",
+      operator,
+      priceValue,
+      total: result.total,
+      shown: Math.min(5, rows.length),
+      remaining: Math.max(0, rows.length - 5),
+      allRows: rows,
+    },
   };
 }
 
@@ -1050,7 +1114,7 @@ function buildWarehouseProductsAnswer(warehouseName, result, wantsExport) {
 
     if (rows.length > 5) {
       lines.push("");
-      lines.push(`📋 **${rows.length - 5} more products available** — [Read More]`);
+      lines.push(`[READ_MORE:${rows.length - 5}:warehouse:${warehouseName}]`);
     }
 
     lines.push("");
@@ -1063,6 +1127,14 @@ function buildWarehouseProductsAnswer(warehouseName, result, wantsExport) {
       ? rowsToTsv(rows, ["sku", "product_name", "warehouse", "stock", "price"])
       : null,
     exportFilename: wantsExport ? `inventorygpt-warehouse-${warehouseName}.tsv` : null,
+    extraData: {
+      type: "warehouse_products",
+      warehouseName,
+      total: result.total,
+      shown: Math.min(5, rows.length),
+      remaining: Math.max(0, rows.length - 5),
+      allRows: rows,
+    },
   };
 }
 
@@ -1336,6 +1408,38 @@ export async function tryInventoryGptDeterministicAnswer({
     };
   }
 
+  // Export follow-up: user said "ok send me" after being offered Excel
+  if (intent.type === "export_followup") {
+    // Look at conversation history to find the last data that was offered
+    const lastUserWithCategory = [...(conversationHistory || [])]
+      .reverse()
+      .find((m) => {
+        const c = String(m?.content || "").toLowerCase();
+        return m?.role === "user" && /grocery|electronics|sports|clothing|beauty|books|toys|health|home.*kitchen/.test(c);
+      });
+    if (lastUserWithCategory) {
+      const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+      for (const cat of categoryNames) {
+        if (lastUserWithCategory.content.toLowerCase().includes(cat)) {
+          const categoryProducts = await resolveInventoryGptCategoryProducts(authToken, cat, 50);
+          if (categoryProducts.rows && categoryProducts.rows.length) {
+            const tsv = rowsToTsv(categoryProducts.rows, ["sku", "product_name", "category", "price", "stock", "source"]);
+            return {
+              answer: `📊 **Excel-ready data for "${cat}" category**\n\n**${categoryProducts.rows.length}** products exported. Copy the table below and paste into Excel:\n\n\`\`\`\n${tsv}\n\`\`\``,
+              exportTsv: tsv,
+              exportFilename: `inventorygpt-category-${cat}.tsv`,
+              render: "text",
+            };
+          }
+        }
+      }
+    }
+    return {
+      answer: "📊 I can prepare **Excel-ready TSV tables** from live operational data now. Please specify which data you'd like exported (e.g., **grocery products**, **stock for SKU 12345**, etc.).",
+      render: "text",
+    };
+  }
+
   // Category-based product listing
   if (intent.type === "category_products") {
     const categoryProducts = await resolveInventoryGptCategoryProducts(
@@ -1348,6 +1452,83 @@ export async function tryInventoryGptDeterministicAnswer({
         categoryProducts,
         intent.wantsExport,
       ),
+      render: "text",
+    };
+  }
+
+  // Product category lookup: "Product X belong to which category"
+  if (intent.type === "product_category") {
+    // Try to find the product by name from both catalogs
+    let foundProduct = null;
+    const searchName = intent.productName || "";
+
+    if (searchName) {
+      // Search dispatch products
+      const dispatchResult = await apiGet(
+        `/api/products?search=${encodeURIComponent(searchName)}&limit=10`,
+        authToken,
+      );
+      if (!dispatchResult.error) {
+        const rows = rowsFromPayload(dispatchResult.data);
+        for (const row of rows) {
+          const normalized = normalizeProduct(row, "dispatch_product");
+          if (
+            normalized.product_name.toLowerCase().includes(searchName.toLowerCase()) ||
+            searchName.toLowerCase().includes(normalized.product_name.toLowerCase())
+          ) {
+            foundProduct = normalized;
+            break;
+          }
+        }
+      }
+
+      // If not found, try website products
+      if (!foundProduct) {
+        const webResult = await apiGet(
+          `/api/website/products?search=${encodeURIComponent(searchName)}&limit=10`,
+          authToken,
+        );
+        if (!webResult.error) {
+          const rows = rowsFromPayload(webResult.data);
+          for (const row of rows) {
+            const normalized = normalizeProduct(row, "website_products");
+            if (
+              normalized.product_name.toLowerCase().includes(searchName.toLowerCase()) ||
+              searchName.toLowerCase().includes(normalized.product_name.toLowerCase())
+            ) {
+              foundProduct = normalized;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (foundProduct) {
+      const lines = [
+        `🏷️ **${foundProduct.product_name}** (SKU: \`${foundProduct.sku || foundProduct.barcode}\`)`,
+        "",
+        `**Category:** ${foundProduct.category}`,
+        `**Catalog:** ${catalogLabel(foundProduct.source)}`,
+      ];
+      if (foundProduct.price != null) {
+        lines.push(`**Price:** ${formatInr(foundProduct.price)}`);
+      }
+      if (foundProduct.stock != null) {
+        lines.push(`**Stock:** ${foundProduct.stock > 0 ? `${foundProduct.stock} units` : "Out of Stock"}`);
+      }
+      lines.push("");
+      lines.push("Would you like more details about this product?");
+      return {
+        answer: lines.join("\n"),
+        render: "text",
+      };
+    }
+
+    // If no product found, show categories as fallback
+    const categories = await resolveInventoryGptCategories(authToken, false);
+    return {
+      ...buildCategoriesAnswer(categories, false, intent.wantsExport),
       render: "text",
     };
   }

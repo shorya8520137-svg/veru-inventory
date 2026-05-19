@@ -106,6 +106,13 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
     contextData.product = 'damaged_products';
   }
 
+  // Follow-up context: "ok then send me", "yes send it", etc.
+  // This should be handled by the resolver, but we add a fallback here
+  if (/^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please)/.test(lower) && lower.length < 50) {
+    // Return null to let the resolver handle it with conversation history
+    return null;
+  }
+
   if (!authToken && /stock|warehouse|timeline|website|barcode|price|transfer|order|dead/i.test(lower)) {
     return {
       answer:
@@ -220,6 +227,60 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
 
   // --- CATEGORIES ---
   if (/categor(y|ies)/.test(lower)) {
+    // Check if user is asking which category a specific product belongs to
+    if (/belong|which.*categor|what.*categor|this.*categor|that.*categor/.test(lower)) {
+      // Extract product name - everything before "belong" or "which"
+      const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
+      if (productMatch) {
+        const productName = productMatch[1].trim();
+        // Try to find the product
+        const prodRes = await apiGet(`/api/products?search=${encodeURIComponent(productName)}&limit=5`, authToken);
+        if (!prodRes.error && prodRes.data) {
+          const prodList = prodRes.data?.data?.products || prodRes.data?.products || (Array.isArray(prodRes.data?.data) ? prodRes.data.data : []);
+          for (const p of prodList) {
+            const name = p.product_name || p.name || '';
+            if (name.toLowerCase().includes(productName) || productName.includes(name.toLowerCase())) {
+              const cat = p.category || p.category_name || p.category_display_name || p.display_name || 'Uncategorized';
+              const price = p.price || p.selling_price || p.mrp || 0;
+              const stock = p.total_stock || p.stock || 0;
+              const sku = p.barcode || p.sku || '';
+              return {
+                answer: `🏷️ **${name}** (SKU: \`${sku}\`)
+
+**Category:** ${cat}
+**Price:** ${formatInr(price)}
+**Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}
+
+Would you like more details about this product?`
+              };
+            }
+          }
+        }
+        // Try website products
+        const webRes = await apiGet(`/api/website/products?search=${encodeURIComponent(productName)}&limit=5`, authToken);
+        if (!webRes.error && webRes.data) {
+          const webList = webRes.data?.data || webRes.data?.products || (Array.isArray(webRes.data) ? webRes.data : []);
+          for (const p of webList) {
+            const name = p.product_name || p.name || '';
+            if (name.toLowerCase().includes(productName) || productName.includes(name.toLowerCase())) {
+              const cat = p.category_name || p.category || p.category_display_name || 'Uncategorized';
+              const price = p.price || p.offer_price || p.final_price || 0;
+              const stock = p.stock_quantity ?? p.stock ?? 0;
+              const sku = p.barcode || p.sku || '';
+              return {
+                answer: `🏷️ **${name}** (SKU: \`${sku}\`)
+
+**Category:** ${cat}
+**Price:** ${formatInr(price)}
+**Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}
+
+Would you like more details about this product?`
+              };
+            }
+          }
+        }
+      }
+    }
     // Return empty answer - frontend will show visual category grid
     return {
       answer: `I found the categories for you. Here they are:`,

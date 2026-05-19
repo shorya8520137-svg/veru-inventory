@@ -724,6 +724,7 @@ function AssistantMessage({
   websiteCategories,
   products,
   onCategoryClick,
+  onReadMore,
 }) {
   const [copied, setCopied] = useState(false);
   const [helpful, setHelpful] = useState(false);
@@ -779,6 +780,11 @@ function AssistantMessage({
     });
   }, [products, showProductMatrix, intent?.category]);
 
+  // Parse Read More marker from content
+  const readMoreMatch = fullContent.match(/\[READ_MORE:(\d+):(category|price|warehouse):([^\]]+)\]/);
+  const hasReadMore = !!readMoreMatch && !isStreaming;
+  const cleanContent = fullContent.replace(/\[READ_MORE:\d+:(category|price|warehouse):[^\]]+\]/g, "").trim();
+
   async function copyText() {
     try {
       await navigator.clipboard.writeText(fullContent);
@@ -829,7 +835,7 @@ function AssistantMessage({
               <p className="text-sm text-red-600">{displayContent}</p>
             ) : (
               <div className="text-[15px] leading-7 text-slate-700">
-                <MarkdownBody content={displayContent} />
+                <MarkdownBody content={hasReadMore ? cleanContent : displayContent} />
                 {isStreaming ? <StreamingCursor /> : null}
               </div>
             )}
@@ -850,6 +856,17 @@ function AssistantMessage({
                 className="mt-2 text-sm font-medium text-slate-500 hover:text-slate-700"
               >
                 Show less
+              </button>
+            ) : null}
+            {/* Read More Button for bulk results */}
+            {hasReadMore && onReadMore ? (
+              <button
+                type="button"
+                onClick={() => onReadMore(message.extraData)}
+                className="mt-2 inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+              >
+                <ChevronDown className="h-4 w-4" />
+                Show {readMoreMatch[1]} more products
               </button>
             ) : null}
             {!isStreaming && fullContent ? (
@@ -1264,6 +1281,7 @@ export default function InventoryGPTPage() {
             exportFilename: data.exportFilename || null,
             render: data.render || null,
             userPrompt: trimmed, // Track user prompt for intent detection
+            extraData: data.extraData || null,
           },
         );
       } else {
@@ -1508,6 +1526,30 @@ export default function InventoryGPTPage() {
                         products={products}
                         onCategoryClick={(cat) => {
                           sendMessage(`show me all products of ${cat}`);
+                        }}
+                        onReadMore={(extraData) => {
+                          if (!extraData) return;
+                          const { type, category, warehouseName, allRows } = extraData;
+                          if (type === "category_products" && category) {
+                            sendMessage(`show me all products in ${category} category`);
+                          } else if (type === "warehouse_products" && warehouseName) {
+                            sendMessage(`show me all products in ${warehouseName} warehouse`);
+                          } else if (type === "price_filter") {
+                            sendMessage(`show me all products with price filter`);
+                          } else if (allRows && allRows.length > 5) {
+                            // Show remaining products
+                            const remaining = allRows.slice(5);
+                            const lines = remaining.map((p, i) => {
+                              const priceStr = p.price != null ? ` · ₹${p.price}` : "";
+                              const stockStr = p.stock != null ? ` · ${p.stock} units` : "";
+                              return `${i + 6}. **${p.product_name}** (\`${p.sku || p.barcode}\`)${priceStr}${stockStr}`;
+                            });
+                            appendAssistantWithTyping(
+                              activeSessionId,
+                              `📦 **Remaining products:**\n\n${lines.join("\n")}`,
+                              { render: "text" }
+                            );
+                          }
                         }}
                       />
                     );

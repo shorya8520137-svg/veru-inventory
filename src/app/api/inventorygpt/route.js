@@ -304,6 +304,7 @@ export async function POST(req) {
         render: deterministicAnswer.render || "text",
         exportTsv: deterministicAnswer.exportTsv || undefined,
         exportFilename: deterministicAnswer.exportFilename || undefined,
+        extraData: deterministicAnswer.extraData || undefined,
       });
     }
 
