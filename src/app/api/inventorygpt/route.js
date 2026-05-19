@@ -71,7 +71,7 @@ export async function POST(req) {
     // in the provided `products` array, return a concise deterministic answer
     // instead of the generic fallback when OpenRouter is not configured.
     const extractBarcode = (text) => {
-      const m = String(text || '').match(/\b(\d{8,14})\b/);
+      const m = String(text || '').match(/\b(\d{4,16})\b/);
       return m ? m[1] : null;
     };
 

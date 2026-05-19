@@ -23,7 +23,7 @@ function extractWarehouse(q) {
 }
 
 function extractBarcode(q) {
-  const m = String(q).match(/\b(\d{8,14})\b/);
+  const m = String(q).match(/\b(\d{4,16})\b/);
   return m ? m[1] : null;
 }
 
