@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { tryInsoraOppsDataAnswer } from "@/lib/insoraOppsOpsAnswer";
 import { buildInventoryGptBrainContext } from "@/lib/inventorygptBrainContext";
+import { tryInventoryGptDeterministicAnswer } from "@/lib/inventorygptResolvers";
 
 const OPENROUTER_API_KEY =
   process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY;
@@ -288,6 +289,24 @@ export async function POST(req) {
 
     const prods = Array.isArray(products) ? products : [];
     const cats = Array.isArray(categories) ? categories : [];
+    const deterministicAnswer = await tryInventoryGptDeterministicAnswer({
+      question,
+      authToken: authToken || "",
+      localProducts: prods,
+      conversationHistory,
+    });
+
+    if (deterministicAnswer?.answer) {
+      return NextResponse.json({
+        success: true,
+        answer: deterministicAnswer.answer,
+        model: "deterministic-resolver",
+        render: deterministicAnswer.render || "text",
+        exportTsv: deterministicAnswer.exportTsv || undefined,
+        exportFilename: deterministicAnswer.exportFilename || undefined,
+      });
+    }
+
     const localBarcode = extractBarcode(question);
     const followUpType = productFollowUpType(question);
     const historyBarcode =
@@ -336,6 +355,7 @@ export async function POST(req) {
         model: "deterministic",
         exportTsv: opsAnswer.exportTsv || undefined,
         exportFilename: opsAnswer.exportFilename || undefined,
+        render: opsAnswer.render || undefined,
       });
     }
 

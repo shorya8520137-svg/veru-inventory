@@ -41,11 +41,17 @@ const TYPING_CHAR_MS = 14;
 const WELCOME_TYPE_MS = 18;
 
 const QUICK_EXAMPLES = [
-  { label: "Show categories", prompt: "show categories" },
-  { label: "Website categories", prompt: "show website categories" },
-  { label: "BLR_WH stock", prompt: "show stock of BLR_WH" },
-  { label: "Analyze dead stock", prompt: "Analyze dead stock at BLR_WH" },
-  { label: "Website orders", prompt: "show website orders" },
+  {
+    label: "🧭 Product journey",
+    prompt: "show product journey for 8793287932489",
+  },
+  { label: "📦 Warehouse stock", prompt: "show stock for 8793287932489" },
+  {
+    label: "📊 Excel-ready report",
+    prompt: "make excel sheet for product 8793287932489",
+  },
+  { label: "🛡️ Audit intelligence", prompt: "show audit logs" },
+  { label: "🧾 Website orders", prompt: "show website orders" },
 ];
 
 function isGreetingOnly(text) {
@@ -675,12 +681,24 @@ function WelcomePanel({ brain, onPickExample }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
             >
+              <div className="mt-4 rounded-2xl border border-violet-100 bg-gradient-to-br from-white via-violet-50/60 to-indigo-50/70 p-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Premium operations brain
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  I can read products, stock, orders, timelines, audit trails,
+                  and prepare Excel-ready tables — with deterministic answers
+                  first, AI reasoning second.
+                </p>
+              </div>
               {brain?.inventoryRowCount ? (
                 <p className="mt-3 text-sm font-medium text-emerald-700">
-                  Live data connected — ask about any warehouse or SKU.
+                  Live data connected — ask about any warehouse, SKU, order,
+                  journey, or audit trail.
                 </p>
               ) : null}
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {QUICK_EXAMPLES.map((ex, i) => (
                   <QuickExampleCard
                     key={ex.prompt}
