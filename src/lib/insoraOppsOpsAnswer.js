@@ -294,6 +294,7 @@ Would you like more details about this product?`
     const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
     for (const cat of categoryNames) {
       if (lower.includes(cat)) {
+        // Try dispatch products first
         const prods = await apiGet(`/api/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
         if (!prods.error && prods.data) {
           const prodList = prods.data?.data?.products || prods.data?.products || (Array.isArray(prods.data?.data) ? prods.data.data : []);
@@ -307,7 +308,9 @@ Would you like more details about this product?`
             });
             const more = prodList.length > 5 ? `\n\n📋 **${prodList.length - 5} more products available** — [Read More]` : '';
             return {
-              answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${prodList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`
+              answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${prodList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`,
+              exportTsv: prodList.map(p => `${p.barcode || p.sku}\t${p.product_name || p.name}\t${cat}\t${p.price || p.selling_price || p.mrp}\t${p.total_stock || p.stock}\tdispatch_product`).join('\n'),
+              exportFilename: `inventorygpt-category-${cat}.tsv`,
             };
           }
         }
@@ -325,7 +328,9 @@ Would you like more details about this product?`
             });
             const more = webList.length > 5 ? `\n\n📋 **${webList.length - 5} more products available** — [Read More]` : '';
             return {
-              answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${webList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`
+              answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${webList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`,
+              exportTsv: webList.map(p => `${p.barcode || p.sku}\t${p.product_name || p.name}\t${cat}\t${p.price || p.offer_price || p.final_price}\t${p.stock_quantity ?? p.stock ?? 0}\twebsite_products`).join('\n'),
+              exportFilename: `inventorygpt-category-${cat}.tsv`,
             };
           }
         }

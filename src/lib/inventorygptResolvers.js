@@ -746,9 +746,23 @@ export async function resolveInventoryGptCategories(token, website = false) {
 }
 
 export async function resolveInventoryGptCategoryProducts(token, category, limit = 20) {
+  // First get all categories to find the exact name (case-insensitive match)
+  const categoriesResult = await resolveInventoryGptCategories(token, false);
+  let exactCategoryName = category;
+  
+  if (categoriesResult.rows && categoriesResult.rows.length) {
+    const lowerCategory = category.toLowerCase();
+    const found = categoriesResult.rows.find(
+      (cat) => cat.name.toLowerCase() === lowerCategory || cat.slug?.toLowerCase() === lowerCategory
+    );
+    if (found) {
+      exactCategoryName = found.name;
+    }
+  }
+
   const endpoints = [
-    { source: "dispatch_product", path: `/api/products?category=${encodeURIComponent(category)}&limit=${limit}` },
-    { source: "website_products", path: `/api/website/products?category=${encodeURIComponent(category)}&limit=${limit}` },
+    { source: "dispatch_product", path: `/api/products?category=${encodeURIComponent(exactCategoryName)}&limit=${limit}` },
+    { source: "website_products", path: `/api/website/products?category=${encodeURIComponent(exactCategoryName)}&limit=${limit}` },
   ];
 
   const merged = [];
