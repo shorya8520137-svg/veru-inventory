@@ -83,7 +83,7 @@ function pickItems(payload) {
   return [];
 }
 
-export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = null) {
+export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = null, conversationHistory = []) {
   const q = String(question || '').trim();
   const lower = q.toLowerCase();
   if (!q) return null;
@@ -111,6 +111,41 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
   if (/^(ok|okay|yes|sure|do it|send|send it|send me|go ahead|please)/.test(lower) && lower.length < 50) {
     // Return null to let the resolver handle it with conversation history
     return null;
+  }
+
+  // Follow-up with "this category" / "that category" - inherit from conversation memory
+  const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+  if (/this category|that category|same category|of this category|of that category/.test(lower) && /product|item|show|list/.test(lower)) {
+    // Extract active category from last assistant message
+    const lastAssistant = [...(conversationHistory || [])]
+      .reverse()
+      .find((m) => m?.role === "assistant");
+    if (lastAssistant?.content) {
+      for (const cat of categoryNames) {
+        const catRegex = new RegExp(`category:\\s*${cat}`, 'i');
+        if (catRegex.test(lastAssistant.content)) {
+          const prods = await apiGet(`/api/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
+          if (!prods.error && prods.data) {
+            const prodList = prods.data?.data?.products || prods.data?.products || (Array.isArray(prods.data?.data) ? prods.data.data : []);
+            if (prodList.length > 0) {
+              const lines = prodList.slice(0, 5).map((p, i) => {
+                const name = p.product_name || p.name || 'Product';
+                const sku = p.barcode || p.sku || '';
+                const price = p.price || p.selling_price || p.mrp;
+                const stock = p.total_stock || p.stock || 0;
+                return `${i + 1}. **${name}** (\`${sku}\`)${price ? ` · ${formatInr(price)}` : ''}${stock ? ` · ${stock} units` : ''}`;
+              });
+              const more = prodList.length > 5 ? `\n\n📋 **${prodList.length - 5} more products available** — [Read More]` : '';
+              return {
+                answer: `📦 **Products in "${cat}" category**\n\nTotal products found: **${prodList.length}**\n\n${lines.join('\n')}${more}\n\nWould you like this data exported as an Excel sheet?`,
+                exportTsv: prodList.map(p => `${p.barcode || p.sku}\t${p.product_name || p.name}\t${cat}\t${p.price || p.selling_price || p.mrp}\t${p.total_stock || p.stock}\tdispatch_product`).join('\n'),
+                exportFilename: `inventorygpt-category-${cat}.tsv`,
+              };
+            }
+          }
+        }
+      }
+    }
   }
 
   if (!authToken && /stock|warehouse|timeline|website|barcode|price|transfer|order|dead/i.test(lower)) {

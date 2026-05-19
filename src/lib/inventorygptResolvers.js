@@ -149,6 +149,34 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "context_help", wantsExport };
   }
 
+  // Follow-up with "this category" / "same category" / "that category" - inherit from conversation memory
+  if (/this category|same category|that category|of this category|of that category/.test(lower) && /product|item|show|list/.test(lower)) {
+    // Extract active category from last assistant message
+    const lastAssistant = [...(conversationHistory || [])]
+      .reverse()
+      .find((m) => m?.role === "assistant");
+    if (lastAssistant?.content) {
+      for (const cat of categoryNames) {
+        const catRegex = new RegExp(`category:\\s*${cat}`, 'i');
+        if (catRegex.test(lastAssistant.content)) {
+          return { type: "category_products", category: cat, wantsExport };
+        }
+      }
+    }
+    // Also check last user message for category context
+    const lastUser = [...(conversationHistory || [])]
+      .reverse()
+      .find((m) => m?.role === "user");
+    if (lastUser?.content) {
+      const userLower = lastUser.content.toLowerCase();
+      for (const cat of categoryNames) {
+        if (userLower.includes(cat)) {
+          return { type: "category_products", category: cat, wantsExport };
+        }
+      }
+    }
+  }
+
   // Global/list intents must be checked before SKU/product intents.
   if (
     /address|full address|location|phone|email|contact|manager/.test(lower) &&
@@ -200,20 +228,29 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   }
 
   // Category-based product listing: "grocery show me all the product", "show all products in electronics"
-  const categoryProductMatch = lower.match(
-    /(?:show|list|get|find|display|see|all)?\s*(?:the\s*)?(?:product|item)s?\s*(?:of|in|from|for|under|belonging to|category)?\s*([\w\s-]+)/
-  ) || lower.match(
-    /([\w\s-]+)\s*(?:category|cat)?\s*(?:show|list|get|find|display|see|all)?\s*(?:the\s*)?(?:product|item)s?/
-  );
+  // Also handles: "show me all the product of this category" (with inherited context)
   if (
     (/product|item/.test(lower)) &&
     !/sku|barcode|single|specific|this product|this item|one product/.test(lower)
   ) {
-    // Check if a category name is mentioned
-    const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+    // Check if a category name is explicitly mentioned
     for (const cat of categoryNames) {
       if (lower.includes(cat)) {
         return { type: "category_products", category: cat, wantsExport };
+      }
+    }
+    // Check for "this category" / "that category" with inherited context
+    if (/this category|that category|same category|of this|of that/.test(lower)) {
+      const lastAssistant = [...(conversationHistory || [])]
+        .reverse()
+        .find((m) => m?.role === "assistant");
+      if (lastAssistant?.content) {
+        for (const cat of categoryNames) {
+          const catRegex = new RegExp(`category:\\s*${cat}`, 'i');
+          if (catRegex.test(lastAssistant.content)) {
+            return { type: "category_products", category: cat, wantsExport };
+          }
+        }
       }
     }
   }

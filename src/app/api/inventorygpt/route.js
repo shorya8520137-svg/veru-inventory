@@ -348,7 +348,7 @@ export async function POST(req) {
       });
     }
 
-    const opsAnswer = await tryInsoraOppsDataAnswer(question, authToken || "");
+    const opsAnswer = await tryInsoraOppsDataAnswer(question, authToken || "", null, conversationHistory);
     if (opsAnswer?.answer) {
       return NextResponse.json({
         success: true,
