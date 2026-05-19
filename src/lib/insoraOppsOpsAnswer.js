@@ -287,20 +287,11 @@ Would you like more details about this product?`
         }
       }
     }
-    // Return empty answer - frontend will show visual category grid
-    return {
-      answer: `I found the categories for you. Here they are:`,
-      triggerVisual: true
-    };
-  }
-
-  // --- CATEGORY PRODUCT LISTING ---
-  const categoryProductMatch = lower.match(/(?:show|list|get|find|all)?\s*(?:the\s*)?(?:product|item)s?\s*(?:of|in|from|for|under|belonging to)?\s*([\w\s-]+)/);
-  if (/product|item/.test(lower) && !/sku|barcode|single|specific|this product/.test(lower)) {
+    
+    // Check if user is asking for products IN a category (e.g., "Grocery show me all the product of this category")
     const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
     for (const cat of categoryNames) {
-      if (lower.includes(cat)) {
-        // Try dispatch products first
+      if (lower.includes(cat) && /product|item/.test(lower)) {
         const prods = await apiGet(`/api/products?category=${encodeURIComponent(cat)}&limit=20`, authToken);
         if (!prods.error && prods.data) {
           const prodList = prods.data?.data?.products || prods.data?.products || (Array.isArray(prods.data?.data) ? prods.data.data : []);
@@ -343,6 +334,12 @@ Would you like more details about this product?`
         return { answer: `No products found in the **${cat}** category.` };
       }
     }
+    
+    // Return empty answer - frontend will show visual category grid
+    return {
+      answer: `I found the categories for you. Here they are:`,
+      triggerVisual: true
+    };
   }
 
   // --- PRICE FILTER ---
