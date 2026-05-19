@@ -89,6 +89,101 @@ function findProduct(list, code) {
   );
 }
 
+function formatInr(value) {
+  if (value == null || value === "") return null;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return `₹${numeric.toLocaleString("en-IN")}`;
+  return String(value);
+}
+
+function productAnswer(product, barcode, options = {}) {
+  const found = normalizeProductForAnswer(product);
+  if (!found) return null;
+
+  const requested = options.requested || "summary";
+  const name = found.product_name || found.name || found.title || "Product";
+  const cat =
+    found.category ||
+    found.category_name ||
+    found.category_display_name ||
+    "Uncategorized";
+  const price =
+    found.price ??
+    found.selling_price ??
+    found.mrp ??
+    found.final_price ??
+    null;
+  const stock =
+    found.total_stock ??
+    found.stock ??
+    found.quantity ??
+    found.stock_quantity ??
+    null;
+  const desc =
+    found.description ||
+    found.short_description ||
+    found.product_description ||
+    "No description is available for this product yet.";
+  const sourceLabel =
+    found.source === "website_products"
+      ? "Website Product catalog"
+      : "Product catalog";
+  const sku = found.sku || barcode;
+  const lines = [`**${name}** (SKU: \`${sku}\`)`, ""];
+
+  if (requested === "description") {
+    lines.push(`- **Description:** ${desc}`);
+    lines.push(`- **Category:** ${cat}`);
+  } else if (requested === "price") {
+    const formattedPrice = formatInr(price);
+    lines.push(`- **Price:** ${formattedPrice || "Price not available"}`);
+    lines.push(`- **Category:** ${cat}`);
+  } else if (requested === "stock") {
+    lines.push(
+      `- **Stock:** ${stock != null && Number(stock) > 0 ? stock + " units" : "Out of Stock"}`,
+    );
+    lines.push(`- **Category:** ${cat}`);
+  } else {
+    lines.push(`- **Category:** ${cat}`);
+    lines.push(`- **Catalog:** ${sourceLabel}`);
+    const formattedPrice = formatInr(price);
+    if (formattedPrice) lines.push(`- **Price:** ${formattedPrice}`);
+    if (stock != null) {
+      lines.push(
+        `- **Stock:** ${Number(stock) > 0 ? stock + " units" : "Out of Stock"}`,
+      );
+    }
+  }
+
+  lines.push("");
+  lines.push(
+    "If you want description, warehouse breakup, price, stock, or product journey, just ask me.",
+  );
+  return lines.join("\n");
+}
+
+function extractLastBarcodeFromHistory(history) {
+  if (!Array.isArray(history)) return null;
+  for (const message of [...history].reverse()) {
+    const content = String(message?.content || "");
+    const skuMatch = content.match(/SKU:\s*`?(\d{4,16})`?/i);
+    if (skuMatch) return skuMatch[1];
+    const anyBarcode = content.match(/\b(\d{8,16})\b/);
+    if (anyBarcode) return anyBarcode[1];
+  }
+  return null;
+}
+
+function productFollowUpType(question) {
+  const lower = String(question || "").toLowerCase();
+  if (/description|describe|details?|about this|about product/.test(lower))
+    return "description";
+  if (/price|cost|mrp|rate|amount/.test(lower)) return "price";
+  if (/stock|quantity|qty|available|availability/.test(lower)) return "stock";
+  if (/category|belong/.test(lower)) return "category";
+  return null;
+}
+
 async function fetchJson(url, token) {
   const response = await fetch(url, {
     headers: apiHeaders(token),
@@ -194,48 +289,28 @@ export async function POST(req) {
     const prods = Array.isArray(products) ? products : [];
     const cats = Array.isArray(categories) ? categories : [];
     const localBarcode = extractBarcode(question);
+    const followUpType = productFollowUpType(question);
+    const historyBarcode =
+      !localBarcode && followUpType
+        ? extractLastBarcodeFromHistory(conversationHistory)
+        : null;
+    const effectiveBarcode = localBarcode || historyBarcode;
 
-    if (localBarcode) {
-      let found = findProduct(prods, localBarcode);
+    if (effectiveBarcode) {
+      let found = findProduct(prods, effectiveBarcode);
       if (!found) {
         found = await fetchProductByBarcodeFromCatalogs(
-          localBarcode,
+          effectiveBarcode,
           authToken || "",
         );
       }
       if (found) {
-        const name =
-          found.product_name || found.name || found.title || "Product";
-        const cat =
-          found.category ||
-          found.category_name ||
-          found.category_display_name ||
-          "Uncategorized";
-        const price =
-          found.price ??
-          found.selling_price ??
-          found.mrp ??
-          found.final_price ??
-          null;
-        const stock =
-          found.total_stock ??
-          found.stock ??
-          found.quantity ??
-          found.stock_quantity ??
-          null;
-        const sourceLabel =
-          found.source === "website_products"
-            ? "Website Product catalog"
-            : "Product catalog";
+        const answer = productAnswer(found, effectiveBarcode, {
+          requested: followUpType || "summary",
+        });
         return NextResponse.json({
           success: true,
-          answer:
-            `**${name}** (SKU: \`${found.sku || localBarcode}\`)\n\n` +
-            `- **Category:** ${cat}\n` +
-            `- **Catalog:** ${sourceLabel}\n` +
-            `${price != null ? `- **Price:** ${typeof price === "number" ? `₹${price.toLocaleString("en-IN")}` : price}\n` : ""}` +
-            `${stock != null ? `- **Stock:** ${Number(stock) > 0 ? stock + " units" : "Out of Stock"}\n` : ""}` +
-            `\nIf you want description, warehouse breakup, or similar products, just ask me.`,
+          answer,
           model: "local-lookup",
           render: "text",
         });
@@ -244,7 +319,7 @@ export async function POST(req) {
       return NextResponse.json({
         success: true,
         answer:
-          `I checked both catalogs for SKU \`${localBarcode}\`, but I could not find this product.\n\n` +
+          `I checked both catalogs for SKU \`${effectiveBarcode}\`, but I could not find this product.\n\n` +
           `- Checked: **Product catalog** (dispatch products)\n` +
           `- Checked: **Website Product catalog**\n\n` +
           `Please confirm the SKU/barcode, or ask me to show categories/products separately.`,
