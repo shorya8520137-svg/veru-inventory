@@ -232,50 +232,56 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
       // Extract product name - everything before "belong" or "which"
       const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
       if (productMatch) {
-        const productName = productMatch[1].trim();
-        // Try to find the product
-        const prodRes = await apiGet(`/api/products?search=${encodeURIComponent(productName)}&limit=5`, authToken);
-        if (!prodRes.error && prodRes.data) {
-          const prodList = prodRes.data?.data?.products || prodRes.data?.products || (Array.isArray(prodRes.data?.data) ? prodRes.data.data : []);
-          for (const p of prodList) {
-            const name = p.product_name || p.name || '';
-            if (name.toLowerCase().includes(productName) || productName.includes(name.toLowerCase())) {
-              const cat = p.category || p.category_name || p.category_display_name || p.display_name || 'Uncategorized';
-              const price = p.price || p.selling_price || p.mrp || 0;
-              const stock = p.total_stock || p.stock || 0;
-              const sku = p.barcode || p.sku || '';
-              return {
-                answer: `🏷️ **${name}** (SKU: \`${sku}\`)
+        // Clean up filler words
+        let productName = productMatch[1].trim();
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their)\b/gi, '').trim();
+        productName = productName.replace(/\s+/g, ' ').trim();
+        
+        if (productName.length > 0) {
+          // Try to find the product
+          const prodRes = await apiGet(`/api/products?search=${encodeURIComponent(productName)}&limit=5`, authToken);
+          if (!prodRes.error && prodRes.data) {
+            const prodList = prodRes.data?.data?.products || prodRes.data?.products || (Array.isArray(prodRes.data?.data) ? prodRes.data.data : []);
+            for (const p of prodList) {
+              const name = p.product_name || p.name || '';
+              if (name.toLowerCase().includes(productName) || productName.includes(name.toLowerCase())) {
+                const cat = p.category || p.category_name || p.category_display_name || p.display_name || 'Uncategorized';
+                const price = p.price || p.selling_price || p.mrp || 0;
+                const stock = p.total_stock || p.stock || 0;
+                const sku = p.barcode || p.sku || '';
+                return {
+                  answer: `🏷️ **${name}** (SKU: \`${sku}\`)
 
 **Category:** ${cat}
 **Price:** ${formatInr(price)}
 **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}
 
 Would you like more details about this product?`
-              };
+                };
+              }
             }
           }
-        }
-        // Try website products
-        const webRes = await apiGet(`/api/website/products?search=${encodeURIComponent(productName)}&limit=5`, authToken);
-        if (!webRes.error && webRes.data) {
-          const webList = webRes.data?.data || webRes.data?.products || (Array.isArray(webRes.data) ? webRes.data : []);
-          for (const p of webList) {
-            const name = p.product_name || p.name || '';
-            if (name.toLowerCase().includes(productName) || productName.includes(name.toLowerCase())) {
-              const cat = p.category_name || p.category || p.category_display_name || 'Uncategorized';
-              const price = p.price || p.offer_price || p.final_price || 0;
-              const stock = p.stock_quantity ?? p.stock ?? 0;
-              const sku = p.barcode || p.sku || '';
-              return {
-                answer: `🏷️ **${name}** (SKU: \`${sku}\`)
+          // Try website products
+          const webRes = await apiGet(`/api/website/products?search=${encodeURIComponent(productName)}&limit=5`, authToken);
+          if (!webRes.error && webRes.data) {
+            const webList = webRes.data?.data || webRes.data?.products || (Array.isArray(webRes.data) ? webRes.data : []);
+            for (const p of webList) {
+              const name = p.product_name || p.name || '';
+              if (name.toLowerCase().includes(productName) || productName.includes(name.toLowerCase())) {
+                const cat = p.category_name || p.category || p.category_display_name || 'Uncategorized';
+                const price = p.price || p.offer_price || p.final_price || 0;
+                const stock = p.stock_quantity ?? p.stock ?? 0;
+                const sku = p.barcode || p.sku || '';
+                return {
+                  answer: `🏷️ **${name}** (SKU: \`${sku}\`)
 
 **Category:** ${cat}
 **Price:** ${formatInr(price)}
 **Stock:** ${stock > 0 ? stock + ' units' : 'Out of Stock'}
 
 Would you like more details about this product?`
-              };
+                };
+              }
             }
           }
         }

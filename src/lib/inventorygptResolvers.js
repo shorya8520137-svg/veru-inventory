@@ -169,19 +169,26 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Must be checked BEFORE generic category listing
   // ONLY match when asking about a specific product's category
   if (/categor/.test(lower)) {
-    const isProductCategoryQuery = /belong|which.*categor|what.*categor.*product|this.*product.*categor|that.*product.*categor/.test(lower);
+    const isProductCategoryQuery = /belong|which.*categor|what.*categor|this.*categor|that.*categor/.test(lower);
     const isShowAllProducts = /^(show|list|get|display|view|all)\s+(the\s+)?(all\s+)?product/.test(lower);
-    const isCategoryProductListing = /product.*(of|in|from|for)\s+[\w\s]+categor|categor.*product/.test(lower) && !isProductCategoryQuery;
     
     if (isProductCategoryQuery && !isShowAllProducts) {
-      // Extract potential product name - everything before "belong" or "which"
+      // Extract potential product name - everything before "belong", "which", "what", "this belong", "that belong"
       const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
       if (productMatch) {
-        return {
-          type: "product_category",
-          productName: productMatch[1].trim(),
-          wantsExport,
-        };
+        // Clean up filler words: "this", "that", "the", "a", "an", etc.
+        let productName = productMatch[1].trim();
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their)\b/gi, '').trim();
+        // Remove extra spaces
+        productName = productName.replace(/\s+/g, ' ').trim();
+        
+        if (productName.length > 0) {
+          return {
+            type: "product_category",
+            productName,
+            wantsExport,
+          };
+        }
       }
       // If no clear product name but mentions category question, try to extract from context
       return {
