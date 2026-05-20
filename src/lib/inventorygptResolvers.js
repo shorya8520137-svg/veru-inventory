@@ -170,6 +170,37 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Extract active context from conversation history
   const activeContext = extractActiveContext(conversationHistory);
 
+  // ========================================
+  // STEP 1 — ENTITY DETECTION (before intent classification)
+  // ========================================
+  const categoryNames = ["home & kitchen", "home--kitchen", "electronics", "sports", "clothing", "home", "kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
+  
+  // Detect SKU/barcode (alphanumeric like FG-082-5KG or numeric like 12345678)
+  const detectedSKU = extractInventoryGptBarcode(raw);
+  
+  // Detect warehouse names
+  const detectedWarehouse = extractInventoryGptWarehouse(raw);
+  
+  // Detect category names in query
+  const detectedCategory = categoryNames.find(cat => lower.includes(cat)) || activeContext.category;
+  
+  // Detect if query is JUST a product name (no action words, no question words)
+  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor/.test(lower);
+  
+  // ========================================
+  // STEP 2 — IF ONLY PRODUCT NAME → PRODUCT_OVERVIEW
+  // ========================================
+  if (isJustEntity && raw.length > 2 && !detectedSKU && !detectedWarehouse && !detectedCategory) {
+    // User just typed a product name like "Lakme Absolute Lipstick"
+    // Infer intent: show product overview
+    return {
+      type: "product",
+      field: "summary",
+      productName: raw.trim(),
+      wantsExport,
+    };
+  }
+
   // Follow-up like "?" should continue the last business context instead of failing.
   if (/^[?.!]+$/.test(lower)) {
     const previousUser = [...(conversationHistory || [])]
@@ -1711,7 +1742,8 @@ export async function tryInventoryGptDeterministicAnswer({
 
   // Only ask for SKU for single-product operations (product, stock, timeline)
   // Do NOT ask for SKU for bulk/list operations
-  if (["product", "stock", "timeline"].includes(intent.type) && !barcode) {
+  // EXCEPTION: if intent has productName (entity-first detection), use that instead
+  if (["product", "stock", "timeline"].includes(intent.type) && !barcode && !intent.productName) {
     return {
       answer:
         "Please share the SKU/barcode so I can read live catalog, stock, and timeline data accurately. I will not guess operational data.",
@@ -1719,9 +1751,50 @@ export async function tryInventoryGptDeterministicAnswer({
     };
   }
 
-  const product = barcode
-    ? await resolveInventoryGptProduct(barcode, authToken, localProducts)
-    : null;
+  // Entity-first: if product name provided directly (user just typed product name)
+  let product = null;
+  if (intent.productName) {
+    // Search by product name across both catalogs
+    const searchName = intent.productName;
+    const dispatchResult = await apiGet(
+      `/api/products?search=${encodeURIComponent(searchName)}&limit=10`,
+      authToken,
+    );
+    if (!dispatchResult.error) {
+      const rows = rowsFromPayload(dispatchResult.data);
+      for (const row of rows) {
+        const normalized = normalizeProduct(row, "dispatch_product");
+        if (
+          normalized.product_name.toLowerCase().includes(searchName.toLowerCase()) ||
+          searchName.toLowerCase().includes(normalized.product_name.toLowerCase())
+        ) {
+          product = normalized;
+          break;
+        }
+      }
+    }
+    if (!product) {
+      const webResult = await apiGet(
+        `/api/website/products?search=${encodeURIComponent(searchName)}&limit=10`,
+        authToken,
+      );
+      if (!webResult.error) {
+        const rows = rowsFromPayload(webResult.data);
+        for (const row of rows) {
+          const normalized = normalizeProduct(row, "website_products");
+          if (
+            normalized.product_name.toLowerCase().includes(searchName.toLowerCase()) ||
+            searchName.toLowerCase().includes(normalized.product_name.toLowerCase())
+          ) {
+            product = normalized;
+            break;
+          }
+        }
+      }
+    }
+  } else if (barcode) {
+    product = await resolveInventoryGptProduct(barcode, authToken, localProducts);
+  }
 
   if (intent.type === "context_help") {
     return {
@@ -1793,12 +1866,13 @@ export async function tryInventoryGptDeterministicAnswer({
 
   if (intent.type === "product") {
     if (!product) {
+      const searchRef = barcode ? `SKU \`${barcode}\`` : `\`${intent.productName || 'this product'}\``;
       return {
         answer:
-          `I checked both catalogs for SKU \`${barcode}\`, but I could not find this product.\n\n` +
+          `I checked both catalogs for ${searchRef}, but I could not find this product.\n\n` +
           "- Checked: **Product catalog** (dispatch products)\n" +
           "- Checked: **Website Product catalog**\n\n" +
-          "Please confirm the SKU/barcode, or ask me to show categories/products separately.",
+          "Please confirm the product name or SKU/barcode, or ask me to show categories/products separately.",
         render: "text",
       };
     }
