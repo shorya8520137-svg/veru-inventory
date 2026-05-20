@@ -218,7 +218,6 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Follow-up context: "ok then send me", "yes send it", "sure", "do it"
   // These should trigger the last action's export or continue the last context
   // IMPORTANT: Exclude full queries that contain category names or are complete requests
-  const categoryNames = ["electronics", "sports", "clothing", "home", "kitchen", "home--kitchen", "home & kitchen", "beauty", "books", "toys", "grocery", "health", "food", "fashion", "accessories"];
   const hasCategoryName = categoryNames.some(cat => lower.includes(cat));
   const isFullRequest = /show.*all.*product|list.*product|get.*product|display.*product|see.*product/.test(lower);
   
