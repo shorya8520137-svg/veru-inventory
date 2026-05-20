@@ -247,16 +247,47 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   if (/categor/.test(lower)) {
     // IMPORTANT: "this category/that category" in product requests is NOT a product category query
     const isFollowUpCategoryReference = /this category|that category|same category|of this|of that/.test(lower);
-    const isProductCategoryQuery = !isFollowUpCategoryReference && /belong|which.*categor|what.*categor/.test(lower);
     const isShowAllProducts = /^(show|list|get|display|view|all)\s+(the\s+)?(all\s+)?product/.test(lower);
     
-    if (isProductCategoryQuery && !isShowAllProducts) {
-      // Extract potential product name - everything before "belong", "which", "what"
-      const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
-      if (productMatch) {
-        // Clean up filler words and product references: "this", "that", "the", "product", "item", etc.
-        let productName = productMatch[1].trim();
-        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name)\b/gi, '').trim();
+    // Multilingual semantic intent detection for product category lookup
+    // English: belong to which category, what is its category, which category
+    // Hinglish: kise category se belong kr ta hai, iska category kya hai, konsa category hai
+    // Hindi: ye kis category ka hai, category batao, ye kis category se taluk rakhta hai
+    const isProductCategoryQuery = !isFollowUpCategoryReference && !isShowAllProducts && (
+      /belong|which.*categor|what.*categor/.test(lower) ||
+      /kise.*categor|kis.*categor|konsa.*categor|kounsi.*categor/.test(lower) ||
+      /category.*kya.*hai|category.*batao|category.*hai/.test(lower) ||
+      /taluk|taluk rakhta|taluk rekh|andher ayea|andhar aaya|se belong/.test(lower) ||
+      /iska.*category|is.*category|uska.*category|us.*category/.test(lower)
+    );
+    
+    if (isProductCategoryQuery) {
+      // Extract potential product name - everything before the category question part
+      // English: "Lakme Absolute Lipstick belong to which category" → "Lakme Absolute Lipstick"
+      // Hinglish: "Lakme Absolute Lipstick kise category se belong kr ta hai" → "Lakme Absolute Lipstick"
+      // Hinglish: "Lakme Absolute Lipstick iska category kya hai" → "Lakme Absolute Lipstick"
+      let productName = "";
+      
+      // Try multiple patterns to extract product name
+      const patterns = [
+        /^(.+?)\s+(?:belong|which|what)/,
+        /^(.+?)\s+(?:kise|kis|konsa|kounsi)\s+categor/,
+        /^(.+?)\s+(?:iska|is|uska|us)\s+categor/,
+        /^(.+?)\s+categor\s+(?:kya|batao|hai)/,
+        /^(.+?)\s+(?:taluk|andher|andhar)/,
+      ];
+      
+      for (const pattern of patterns) {
+        const match = lower.match(pattern);
+        if (match) {
+          productName = match[1].trim();
+          break;
+        }
+      }
+      
+      if (productName) {
+        // Clean up filler words (English + Hinglish)
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name|ye|ya|hai|ho|tha|the|ne|se|ka|ke|ki|ko|mein|par|aur|bhi|to|hi|jo)\b/gi, '').trim();
         // Remove extra spaces
         productName = productName.replace(/\s+/g, ' ').trim();
         

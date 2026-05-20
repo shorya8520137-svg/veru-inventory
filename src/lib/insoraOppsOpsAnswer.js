@@ -266,13 +266,37 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
   // --- CATEGORIES ---
   if (/categor(y|ies)/.test(lower)) {
     // Check if user is asking which category a specific product belongs to
-    if (/belong|which.*categor|what.*categor|this.*categor|that.*categor/.test(lower)) {
-      // Extract product name - everything before "belong" or "which"
-      const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
-      if (productMatch) {
-        // Clean up filler words and product references
-        let productName = productMatch[1].trim();
-        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name)\b/gi, '').trim();
+    // Multilingual semantic intent detection
+    const isProductCategoryQuery = (
+      /belong|which.*categor|what.*categor/.test(lower) ||
+      /kise.*categor|kis.*categor|konsa.*categor|kounsi.*categor/.test(lower) ||
+      /category.*kya.*hai|category.*batao|category.*hai/.test(lower) ||
+      /taluk|taluk rakhta|taluk rekh|andher ayea|andhar aaya|se belong/.test(lower) ||
+      /iska.*category|is.*category|uska.*category|us.*category/.test(lower)
+    );
+    
+    if (isProductCategoryQuery) {
+      // Extract product name using multiple patterns
+      let productName = "";
+      const patterns = [
+        /^(.+?)\s+(?:belong|which|what)/,
+        /^(.+?)\s+(?:kise|kis|konsa|kounsi)\s+categor/,
+        /^(.+?)\s+(?:iska|is|uska|us)\s+categor/,
+        /^(.+?)\s+categor\s+(?:kya|batao|hai)/,
+        /^(.+?)\s+(?:taluk|andher|andhar)/,
+      ];
+      
+      for (const pattern of patterns) {
+        const match = lower.match(pattern);
+        if (match) {
+          productName = match[1].trim();
+          break;
+        }
+      }
+      
+      if (productName) {
+        // Clean up filler words (English + Hinglish)
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name|ye|ya|hai|ho|tha|the|ne|se|ka|ke|ki|ko|mein|par|aur|bhi|to|hi|jo)\b/gi, '').trim();
         productName = productName.replace(/\s+/g, ' ').trim();
         
         if (productName.length > 0) {
