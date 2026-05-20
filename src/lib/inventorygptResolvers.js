@@ -251,12 +251,12 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     const isShowAllProducts = /^(show|list|get|display|view|all)\s+(the\s+)?(all\s+)?product/.test(lower);
     
     if (isProductCategoryQuery && !isShowAllProducts) {
-      // Extract potential product name - everything before "belong", "which", "what", "this belong", "that belong"
+      // Extract potential product name - everything before "belong", "which", "what"
       const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
       if (productMatch) {
-        // Clean up filler words: "this", "that", "the", "a", "an", etc.
+        // Clean up filler words and product references: "this", "that", "the", "product", "item", etc.
         let productName = productMatch[1].trim();
-        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their)\b/gi, '').trim();
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name)\b/gi, '').trim();
         // Remove extra spaces
         productName = productName.replace(/\s+/g, ' ').trim();
         

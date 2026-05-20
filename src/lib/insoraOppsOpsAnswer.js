@@ -270,9 +270,9 @@ export async function tryInsoraOppsDataAnswer(question, authToken, sessionId = n
       // Extract product name - everything before "belong" or "which"
       const productMatch = lower.match(/^(.+?)\s+(?:belong|which|what)/);
       if (productMatch) {
-        // Clean up filler words
+        // Clean up filler words and product references
         let productName = productMatch[1].trim();
-        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their)\b/gi, '').trim();
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name)\b/gi, '').trim();
         productName = productName.replace(/\s+/g, ' ').trim();
         
         if (productName.length > 0) {
