@@ -299,12 +299,13 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       let productName = "";
       
       // Try multiple patterns to extract product name
+      // IMPORTANT: Hinglish patterns MUST come first (more specific)
       const patterns = [
-        /^(.+?)\s+(?:belong|which|what)/,
-        /^(.+?)\s+(?:kise|kis|konsa|kounsi)\s+categor/,
         /^(.+?)\s+(?:iska|is|uska|us)\s+categor/,
-        /^(.+?)\s+categor\s+(?:kya|batao|hai)/,
+        /^(.+?)\s+(?:kise|kis|konsa|kounsi)\s+categor/,
+        /^(.+?)\s+categor\s+(?:kya|batao|hai|bta)/,
         /^(.+?)\s+(?:taluk|andher|andhar)/,
+        /^(.+?)\s+(?:belong|which|what)/,
       ];
       
       for (const pattern of patterns) {
@@ -316,8 +317,8 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       }
       
       if (productName) {
-        // Clean up filler words (English + Hinglish)
-        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name|ye|ya|hai|ho|tha|the|ne|se|ka|ke|ki|ko|mein|par|aur|bhi|to|hi|jo)\b/gi, '').trim();
+        // Clean up filler words (English + Hinglish + category-related words)
+        productName = productName.replace(/\b(this|that|the|a|an|is|are|it|for|me|my|your|his|her|our|their|product|item|name|ye|ya|hai|ho|tha|the|ne|se|ka|ke|ki|ko|mein|par|aur|bhi|to|hi|jo|kise|kis|konsa|kounsi|iska|is|uska|us|category|categor|belong|se|kr|ta|hai|rekh|rakhta|andher|andhar|batao|bta|kya)\b/gi, '').trim();
         // Remove extra spaces
         productName = productName.replace(/\s+/g, ' ').trim();
         
