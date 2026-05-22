@@ -288,18 +288,6 @@ export function PermissionsProvider({ children }) {
             setUserPermissions([]);
         }
     }, [user, apiAvailable]);
-                });
-                console.log(`✅ Loaded ${Object.keys(warehouseMap).length} warehouses:`, Object.keys(warehouseMap));
-                setWarehouses(warehouseMap);
-            } else {
-                console.warn('⚠️ No warehouses in API response');
-                setWarehouses({});
-            }
-        } catch (error) {
-            console.error('❌ Failed to load warehouses from API:', error);
-            setWarehouses({});
-        }
-    };
 
     const loadUserPermissions = async () => {
         if (!user) return;
