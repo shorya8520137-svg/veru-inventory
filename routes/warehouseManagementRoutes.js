@@ -13,25 +13,27 @@ router.get('/warehouses', authenticateToken, (req, res) => {
     try {
         const sql = `
             SELECT 
-                id,
-                code as warehouse_code,
-                name as warehouse_name,
-                location,
+                w_id as id,
+                warehouse_code,
+                Warehouse_name as warehouse_name,
                 address,
-                city,
-                state,
-                country,
-                pincode,
-                phone,
-                email,
-                manager_name,
-                capacity,
-                is_active,
-                created_at,
-                updated_at
-            FROM warehouses 
-            WHERE is_active = TRUE
-            ORDER BY name ASC
+                warehouse_code as code,
+                Warehouse_name as name,
+                address as location,
+                address as city,
+                'India' as state,
+                'India' as country,
+                NULL as pincode,
+                NULL as phone,
+                NULL as email,
+                NULL as manager_name,
+                NULL as capacity,
+                1 as is_active,
+                NOW() as created_at,
+                NOW() as updated_at
+            FROM dispatch_warehouse 
+            WHERE 1=1
+            ORDER BY Warehouse_name ASC
         `;
 
         db.query(sql, (err, results) => {
@@ -149,7 +151,7 @@ router.get('/stores', authenticateToken, (req, res) => {
                 id,
                 store_code,
                 store_name,
-                store_type,
+                'retail' as store_type,
                 address,
                 city,
                 state,
