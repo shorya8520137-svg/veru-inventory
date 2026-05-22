@@ -31,13 +31,13 @@ router.get('/warehouses', authenticateToken, (req, res) => {
                 created_at,
                 updated_at
             FROM warehouses
-            WHERE is_active = TRUE
+            WHERE is_active = TRUE OR is_active IS NULL
             ORDER BY name ASC
         `;
 
         db.query(sql, (err, results) => {
             if (err) {
-                console.error('Error fetching warehouses:', err);
+                console.error('❌ Error fetching warehouses:', err);
                 return res.status(500).json({
                     success: false,
                     message: 'Failed to fetch warehouses',
@@ -45,7 +45,10 @@ router.get('/warehouses', authenticateToken, (req, res) => {
                 });
             }
 
-            console.log('✅ Fetched warehouses from warehouses table:', results.length);
+            console.log(`✅ Fetched ${results.length} warehouses from warehouses table`);
+            if (results.length > 0) {
+                console.log('   Sample:', results[0].warehouse_name, `(${results[0].warehouse_code})`);
+            }
 
             res.json({
                 success: true,
@@ -53,7 +56,7 @@ router.get('/warehouses', authenticateToken, (req, res) => {
             });
         });
     } catch (error) {
-        console.error('Warehouse API Error:', error);
+        console.error('❌ Warehouse API Error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error',

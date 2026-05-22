@@ -293,10 +293,16 @@ export function PermissionsProvider({ children }) {
     }, [user, apiAvailable]);
 
     const loadWarehouses = async () => {
-        if (!apiAvailable) return;
+        if (!apiAvailable) {
+            console.log('⚠️ API not available, warehouses will be empty');
+            return;
+        }
         
         try {
+            console.log('🔄 Loading warehouses from API...');
             const response = await PermissionsAPI.getWarehouses();
+            console.log('📦 Warehouse API response:', response);
+            
             if (response.success && response.warehouses) {
                 // Convert API response to WAREHOUSES format
                 const warehouseMap = {};
@@ -307,12 +313,15 @@ export function PermissionsProvider({ children }) {
                         location: `${wh.city}, ${wh.state}`
                     };
                 });
+                console.log(`✅ Loaded ${Object.keys(warehouseMap).length} warehouses:`, Object.keys(warehouseMap));
                 setWarehouses(warehouseMap);
+            } else {
+                console.warn('⚠️ No warehouses in API response');
+                setWarehouses({});
             }
         } catch (error) {
-            console.warn('Failed to load warehouses from API:', error);
-            // Fallback to hardcoded warehouses if API fails
-            setWarehouses(WAREHOUSES);
+            console.error('❌ Failed to load warehouses from API:', error);
+            setWarehouses({});
         }
     };
 
