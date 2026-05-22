@@ -1318,10 +1318,8 @@ function buildWarehouseProductsAnswer(warehouseName, result, wantsExport) {
 
   return {
     answer: lines.join("\n"),
-    exportTsv: wantsExport
-      ? rowsToTsv(rows, ["sku", "product_name", "warehouse", "stock", "price"])
-      : null,
-    exportFilename: wantsExport ? `inventorygpt-warehouse-${warehouseName}.tsv` : null,
+    exportTsv: rowsToTsv(rows, ["sku", "product_name", "warehouse", "stock", "price"]),
+    exportFilename: `inventorygpt-warehouse-${warehouseName}.tsv`,
     extraData: {
       type: "warehouse_products",
       warehouseName,
