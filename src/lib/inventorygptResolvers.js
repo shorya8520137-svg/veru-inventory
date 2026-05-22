@@ -258,13 +258,13 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Global/list intents must be checked before SKU/product intents.
   if (
     /address|full address|location|phone|email|contact|manager/.test(lower) &&
-    /(store|warehouse|wearhouse|this|same|it)/.test(lower)
+    /(store|warehouse|wearhouse|werahouse|this|same|it)/.test(lower)
   ) {
     return {
       type: "location_detail",
       locationType: /store/.test(lower)
         ? "stores"
-        : /warehouse|wearhouse/.test(lower)
+        : /warehouse|wearhouse|werahouse/.test(lower)
           ? "warehouses"
           : "last",
       wantsExport,
@@ -383,9 +383,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Warehouse-based product listing: "show all products in gandu nagar warehouse"
   const genericPhraseRe = /^(?:all|every|each|the|this|that|any|some|a|an|of|in|for|from|to)(?:\s+(?:all|every|each|the|this|that|any|some|a|an|of|in|for|from|to))*$/i;
   const warehouseProductMatch = lower.match(
-    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|wh|store)/
+    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|wh|store)/
   ) || lower.match(
-    /(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|wh|store).*(?:product|item|stock|inventory)/
+    /(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|wh|store).*(?:product|item|stock|inventory)/
   );
   const warehouseProductName = warehouseProductMatch?.[1]?.trim();
   const isGenericWarehouseName = !!warehouseProductName && genericPhraseRe.test(warehouseProductName);
@@ -402,10 +402,10 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // "show me stock of all the warehouse", "sare warehouse ka stock dikhao"
   // Also catches "show me all stock" / "show me all products" (no warehouse mentioned)
   if (
-    /show.*(?:stock|inventory|quantity).*(?:warehouse|wearhouse)/.test(lower) ||
-    /(?:warehouse|wearhouse).*(?:stock|inventory|quantity)/.test(lower) ||
-    /(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse).*(?:stock|inventory|product)/.test(lower) ||
-    /(?:stock|inventory|quantity).*(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse)/.test(lower) ||
+    /show.*(?:stock|inventory|quantity).*(?:warehouse|wearhouse|werahouse)/.test(lower) ||
+    /(?:warehouse|wearhouse|werahouse).*(?:stock|inventory|quantity)/.test(lower) ||
+    /(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse).*(?:stock|inventory|product)/.test(lower) ||
+    /(?:stock|inventory|quantity).*(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse)/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?)\s*$/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?).*dikhao/.test(lower) ||
     /(?:sare|saare|sabhi|all)\s+(?:stock|product|item|inventory|samagri|cheeze?)\s+(?:dikhao|show)/.test(lower)
@@ -424,7 +424,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
   if (
-    /how\s*(many|much|may).*(warehouse|wearhouse)|total.*(warehouse|wearhouse)|list.*(warehouse|wearhouse)|(warehouse|warehouses|wearhouse|wearhouses)\s*(i have|count|list)?$/.test(
+    /how\s*(many|much|may).*(warehouse|wearhouse|werahouse)|total.*(warehouse|wearhouse|werahouse)|list.*(warehouse|wearhouse|werahouse)|(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses)\s*(i have|count|list)?$/.test(
       lower,
     ) ||
     (/show\s+(?:me\s+)?(?:all\s+)?(?:the\s+)?(?:warehouse|warehouses|wearhouse|wearhouses)\s*$/.test(lower) && !/stock|inventory|quantity|product/.test(lower))
