@@ -1821,11 +1821,24 @@ export async function tryInventoryGptDeterministicAnswer({
   // Do NOT ask for SKU for bulk/list operations
   // EXCEPTION: if intent has productName (entity-first detection), use that instead
   if (["product", "stock", "timeline"].includes(intent.type) && !barcode && !intent.productName) {
-    return {
-      answer:
-        "Please share the SKU/barcode so I can read live catalog, stock, and timeline data accurately. I will not guess operational data.",
-      render: "text",
-    };
+    // Try to extract product name from natural language query like "3M Sticky Notes what is the stock of this"
+    const productNameFromQuery = q
+      .replace(/what('s| is| are)(\s+the)?\s+(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
+      .replace(/(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
+      .replace(/what('s| is| are)(\s+the)?\s+(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
+      .replace(/(tell|show|check|get|give)\s+(me\s+)?(the\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
+      .replace(/\b(of|this|it|that|the|for|on|please|pls|now)\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (productNameFromQuery && productNameFromQuery.length > 2) {
+      intent.productName = productNameFromQuery;
+    } else {
+      return {
+        answer:
+          "Please share the SKU/barcode so I can read live catalog, stock, and timeline data accurately. I will not guess operational data.",
+        render: "text",
+      };
+    }
   }
 
   // Entity-first: if product name provided directly (user just typed product name)
