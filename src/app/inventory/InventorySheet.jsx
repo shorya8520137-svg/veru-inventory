@@ -265,6 +265,32 @@ export default function InventorySheet() {
     const [dateTo, setDateTo] = useState(""); // Empty by default - no date filtering
     const [useMockData, setUseMockData] = useState(false); // Toggle for mock data
     const [availableWarehouses, setAvailableWarehouses] = useState([]); // Dynamic warehouses from inventory data
+    const [warehouseNameMap, setWarehouseNameMap] = useState({}); // Map code -> name
+
+    // Fetch warehouse names from management API
+    useEffect(() => {
+        const fetchWarehouseNames = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/api/warehouse-management/warehouses`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.warehouses) {
+                        const map = {};
+                        data.warehouses.forEach(wh => {
+                            map[wh.warehouse_code] = wh.warehouse_name;
+                        });
+                        setWarehouseNameMap(map);
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to fetch warehouse names:', error);
+            }
+        };
+        fetchWarehouseNames();
+    }, []);
 
     // Timeline states - restored for modal
     const [selectedItem, setSelectedItem] = useState(null);
@@ -349,9 +375,11 @@ export default function InventorySheet() {
             inventoryItems.forEach(item => {
                 const whCode = item.warehouse || item.warehouse_code || item.warehouse_name;
                 if (whCode && !warehouseMap.has(whCode)) {
+                    // Use name from map, or item field, or fallback to code
+                    const whName = warehouseNameMap[whCode] || item.warehouse_name || item.warehouseName || whCode;
                     warehouseMap.set(whCode, {
                         code: whCode,
-                        name: item.warehouse_name || item.warehouse || whCode
+                        name: whName
                     });
                 }
             });
