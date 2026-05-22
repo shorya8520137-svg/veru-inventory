@@ -11,29 +11,28 @@ const { authenticateToken } = require('../middleware/auth');
 // GET /api/warehouse-management/warehouses - Get all warehouses
 router.get('/warehouses', authenticateToken, (req, res) => {
     try {
+        // Get warehouses from the warehouses table
         const sql = `
             SELECT 
-                w_id as id,
-                warehouse_code,
-                Warehouse_name as warehouse_name,
+                id,
+                code as warehouse_code,
+                name as warehouse_name,
+                location,
                 address,
-                warehouse_code as code,
-                Warehouse_name as name,
-                address as location,
-                address as city,
-                'India' as state,
-                'India' as country,
-                NULL as pincode,
-                NULL as phone,
-                NULL as email,
-                NULL as manager_name,
-                NULL as capacity,
-                1 as is_active,
-                NOW() as created_at,
-                NOW() as updated_at
-            FROM dispatch_warehouse 
-            WHERE 1=1
-            ORDER BY Warehouse_name ASC
+                city,
+                state,
+                country,
+                pincode,
+                phone,
+                email,
+                manager_name,
+                capacity,
+                is_active,
+                created_at,
+                updated_at
+            FROM warehouses
+            WHERE is_active = TRUE
+            ORDER BY name ASC
         `;
 
         db.query(sql, (err, results) => {
@@ -45,6 +44,8 @@ router.get('/warehouses', authenticateToken, (req, res) => {
                     error: err.message
                 });
             }
+
+            console.log('✅ Fetched warehouses from warehouses table:', results.length);
 
             res.json({
                 success: true,

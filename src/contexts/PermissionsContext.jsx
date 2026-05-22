@@ -101,14 +101,9 @@ export const PERMISSIONS = {
     TICKETS_MANAGE: 'TICKETS_MANAGE',
 };
 
-// Warehouse definitions
-export const WAREHOUSES = {
-    GGM_WH: { code: 'GGM_WH', name: 'Gurgaon Warehouse', location: 'Gurgaon, Haryana' },
-    BLR_WH: { code: 'BLR_WH', name: 'Bangalore Warehouse', location: 'Bangalore, Karnataka' },
-    MUM_WH: { code: 'MUM_WH', name: 'Mumbai Warehouse', location: 'Mumbai, Maharashtra' },
-    AMD_WH: { code: 'AMD_WH', name: 'Ahmedabad Warehouse', location: 'Ahmedabad, Gujarat' },
-    HYD_WH: { code: 'HYD_WH', name: 'Hyderabad Warehouse', location: 'Hyderabad, Telangana' }
-};
+// Warehouse definitions - loaded dynamically from API
+// Fallback empty object if API fails
+export const WAREHOUSES = {};
 
 // Define roles and their permissions (Updated for backend format)
 export const ROLES = {
