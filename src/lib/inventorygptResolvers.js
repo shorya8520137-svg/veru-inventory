@@ -1220,15 +1220,13 @@ function buildCategoryProductsAnswer(category, result, wantsExport) {
     }
 
     lines.push("");
-    lines.push("Would you like this data exported as an Excel sheet?");
+    lines.push("📊 Here is the Excel sheet — you can also do deep analysis if needed.");
   }
 
   return {
     answer: lines.join("\n"),
-    exportTsv: wantsExport
-      ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
-      : null,
-    exportFilename: wantsExport ? `inventorygpt-category-${category}.tsv` : null,
+    exportTsv: rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"]),
+    exportFilename: `inventorygpt-category-${category}.tsv`,
     extraData: {
       type: "category_products",
       category,
@@ -1267,15 +1265,13 @@ function buildPriceFilterAnswer(operator, priceValue, result, wantsExport) {
     }
 
     lines.push("");
-    lines.push("Would you like this data exported as an Excel sheet?");
+    lines.push("📊 Here is the Excel sheet — you can also do deep analysis if needed.");
   }
 
   return {
     answer: lines.join("\n"),
-    exportTsv: wantsExport
-      ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
-      : null,
-    exportFilename: wantsExport ? `inventorygpt-price-${operator}${priceValue}.tsv` : null,
+    exportTsv: rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"]),
+    exportFilename: `inventorygpt-price-${operator}${priceValue}.tsv`,
     extraData: {
       type: "price_filter",
       operator,
@@ -1313,7 +1309,7 @@ function buildWarehouseProductsAnswer(warehouseName, result, wantsExport) {
     }
 
     lines.push("");
-    lines.push("Would you like this data exported as an Excel sheet?");
+    lines.push("📊 Here is the Excel sheet — you can also do deep analysis if needed.");
   }
 
   return {
@@ -1784,7 +1780,7 @@ export async function tryInventoryGptDeterministicAnswer({
     lines.push("");
     lines.push("Type the warehouse name or code to see its stock.");
     lines.push("");
-    lines.push("Would you like this data exported as an Excel sheet?");
+    lines.push("Which warehouse would you like to check?");
 
     return {
       answer: lines.join("\n"),
