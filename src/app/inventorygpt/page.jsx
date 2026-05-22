@@ -1338,6 +1338,28 @@ export default function InventoryGPTPage() {
       return;
     }
 
+    // Affirmative response to pending export question?
+    // If user says yes/sure/ok/haan and last assistant message has exportTsv, trigger download
+    const affirmativeRe = /^(yes|yeah|sure|ok|okay|yep|yup|haan|ha|h[ae]|pl[sz]|please|do it|go ahead|send|export|download)\b/i;
+    const lastAssistantMsg = priorMessages.filter((m) => m.role === "assistant").pop();
+    if (
+      affirmativeRe.test(trimmed) &&
+      lastAssistantMsg?.exportTsv
+    ) {
+      appendAssistantWithTyping(
+        sessionIdForRequest,
+        "Downloading your Excel file...",
+        {
+          error: false,
+          fromAgent: AGENT_NAME,
+          exportTsv: lastAssistantMsg.exportTsv,
+          exportFilename: lastAssistantMsg.exportFilename || "inventorygpt-export.xlsx",
+        },
+      );
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/inventorygpt", {
         method: "POST",
