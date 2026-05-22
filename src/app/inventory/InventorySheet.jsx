@@ -10,14 +10,6 @@ import { usePermissions, PERMISSIONS } from '@/contexts/PermissionsContext';
 const PAGE_SIZE = 10;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
-const WAREHOUSES = [
-    { code: "GGM_WH", name: "Gurgaon Warehouse", city: "Gurgaon" },
-    { code: "BLR_WH", name: "Bangalore Warehouse", city: "Bangalore" },
-    { code: "MUM_WH", name: "Mumbai Warehouse", city: "Mumbai" },
-    { code: "AMD_WH", name: "Ahmedabad Warehouse", city: "Ahmedabad" },
-    { code: "HYD_WH", name: "Hyderabad Warehouse", city: "Hyderabad" },
-];
-
 /* ── Growth Trajectory Modal — fetches real timeline data ── */
 function GrowthTrajectoryModal({ item, onClose }) {
     const [timeline, setTimeline] = useState([]);   // last 20, newest-first (for display)
@@ -275,7 +267,7 @@ export default function InventorySheet() {
 
     // Get accessible warehouses based on user permissions
     const accessibleWarehouses = getAccessibleWarehouses('INVENTORY_VIEW');
-    const availableWarehouses = accessibleWarehouses.length > 0 ? accessibleWarehouses : WAREHOUSES;
+    const availableWarehouses = accessibleWarehouses.length > 0 ? accessibleWarehouses : [];
 
     // Timeline states - restored for modal
     const [selectedItem, setSelectedItem] = useState(null);
