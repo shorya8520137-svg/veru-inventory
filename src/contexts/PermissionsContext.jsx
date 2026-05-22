@@ -302,14 +302,14 @@ export function PermissionsProvider({ children }) {
         
         try {
             const response = await PermissionsAPI.getWarehouses();
-            if (response.success && response.data) {
+            if (response.success && response.warehouses) {
                 // Convert API response to WAREHOUSES format
                 const warehouseMap = {};
-                response.data.forEach(wh => {
+                response.warehouses.forEach(wh => {
                     warehouseMap[wh.warehouse_code] = {
                         code: wh.warehouse_code,
                         name: wh.warehouse_name,
-                        location: wh.warehouse_name
+                        location: `${wh.city}, ${wh.state}`
                     };
                 });
                 setWarehouses(warehouseMap);

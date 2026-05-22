@@ -230,7 +230,7 @@ export class PermissionsAPI {
     }
     
     static async getWarehouses() {
-        return this.makeAuthenticatedRequest('/permissions/warehouses');
+        return this.makeAuthenticatedRequest('/warehouse-management/warehouses');
     }
     
     // ================= SYSTEM STATS ================= //
