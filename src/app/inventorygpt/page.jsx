@@ -276,6 +276,54 @@ function CategoryGrid({ categories, onCategoryClick }) {
   );
 }
 
+// ==================== WAREHOUSE GRID ====================
+function WarehouseGrid({ warehouses, onWarehouseSelect }) {
+  if (!Array.isArray(warehouses) || warehouses.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+    >
+      {warehouses.map((wh, i) => {
+        const place = [wh.city, wh.state].filter(Boolean).join(", ");
+        return (
+          <motion.div
+            key={`${wh.code}-${i}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.35 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onWarehouseSelect?.(wh.name || wh.code)}
+            className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-100/50"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-colors group-hover:bg-emerald-200">
+                <Package className="h-6 w-6" />
+              </div>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-semibold text-slate-600">
+                {wh.code}
+              </span>
+            </div>
+            <h3 className="mt-3 text-base font-semibold capitalize text-slate-900">
+              {wh.name}
+            </h3>
+            {place && (
+              <p className="mt-1 text-sm text-slate-500">{place}</p>
+            )}
+            <div className="mt-3 flex items-center gap-1.5 text-sm font-medium text-emerald-600 transition-colors group-hover:text-emerald-700">
+              <span>View Stock</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
 // ==================== PRODUCT CARD ====================
 function ProductCard({ product, index = 0, onAskAI }) {
   const [showNestedChat, setShowNestedChat] = useState(false);
@@ -727,6 +775,8 @@ function AssistantMessage({
   products,
   onCategoryClick,
   onReadMore,
+  warehouses,
+  onWarehouseSelect,
 }) {
   const [copied, setCopied] = useState(false);
   const [helpful, setHelpful] = useState(false);
@@ -787,6 +837,9 @@ function AssistantMessage({
   const hasReadMore = !!readMoreMatch && !isStreaming;
   const cleanContent = fullContent.replace(/\[READ_MORE:\d+:(category|price|warehouse):[^\]]+\]/g, "").trim();
 
+  // Check for warehouse prompt extra data
+  const showWarehouseGrid = message.extraData?.type === "warehouse_prompt" && Array.isArray(message.extraData?.warehouses) && !isStreaming;
+
   async function copyText() {
     try {
       await navigator.clipboard.writeText(fullContent);
@@ -835,8 +888,18 @@ function AssistantMessage({
         <Info className="h-4 w-4" strokeWidth={2.5} />
       </span>
       <div className="min-w-0 flex-1 space-y-4">
-        {/* Regular Category Grid */}
-        {showCategoryGrid ? (
+        {/* Warehouse Selection Grid */}
+        {showWarehouseGrid ? (
+          <>
+            <div className="text-[15px] leading-7 text-slate-700">
+              <MarkdownBody content={cleanContent || fullContent} />
+            </div>
+            <WarehouseGrid
+              warehouses={message.extraData.warehouses}
+              onWarehouseSelect={onWarehouseSelect}
+            />
+          </>
+        ) : showCategoryGrid ? (
           <CategoryGrid
             categories={categories}
             onCategoryClick={onCategoryClick}
@@ -1551,6 +1614,9 @@ export default function InventoryGPTPage() {
                         products={products}
                         onCategoryClick={(cat) => {
                           sendMessage(`show me all products of ${cat}`);
+                        }}
+                        onWarehouseSelect={(whName) => {
+                          sendMessage(`show me all products in ${whName} warehouse`);
                         }}
                         onReadMore={(extraData) => {
                           if (!extraData) return;

@@ -394,6 +394,18 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
 
+  // Warehouse stock prompt: "show me stock of all the warehouse"
+  if (
+    /show\s+me\s+(all\s+)?(the\s+)?(warehouse|wearhouse)\s+stock/.test(lower) ||
+    /show\s+(all\s+)?(the\s+)?(warehouse|wearhouse)\s+stock/.test(lower) ||
+    /(stock|inventory|quantity).*(warehouse|wearhouse).*(all|every|each|show|list)/.test(lower) ||
+    /(warehouse|wearhouse).*(stock|inventory|quantity).*(show|list|all)/.test(lower)
+  ) {
+    if (!detectedWarehouse && !warehouseProductMatch) {
+      return { type: "warehouse_prompt", wantsExport };
+    }
+  }
+
   if (/categor/.test(lower) && !/product|item|show.*product/.test(lower)) {
     return {
       type: /website|web site|websites|website product|site/.test(lower)
@@ -1737,6 +1749,47 @@ export async function tryInventoryGptDeterministicAnswer({
         intent.wantsExport,
       ),
       render: "text",
+    };
+  }
+
+  // Warehouse stock prompt: show warehouses and ask user to pick one
+  if (intent.type === "warehouse_prompt") {
+    const locations = await resolveInventoryGptLocations(authToken, "warehouses");
+    const warehouseRows = locations.rows || [];
+
+    if (!warehouseRows.length) {
+      return {
+        answer: "No warehouses found. Please check your warehouse management setup.",
+        render: "text",
+      };
+    }
+
+    const lines = ["🏬 **Warehouse Stock**", ""];
+    lines.push("Which warehouse would you like to check the stock for?");
+    lines.push("");
+    warehouseRows.slice(0, 20).forEach((wh) => {
+      const place = [wh.city, wh.state].filter(Boolean).join(", ");
+      lines.push(
+        `- **${wh.name}** \`${wh.code}\`${place ? ` · ${place}` : ""}`,
+      );
+    });
+    lines.push("");
+    lines.push("Type the warehouse name or code to see its stock.");
+    lines.push("");
+    lines.push("Would you like this data exported as an Excel sheet?");
+
+    return {
+      answer: lines.join("\n"),
+      render: "text",
+      extraData: {
+        type: "warehouse_prompt",
+        warehouses: warehouseRows.map(wh => ({
+          code: wh.code,
+          name: wh.name,
+          city: wh.city,
+          state: wh.state,
+        })),
+      },
     };
   }
 
