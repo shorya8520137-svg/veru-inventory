@@ -293,11 +293,6 @@ export function PermissionsProvider({ children }) {
     }, [user, apiAvailable]);
 
     const loadWarehouses = async () => {
-        if (!apiAvailable) {
-            console.log('⚠️ API not available, warehouses will be empty');
-            return;
-        }
-        
         try {
             console.log('🔄 Loading warehouses from API...');
             const response = await PermissionsAPI.getWarehouses();
