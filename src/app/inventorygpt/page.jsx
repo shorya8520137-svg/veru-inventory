@@ -324,6 +324,149 @@ function WarehouseGrid({ warehouses, onWarehouseSelect }) {
   );
 }
 
+// ==================== TABLE PREVIEW ====================
+function TablePreview({ title, columns, rows, total, exportTsv, exportFilename }) {
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const filtered = (() => {
+    if (!search) return rows || [];
+    const q = search.toLowerCase();
+    return (rows || []).filter((r) =>
+      Object.values(r).some((v) => String(v || "").toLowerCase().includes(q)),
+    );
+  })();
+  const displayed = showAll ? filtered : filtered.slice(0, 10);
+  const hasMore = filtered.length > 10;
+  const colKey = (col) => col.replace(/\s+/g, "_").toLowerCase();
+
+  if (!rows || !rows.length) return null;
+
+  function downloadExcel() {
+    try {
+      const tsv =
+        exportTsv ||
+        [columns.join("\t"), ...rows.map((r) => columns.map((c) => r[colKey(c)] ?? "").join("\t"))].join("\n");
+      const data = tsv.split("\n").map((line) => line.split("\t"));
+      const headers = data[0];
+      const rowsData = data.slice(1).map((row) => {
+        const obj = {};
+        headers.forEach((h, i) => (obj[h] = row[i] || ""));
+        return obj;
+      });
+      const ws = XLSX.utils.json_to_sheet(rowsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Data");
+      XLSX.writeFile(wb, exportFilename || "export.xlsx");
+    } catch (e) {
+      console.error("Excel download failed:", e);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">{title || "Data"}</h3>
+          <p className="mt-0.5 text-sm text-slate-500">{total || rows.length} entries</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={downloadExcel}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download Excel
+          </button>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="border-b border-slate-100 px-5 py-3">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search in table..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/80">
+              {columns.map((col) => (
+                <th key={col} className="whitespace-nowrap px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayed.map((row, i) => (
+              <motion.tr
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="border-b border-slate-50 transition-colors hover:bg-emerald-50/50"
+              >
+                {columns.map((col) => {
+                  const val = row[colKey(col)] ?? "";
+                  return (
+                    <td key={col} className="whitespace-nowrap px-5 py-3 text-slate-700">
+                      {colKey(col) === "price" && val != null && val !== ""
+                        ? `₹${Number(val).toLocaleString("en-IN")}`
+                        : colKey(col) === "stock"
+                          ? `${val} units`
+                          : String(val)}
+                    </td>
+                  );
+                })}
+              </motion.tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+        <span className="text-xs text-slate-400">
+          {search
+            ? `Showing ${displayed.length} of ${filtered.length} filtered`
+            : `Showing ${displayed.length} of ${rows.length}`}
+        </span>
+        <div className="flex items-center gap-2">
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setShowAll(!showAll)}
+              className="rounded-lg bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              {showAll ? "Show Less" : `Show ${filtered.length - 10} More`}
+            </button>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ==================== PRODUCT CARD ====================
 function ProductCard({ product, index = 0, onAskAI }) {
   const [showNestedChat, setShowNestedChat] = useState(false);
@@ -840,6 +983,9 @@ function AssistantMessage({
   // Check for warehouse prompt extra data
   const showWarehouseGrid = message.extraData?.type === "warehouse_prompt" && Array.isArray(message.extraData?.warehouses) && !isStreaming;
 
+  // Check for table preview (interactive data table)
+  const showTablePreview = message.extraData?.type === "table_preview" && Array.isArray(message.extraData?.rows) && message.extraData.rows.length > 0;
+
   async function copyText() {
     try {
       await navigator.clipboard.writeText(fullContent);
@@ -928,6 +1074,17 @@ function AssistantMessage({
                 {isStreaming ? <StreamingCursor /> : null}
               </div>
             )}
+            {/* Interactive table preview */}
+            {showTablePreview && (
+              <TablePreview
+                title={message.extraData.title}
+                columns={message.extraData.columns}
+                rows={message.extraData.rows}
+                total={message.extraData.total}
+                exportTsv={message.exportTsv}
+                exportFilename={message.exportFilename}
+              />
+            )}
             {isLong && !expanded ? (
               <button
                 type="button"
@@ -948,7 +1105,7 @@ function AssistantMessage({
               </button>
             ) : null}
             {/* Read More Button for bulk results */}
-            {hasReadMore && onReadMore ? (
+            {hasReadMore && onReadMore && !showTablePreview ? (
               <button
                 type="button"
                 onClick={() => onReadMore(message.extraData)}
@@ -972,7 +1129,7 @@ function AssistantMessage({
                   )}
                   {copied ? "Copied" : "Copy"}
                 </button>
-                {message.exportTsv ? (
+                {message.exportTsv && !showTablePreview ? (
                   <button
                     type="button"
                     onClick={downloadExcel}
@@ -1642,13 +1799,15 @@ export default function InventoryGPTPage() {
                         }}
                         onReadMore={(extraData) => {
                           if (!extraData) return;
-                          const { type, category, warehouseName, allRows } = extraData;
-                          if (type === "category_products" && category) {
-                            sendMessage(`show me all products in ${category} category`);
-                          } else if (type === "warehouse_products" && warehouseName) {
-                            sendMessage(`show me all products in ${warehouseName} warehouse`);
-                          } else if (type === "price_filter") {
-                            sendMessage(`show me all products with price filter`);
+                          const { type, category, warehouseName, allRows, rows } = extraData;
+                          if (type === "table_preview") {
+                            if (category) {
+                              sendMessage(`show me all products in ${category} category`);
+                            } else if (warehouseName) {
+                              sendMessage(`show me all products in ${warehouseName} warehouse`);
+                            } else {
+                              sendMessage(`show me all products`);
+                            }
                           } else if (allRows && allRows.length > 5) {
                             // Show remaining products
                             const remaining = allRows.slice(5);

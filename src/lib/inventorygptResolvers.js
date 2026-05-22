@@ -993,7 +993,7 @@ export async function resolveInventoryGptPriceFilter(token, operator, priceValue
   return { rows: merged.slice(0, limit), total: merged.length, error: merged.length ? null : "No products found" };
 }
 
-export async function resolveInventoryGptWarehouseProducts(token, warehouseName, limit = 20) {
+export async function resolveInventoryGptWarehouseProducts(token, warehouseName, limit = 5000) {
   // First try to find the warehouse code by name
   const locations = await resolveInventoryGptLocations(token, "warehouses");
   let warehouseCode = null;
@@ -1228,11 +1228,18 @@ function buildCategoryProductsAnswer(category, result, wantsExport) {
     exportTsv: rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"]),
     exportFilename: `inventorygpt-category-${category}.tsv`,
     extraData: {
-      type: "category_products",
-      category,
+      type: "table_preview",
+      title: `Products in "${category}" category`,
       total: result.total,
-      shown: Math.min(5, rows.length),
-      remaining: Math.max(0, rows.length - 5),
+      columns: ["Product", "SKU", "Category", "Price", "Stock"],
+      rows: rows.map((r) => ({
+        product: r.product_name,
+        sku: r.sku || "",
+        category: r.category || category,
+        price: r.price ?? null,
+        stock: r.stock ?? 0,
+      })),
+      category,
       allRows: rows,
     },
   };
@@ -1273,12 +1280,19 @@ function buildPriceFilterAnswer(operator, priceValue, result, wantsExport) {
     exportTsv: rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"]),
     exportFilename: `inventorygpt-price-${operator}${priceValue}.tsv`,
     extraData: {
-      type: "price_filter",
+      type: "table_preview",
+      title: `Products ${operator === "<" ? "under" : "above"} ₹${priceValue}`,
+      total: result.total,
+      columns: ["Product", "SKU", "Category", "Price", "Stock"],
+      rows: rows.map((r) => ({
+        product: r.product_name,
+        sku: r.sku || "",
+        category: r.category || "",
+        price: r.price ?? null,
+        stock: r.stock ?? 0,
+      })),
       operator,
       priceValue,
-      total: result.total,
-      shown: Math.min(5, rows.length),
-      remaining: Math.max(0, rows.length - 5),
       allRows: rows,
     },
   };
@@ -1317,11 +1331,17 @@ function buildWarehouseProductsAnswer(warehouseName, result, wantsExport) {
     exportTsv: rowsToTsv(rows, ["sku", "product_name", "warehouse", "stock", "price"]),
     exportFilename: `inventorygpt-warehouse-${warehouseName}.tsv`,
     extraData: {
-      type: "warehouse_products",
-      warehouseName,
+      type: "table_preview",
+      title: `Products in ${warehouseName} warehouse`,
       total: result.total,
-      shown: Math.min(5, rows.length),
-      remaining: Math.max(0, rows.length - 5),
+      columns: ["Product", "SKU", "Stock", "Price"],
+      rows: rows.map((r) => ({
+        product: r.product_name,
+        sku: r.sku || "",
+        stock: r.stock ?? 0,
+        price: r.price ?? null,
+      })),
+      warehouseName,
       allRows: rows,
     },
   };
