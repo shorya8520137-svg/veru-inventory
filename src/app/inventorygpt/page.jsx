@@ -32,6 +32,21 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import MarkdownBody from "./MarkdownBody";
 import * as XLSX from "xlsx";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  Legend,
+} from "recharts";
 
 const STORAGE_KEY = "inventorygpt_chat_sessions_v1";
 const AGENT_NAME = "InsoraOpps";
@@ -324,8 +339,165 @@ function WarehouseGrid({ warehouses, onWarehouseSelect }) {
   );
 }
 
+// ==================== GRAPH COMPONENTS ====================
+const CHART_COLORS = ["#5850EC", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4", "#EC4899", "#84CC16", "#F97316", "#6366F1"];
+
+function BarGraph({ data, dataKey, nameKey, title }) {
+  if (!data || !data.length) return null;
+  const sliced = data.slice(0, 15);
+  return (
+    <div className="w-full">
+      {title && <h4 className="mb-3 text-sm font-semibold text-slate-700">{title}</h4>}
+      <ResponsiveContainer width="100%" height={Math.max(200, sliced.length * 32)}>
+        <BarChart data={sliced} layout="vertical" margin={{ left: 100, right: 20, top: 8, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+          <YAxis type="category" dataKey={nameKey || "product"} tick={{ fontSize: 10, fill: "#475569" }} width={100} />
+          <Tooltip
+            contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+            formatter={(val) => [`${val} units`, dataKey || "Stock"]}
+          />
+          <Bar dataKey={dataKey || "stock"} radius={[0, 6, 6, 0]}>
+            {sliced.map((_, i) => (
+              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function PieGraph({ data, dataKey, nameKey, title }) {
+  if (!data || !data.length) return null;
+  const sliced = data.slice(0, 10);
+  return (
+    <div className="w-full">
+      {title && <h4 className="mb-3 text-sm font-semibold text-slate-700">{title}</h4>}
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={sliced}
+            cx="50%" cy="50%"
+            innerRadius={60} outerRadius={100}
+            dataKey={dataKey || "stock"}
+            nameKey={nameKey || "product"}
+            paddingAngle={3}
+          >
+            {sliced.map((_, i) => (
+              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0" }}
+            formatter={(val, name) => [`${val} units`, name]}
+          />
+          <Legend
+            layout="vertical" align="right" verticalAlign="middle"
+            formatter={(val) => <span className="text-xs text-slate-600">{val}</span>}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function LineGraph({ data, dataKey, nameKey, title }) {
+  if (!data || !data.length) return null;
+  const sliced = data.slice(0, 20);
+  return (
+    <div className="w-full">
+      {title && <h4 className="mb-3 text-sm font-semibold text-slate-700">{title}</h4>}
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={sliced} margin={{ left: 20, right: 20, top: 8, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <XAxis dataKey={nameKey || "product"} tick={{ fontSize: 10, fill: "#94a3b8" }} angle={-30} textAnchor="end" height={60} />
+          <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+          <Tooltip
+            contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0" }}
+            formatter={(val) => [`${val} units`, dataKey || "Stock"]}
+          />
+          <Line
+            type="monotone" dataKey={dataKey || "stock"} stroke="#5850EC"
+            strokeWidth={2} dot={{ r: 4, fill: "#5850EC" }}
+            activeDot={{ r: 6, fill: "#5850EC" }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function GraphContainer({ rows, columns, title, onClose }) {
+  const [graphType, setGraphType] = useState("bar");
+  const graphTypes = [
+    { key: "bar", label: "Bar Graph", icon: "📊" },
+    { key: "pie", label: "Pie Chart", icon: "🥧" },
+    { key: "line", label: "Line Chart", icon: "📈" },
+  ];
+  if (!rows || !rows.length) return null;
+  const dataKey = columns.find((c) => /stock|quantity|qty|price|count|units|amount/i.test(c));
+  const nameKey = columns.find((c) => /product|name|item|sku|category/i.test(c));
+  const stockCol = dataKey ? dataKey.replace(/\s+/g, "_").toLowerCase() : "stock";
+  const nameCol = nameKey ? nameKey.replace(/\s+/g, "_").toLowerCase() : "product";
+  // AI insight
+  const sorted = [...rows].sort((a, b) => (b[stockCol] ?? 0) - (a[stockCol] ?? 0));
+  const top = sorted[0];
+  const bottom = sorted[sorted.length - 1];
+  const outOfStock = rows.filter((r) => (r[stockCol] ?? 0) === 0);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-800">📊 {title || "Visualization"}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {graphTypes.map((gt) => (
+            <button
+              key={gt.key}
+              type="button"
+              onClick={() => setGraphType(gt.key)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                graphType === gt.key
+                  ? "bg-violet-100 text-violet-700 ring-1 ring-violet-200"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              {gt.icon} {gt.label}
+            </button>
+          ))}
+          {onClose && (
+            <button type="button" onClick={onClose} className="ml-2 rounded-full p-1 text-slate-400 hover:bg-slate-100">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      {/* AI Insight */}
+      <div className="border-b border-slate-100 bg-gradient-to-r from-violet-50/50 to-emerald-50/50 px-5 py-3">
+        <p className="text-xs leading-relaxed text-slate-600">
+          💡 {top ? `**${top[nameCol] || "N/A"}** has the highest stock (${top[stockCol] ?? 0} units).` : ""}
+          {bottom && bottom[stockCol] > 0 ? ` **${bottom[nameCol] || "N/A"}** has the lowest (${bottom[stockCol] ?? 0} units).` : ""}
+          {outOfStock.length > 0 ? ` ${outOfStock.length} product${outOfStock.length > 1 ? "s are" : " is"} out of stock.` : ""}
+        </p>
+      </div>
+      {/* Chart */}
+      <div className="px-4 py-4">
+        {graphType === "bar" && <BarGraph data={rows} dataKey={stockCol} nameKey={nameCol} />}
+        {graphType === "pie" && <PieGraph data={rows} dataKey={stockCol} nameKey={nameCol} />}
+        {graphType === "line" && <LineGraph data={rows} dataKey={stockCol} nameKey={nameCol} />}
+      </div>
+    </motion.div>
+  );
+}
+
 // ==================== TABLE PREVIEW ====================
-function TablePreview({ title, columns, rows, total, exportTsv, exportFilename }) {
+function TablePreview({ title, columns, rows, total, exportTsv, exportFilename, onVisualize }) {
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -452,6 +624,15 @@ function TablePreview({ title, columns, rows, total, exportTsv, exportFilename }
             : `Showing ${displayed.length} of ${rows.length}`}
         </span>
         <div className="flex items-center gap-2">
+          {onVisualize && (
+            <button
+              type="button"
+              onClick={() => onVisualize(rows, columns, title)}
+              className="rounded-lg bg-violet-50 px-3.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+            >
+              📊 Visualize
+            </button>
+          )}
           {hasMore && (
             <button
               type="button"
@@ -924,6 +1105,7 @@ function AssistantMessage({
   const [copied, setCopied] = useState(false);
   const [helpful, setHelpful] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [graphData, setGraphData] = useState(null);
 
   const fullContent = String(message.content ?? "");
   const isLong = fullContent.length > READ_MORE_CHAR_LIMIT && !isStreaming;
@@ -1076,14 +1258,27 @@ function AssistantMessage({
             )}
             {/* Interactive table preview */}
             {showTablePreview && (
-              <TablePreview
-                title={message.extraData.title}
-                columns={message.extraData.columns}
-                rows={message.extraData.rows}
-                total={message.extraData.total}
-                exportTsv={message.exportTsv}
-                exportFilename={message.exportFilename}
-              />
+              <>
+                <TablePreview
+                  title={message.extraData.title}
+                  columns={message.extraData.columns}
+                  rows={message.extraData.rows}
+                  total={message.extraData.total}
+                  exportTsv={message.exportTsv}
+                  exportFilename={message.exportFilename}
+                  onVisualize={(vizRows, vizCols, vizTitle) =>
+                    setGraphData({ rows: vizRows, columns: vizCols, title: vizTitle })
+                  }
+                />
+                {graphData && (
+                  <GraphContainer
+                    rows={graphData.rows}
+                    columns={graphData.columns}
+                    title={graphData.title}
+                    onClose={() => setGraphData(null)}
+                  />
+                )}
+              </>
             )}
             {isLong && !expanded ? (
               <button
