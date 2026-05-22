@@ -264,10 +264,7 @@ export default function InventorySheet() {
     const [dateFrom, setDateFrom] = useState(""); // Empty by default - no date filtering
     const [dateTo, setDateTo] = useState(""); // Empty by default - no date filtering
     const [useMockData, setUseMockData] = useState(false); // Toggle for mock data
-
-    // Get accessible warehouses based on user permissions
-    const accessibleWarehouses = getAccessibleWarehouses('INVENTORY_VIEW');
-    const availableWarehouses = accessibleWarehouses.length > 0 ? accessibleWarehouses : [];
+    const [availableWarehouses, setAvailableWarehouses] = useState([]); // Dynamic warehouses from inventory data
 
     // Timeline states - restored for modal
     const [selectedItem, setSelectedItem] = useState(null);
@@ -345,6 +342,22 @@ export default function InventorySheet() {
             setAllItems(inventoryItems);
             if (!data.pagination?.pages) {
                 setTotalPages(Math.ceil(totalCount / PAGE_SIZE) || 1);
+            }
+
+            // Extract unique warehouses from inventory data
+            const warehouseMap = new Map();
+            inventoryItems.forEach(item => {
+                const whCode = item.warehouse || item.warehouse_code || item.warehouse_name;
+                if (whCode && !warehouseMap.has(whCode)) {
+                    warehouseMap.set(whCode, {
+                        code: whCode,
+                        name: item.warehouse_name || item.warehouse || whCode
+                    });
+                }
+            });
+            const extractedWarehouses = Array.from(warehouseMap.values());
+            if (extractedWarehouses.length > 0) {
+                setAvailableWarehouses(extractedWarehouses);
             }
 
             setStats({

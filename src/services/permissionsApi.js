@@ -229,10 +229,6 @@ export class PermissionsAPI {
         return this.makeAuthenticatedRequest(`/audit-logs/action/${action}?${queryParams}`);
     }
     
-    static async getWarehouses() {
-        return this.makeAuthenticatedRequest('/warehouse-management/warehouses');
-    }
-    
     // ================= SYSTEM STATS ================= //
     
     static async getSystemStats() {

@@ -279,34 +279,15 @@ export function PermissionsProvider({ children }) {
     const [roles, setRoles] = useState(ROLES);
     const [permissions, setPermissions] = useState(PERMISSIONS);
     const [loading, setLoading] = useState(false);
-    const [warehouses, setWarehouses] = useState({}); // Dynamic warehouses from API
 
     useEffect(() => {
         if (user && user.role) {
             loadUserPermissions();
-            loadWarehouses();
         } else {
             setUserRole(null);
             setUserPermissions([]);
-            setWarehouses({});
         }
     }, [user, apiAvailable]);
-
-    const loadWarehouses = async () => {
-        try {
-            console.log('🔄 Loading warehouses from API...');
-            const response = await PermissionsAPI.getWarehouses();
-            console.log('📦 Warehouse API response:', response);
-            
-            if (response.success && response.warehouses) {
-                // Convert API response to WAREHOUSES format
-                const warehouseMap = {};
-                response.warehouses.forEach(wh => {
-                    warehouseMap[wh.warehouse_code] = {
-                        code: wh.warehouse_code,
-                        name: wh.warehouse_name,
-                        location: `${wh.city}, ${wh.state}`
-                    };
                 });
                 console.log(`✅ Loaded ${Object.keys(warehouseMap).length} warehouses:`, Object.keys(warehouseMap));
                 setWarehouses(warehouseMap);
@@ -587,8 +568,7 @@ export function PermissionsProvider({ children }) {
         }
         
         // Check any warehouse-specific inventory permissions
-        const warehouseList = Object.keys(warehouses).length > 0 ? warehouses : WAREHOUSES;
-        const warehouseCodes = Object.keys(warehouseList);
+        const warehouseCodes = ['GGM_WH', 'BLR_WH', 'MUM_WH', 'AMD_WH', 'HYD_WH'];
         return warehouseCodes.some(whCode => 
             hasPermission(`INVENTORY_VIEW_${whCode}`) || hasPermission(`INVENTORY_EDIT_${whCode}`)
         );
@@ -604,8 +584,7 @@ export function PermissionsProvider({ children }) {
         }
         
         // Check any warehouse-specific order permissions
-        const warehouseList = Object.keys(warehouses).length > 0 ? warehouses : WAREHOUSES;
-        const warehouseCodes = Object.keys(warehouseList);
+        const warehouseCodes = ['GGM_WH', 'BLR_WH', 'MUM_WH', 'AMD_WH', 'HYD_WH'];
         return warehouseCodes.some(whCode => 
             hasPermission(`ORDERS_VIEW_${whCode}`) || hasPermission(`ORDERS_EDIT_${whCode}`)
         );
@@ -615,15 +594,14 @@ export function PermissionsProvider({ children }) {
         if (!user) return [];
         
         const accessibleWarehouses = [];
-        const warehouseList = Object.keys(warehouses).length > 0 ? warehouses : WAREHOUSES;
         
-        // If user has global permission, return all warehouses
+        // If user has global permission, return all hardcoded warehouses
         if (hasPermission(permissionType) || hasPermission(PERMISSIONS.SYSTEM_USER_MANAGEMENT)) {
-            return Object.values(warehouseList);
+            return Object.values(WAREHOUSES);
         }
         
         // Check each warehouse for specific permissions
-        Object.values(warehouseList).forEach(warehouse => {
+        Object.values(WAREHOUSES).forEach(warehouse => {
             const warehousePermission = `${permissionType}_${warehouse.code}`;
             if (hasPermission(warehousePermission)) {
                 accessibleWarehouses.push(warehouse);
@@ -665,8 +643,7 @@ export function PermissionsProvider({ children }) {
                 PERMISSIONS,
                 WAREHOUSES,
                 ROLES: roles,
-                FEATURES,
-                warehouses // Dynamic warehouses from API
+                FEATURES
             }}
         >
             {children}
