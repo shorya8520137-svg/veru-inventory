@@ -185,7 +185,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   const detectedCategory = categoryNames.find(cat => lower.includes(cat)) || activeContext.category;
   
   // Detect if query is JUST a product name (no action words, no question words)
-  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor/.test(lower);
+  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location/.test(lower);
   
   // ========================================
   // STEP 2 — IF ONLY PRODUCT NAME → PRODUCT_OVERVIEW
@@ -258,13 +258,13 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Global/list intents must be checked before SKU/product intents.
   if (
     /address|full address|location|phone|email|contact|manager/.test(lower) &&
-    /(store|warehouse|wearhouse|werahouse|this|same|it)/.test(lower)
+    /(store|warehouse|wearhouse|werahouse|warhorse|this|same|it)/.test(lower)
   ) {
     return {
       type: "location_detail",
-      locationType: /store/.test(lower)
+      locationType: /store/.test(lower) && !/warehouse|wearhouse|werahouse|warhorse/.test(lower)
         ? "stores"
-        : /warehouse|wearhouse|werahouse/.test(lower)
+        : /warehouse|wearhouse|werahouse|warhorse/.test(lower)
           ? "warehouses"
           : "last",
       wantsExport,
@@ -383,9 +383,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Warehouse-based product listing: "show all products in gandu nagar warehouse"
   const genericPhraseRe = /^(?:all|every|each|the|this|that|any|some|a|an|of|in|for|from|to)(?:\s+(?:all|every|each|the|this|that|any|some|a|an|of|in|for|from|to))*$/i;
   const warehouseProductMatch = lower.match(
-    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|wh|store)/
+    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|warhorse|wh|store)/
   ) || lower.match(
-    /(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|wh|store).*(?:product|item|stock|inventory)/
+    /(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|warhorse|wh|store).*(?:product|item|stock|inventory)/
   );
   const warehouseProductName = warehouseProductMatch?.[1]?.trim();
   const isGenericWarehouseName = !!warehouseProductName && genericPhraseRe.test(warehouseProductName);
@@ -402,10 +402,10 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // "show me stock of all the warehouse", "sare warehouse ka stock dikhao"
   // Also catches "show me all stock" / "show me all products" (no warehouse mentioned)
   if (
-    /show.*(?:stock|inventory|quantity).*(?:warehouse|wearhouse|werahouse)/.test(lower) ||
-    /(?:warehouse|wearhouse|werahouse).*(?:stock|inventory|quantity)/.test(lower) ||
-    /(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse).*(?:stock|inventory|product)/.test(lower) ||
-    /(?:stock|inventory|quantity).*(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse)/.test(lower) ||
+    /show.*(?:stock|inventory|quantity).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
+    /(?:warehouse|wearhouse|werahouse|warhorse).*(?:stock|inventory|quantity)/.test(lower) ||
+    /(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse|warhorse).*(?:stock|inventory|product)/.test(lower) ||
+    /(?:stock|inventory|quantity).*(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?)\s*$/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?).*dikhao/.test(lower) ||
     /(?:sare|saare|sabhi|all)\s+(?:stock|product|item|inventory|samagri|cheeze?)\s+(?:dikhao|show)/.test(lower)
@@ -424,10 +424,10 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
   if (
-    /how\s*(many|much|may).*(warehouse|wearhouse|werahouse)|total.*(warehouse|wearhouse|werahouse)|list.*(warehouse|wearhouse|werahouse)|(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses)\s*(i have|count|list)?$/.test(
+    /how\s*(many|much|may).*(?:warehouse|wearhouse|werahouse|warhorse)|total.*(?:warehouse|wearhouse|werahouse|warhorse)|list.*(?:warehouse|wearhouse|werahouse|warhorse)|(?:warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses)\s*(?:i have|count|list)?$/.test(
       lower,
     ) ||
-    (/show\s+(?:me\s+)?(?:all\s+)?(?:the\s+)?(?:warehouse|warehouses|wearhouse|wearhouses)\s*$/.test(lower) && !/stock|inventory|quantity|product/.test(lower))
+    (/show\s+(?:me\s+)?(?:all\s+)?(?:the\s+)?(?:warehouse|warehouses|wearhouse|wearhouses|warhorse|warhorses)(?:\s+with\s+(?:complete\s+)?details)?\s*$/.test(lower) && !/stock|inventory|quantity|product/.test(lower))
   ) {
     return { type: "warehouses", wantsExport };
   }
@@ -1099,7 +1099,7 @@ function extractLastLocationContext(history) {
   for (const message of [...history].reverse()) {
     const content = String(message?.content || "");
     const storeSection = /store network|store inventory/i.test(content);
-    const warehouseSection = /warehouse network/i.test(content);
+    const warehouseSection = /warehouse network|warhorse network/i.test(content);
     const code = content.match(/`([^`]+)`/)?.[1] || null;
     const namedLine = content.match(/\d+\.\s+\*\*([^*]+)\*\*/)?.[1] || null;
     if (code || namedLine) {
@@ -1924,7 +1924,7 @@ export async function tryInventoryGptDeterministicAnswer({
     const lastContext = extractLastLocationContext(conversationHistory);
     const type =
       intent.locationType === "last"
-        ? lastContext?.type || "stores"
+        ? lastContext?.type || "warehouses"
         : intent.locationType;
     const locations = await resolveInventoryGptLocations(authToken, type);
     const location = findLocation(locations.rows || [], lastContext);

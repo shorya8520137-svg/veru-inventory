@@ -96,7 +96,7 @@ class ConversationMemory {
 
         // Extract topics from messages
         const combined = (msg.user_message + ' ' + msg.ai_response).toLowerCase();
-        if (combined.includes('warehouse') || combined.includes('_wh')) {
+        if (combined.includes('warehouse') || combined.includes('warhorse') || combined.includes('_wh')) {
           const whMatch = combined.match(/\b([A-Z]{2,6}_WH)\b/i);
           if (whMatch) context.lastWarehouse = whMatch[1].toUpperCase();
         }

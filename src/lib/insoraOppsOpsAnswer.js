@@ -462,7 +462,7 @@ Would you like more details about this product?`
   }
 
   // --- WAREHOUSE PRODUCT LISTING ---
-  const whProductMatch = lower.match(/(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|wh|store)/);
+  const whProductMatch = lower.match(/(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|warhorse|wh|store)/);
   if (whProductMatch && /product|item|stock|inventory/.test(lower)) {
     const whName = whProductMatch[1].trim();
     const whCode = whName.replace(/\s+/g, '_').toUpperCase();
