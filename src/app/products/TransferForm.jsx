@@ -5,6 +5,7 @@ import { X, Package, ArrowRight, Plus, Minus, Search, Truck, User, FileText, Rul
 /* API ENDPOINTS */
 const API = `${process.env.NEXT_PUBLIC_API_BASE}/api/dispatch`;
 const PRODUCTS_API = `${process.env.NEXT_PUBLIC_API_BASE}/api/products`;
+const WAREHOUSE_MANAGEMENT_API = `${process.env.NEXT_PUBLIC_API_BASE}/api/warehouse-management`;
 
 export default function TransferForm({ onClose }) {
     const [warehouses, setWarehouses] = useState([]);
@@ -40,25 +41,55 @@ export default function TransferForm({ onClose }) {
 
     const [form, setForm] = useState(initialForm);
     const update = (k, v) => setForm({ ...form, [k]: v });
+    const activeLocationCodes = [
+        form.sourceWarehouse,
+        form.sourceStore,
+        form.destinationWarehouse,
+        form.destinationStore
+    ].filter(Boolean);
+    const visibleExecutives = activeLocationCodes.length
+        ? executives.filter(person => activeLocationCodes.includes(person.location_code))
+        : executives;
 
     /* ------------------ LOAD DROPDOWNS ------------------ */
     useEffect(() => {
         const token = localStorage.getItem('token');
         
-        // Load warehouses from dispatch API
-        fetch(`${API}/warehouses`, {
+        // Load warehouses from warehouse master data
+        fetch(`${WAREHOUSE_MANAGEMENT_API}/warehouses`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json()).then(setWarehouses);
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    setWarehouses((data.warehouses || []).map(w => w.warehouse_code));
+                }
+            })
+            .catch(err => console.error('Error fetching warehouses:', err));
         
-        // Load logistics from dispatch API
-        fetch(`${API}/logistics`, {
+        // Load logistics from warehouse master data
+        fetch(`${WAREHOUSE_MANAGEMENT_API}/logistics`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json()).then(setLogistics);
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    setLogistics((data.logistics || []).map(item => item.name));
+                }
+            })
+            .catch(err => console.error('Error fetching logistics:', err));
         
-        // Load executives from dispatch API
-        fetch(`${API}/processed-persons`, {
+        // Load processed-by users from warehouse/store master data
+        fetch(`${WAREHOUSE_MANAGEMENT_API}/processed-by`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json()).then(setExecutives);
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    setExecutives(data.processedBy || []);
+                }
+            })
+            .catch(err => console.error('Error fetching processed-by users:', err));
         
         // Load stores from products API
         fetch(`${PRODUCTS_API}/stores`, {
@@ -196,6 +227,16 @@ export default function TransferForm({ onClose }) {
             destinationId,
             items,
             requiresShipment: false,
+            orderRef: form.orderRef,
+            awbNumber: form.awb,
+            logistics: form.logistics,
+            paymentMode: form.paymentMode,
+            processedBy: form.processedBy,
+            invoiceAmount: form.invoiceAmount,
+            weight: form.weight,
+            length: form.length,
+            width: form.width,
+            height: form.height,
             notes: form.remarks,
             transferDate: new Date().toISOString()
         };
@@ -424,7 +465,7 @@ export default function TransferForm({ onClose }) {
                                         fontSize: '13px', 
                                         fontWeight: '500', 
                                         color: '#374151', 
-                                        marginBottom: '6px' 
+                                        marginBottom: '6px'
                                     }}>
                                         Transfer Type
                                     </label>
@@ -753,8 +794,8 @@ export default function TransferForm({ onClose }) {
                                         Processed By
                                     </label>
                                     <div style={{ position: 'relative' }}>
-                                        <select 
-                                            value={form.processedBy} 
+                                        <select
+                                            value={form.processedBy}
                                             onChange={e => update("processedBy", e.target.value)}
                                             style={{
                                                 width: '100%',
@@ -766,7 +807,11 @@ export default function TransferForm({ onClose }) {
                                             }}
                                         >
                                             <option value="">Select Executive</option>
-                                            {executives.map(p => <option key={p} value={p}>{p}</option>)}
+                                            {visibleExecutives.map(p => (
+                                                <option key={`${p.location_code}-${p.id || p.name}`} value={p.name}>
+                                                    {p.name} ({p.location_code})
+                                                </option>
+                                            ))}
                                         </select>
                                         <User size={16} style={{
                                             position: 'absolute',

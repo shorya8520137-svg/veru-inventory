@@ -28,6 +28,11 @@ import {
   ArrowRight,
   X,
   Download,
+  Search,
+  FileSpreadsheet,
+  BarChart3,
+  PieChart as PieChartIcon,
+  LineChart as LineChartIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import MarkdownBody from "./MarkdownBody";
@@ -340,7 +345,23 @@ function WarehouseGrid({ warehouses, onWarehouseSelect }) {
 }
 
 // ==================== GRAPH COMPONENTS ====================
-const CHART_COLORS = ["#5850EC", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4", "#EC4899", "#84CC16", "#F97316", "#6366F1"];
+const CHART_COLORS = ["#5850EC", "#14B8A6", "#F59E0B", "#EF4444", "#2563EB", "#8B5CF6", "#06B6D4", "#EC4899", "#84CC16", "#F97316"];
+
+function ModernChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white/95 px-3 py-2 shadow-xl shadow-slate-900/10 backdrop-blur">
+      <p className="max-w-[220px] truncate text-xs font-semibold text-slate-900">{label}</p>
+      {payload.map((item) => (
+        <div key={`${item.name}-${item.value}`} className="mt-1 flex items-center gap-2 text-xs text-slate-600">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+          <span className="font-medium">{item.name}</span>
+          <span className="font-semibold text-slate-900">{Number(item.value || 0).toLocaleString("en-IN")}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function BarGraph({ data, dataKey, nameKey, title }) {
   if (!data || !data.length) return null;
@@ -349,19 +370,35 @@ function BarGraph({ data, dataKey, nameKey, title }) {
     <div className="w-full">
       {title && <h4 className="mb-3 text-sm font-semibold text-slate-700">{title}</h4>}
       <ResponsiveContainer width="100%" height={Math.max(200, sliced.length * 32)}>
-        <BarChart data={sliced} layout="vertical" margin={{ left: 100, right: 20, top: 8, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} />
-          <YAxis type="category" dataKey={nameKey || "product"} tick={{ fontSize: 10, fill: "#475569" }} width={100} />
+        <BarChart data={sliced} layout="vertical" margin={{ left: 108, right: 20, top: 8, bottom: 8 }}>
+          <defs>
+            <linearGradient id="inventorygptBarGradient" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#5850EC" stopOpacity={0.82} />
+              <stop offset="100%" stopColor="#14B8A6" stopOpacity={0.92} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="4 6" stroke="#e5e7eb" horizontal={false} />
+          <XAxis
+            type="number"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#64748b" }}
+            tickFormatter={(value) => Number(value || 0).toLocaleString("en-IN")}
+          />
+          <YAxis
+            type="category"
+            dataKey={nameKey || "product"}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#334155", fontWeight: 600 }}
+            width={108}
+          />
           <Tooltip
-            contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+            cursor={{ fill: "#f8fafc" }}
+            content={<ModernChartTooltip />}
             formatter={(val) => [`${val} units`, dataKey || "Stock"]}
           />
-          <Bar dataKey={dataKey || "stock"} radius={[0, 6, 6, 0]}>
-            {sliced.map((_, i) => (
-              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-            ))}
-          </Bar>
+          <Bar dataKey={dataKey || "stock"} fill="url(#inventorygptBarGradient)" radius={[0, 8, 8, 0]} barSize={18} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -379,17 +416,18 @@ function PieGraph({ data, dataKey, nameKey, title }) {
           <Pie
             data={sliced}
             cx="50%" cy="50%"
-            innerRadius={60} outerRadius={100}
+            innerRadius={66} outerRadius={104}
             dataKey={dataKey || "stock"}
             nameKey={nameKey || "product"}
-            paddingAngle={3}
+            paddingAngle={4}
+            cornerRadius={6}
           >
             {sliced.map((_, i) => (
               <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0" }}
+            content={<ModernChartTooltip />}
             formatter={(val, name) => [`${val} units`, name]}
           />
           <Legend
@@ -410,17 +448,23 @@ function LineGraph({ data, dataKey, nameKey, title }) {
       {title && <h4 className="mb-3 text-sm font-semibold text-slate-700">{title}</h4>}
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={sliced} margin={{ left: 20, right: 20, top: 8, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey={nameKey || "product"} tick={{ fontSize: 10, fill: "#94a3b8" }} angle={-30} textAnchor="end" height={60} />
-          <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+          <defs>
+            <linearGradient id="inventorygptLineGradient" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#5850EC" />
+              <stop offset="100%" stopColor="#14B8A6" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="4 6" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey={nameKey || "product"} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b" }} angle={-30} textAnchor="end" height={60} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
           <Tooltip
-            contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0" }}
+            content={<ModernChartTooltip />}
             formatter={(val) => [`${val} units`, dataKey || "Stock"]}
           />
           <Line
-            type="monotone" dataKey={dataKey || "stock"} stroke="#5850EC"
-            strokeWidth={2} dot={{ r: 4, fill: "#5850EC" }}
-            activeDot={{ r: 6, fill: "#5850EC" }}
+            type="monotone" dataKey={dataKey || "stock"} stroke="url(#inventorygptLineGradient)"
+            strokeWidth={3} dot={{ r: 3, fill: "#ffffff", stroke: "#5850EC", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "#14B8A6", stroke: "#ffffff", strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -431,9 +475,9 @@ function LineGraph({ data, dataKey, nameKey, title }) {
 function GraphContainer({ rows, columns, title, onClose }) {
   const [graphType, setGraphType] = useState("bar");
   const graphTypes = [
-    { key: "bar", label: "Bar Graph", icon: "📊" },
-    { key: "pie", label: "Pie Chart", icon: "🥧" },
-    { key: "line", label: "Line Chart", icon: "📈" },
+    { key: "bar", label: "Bar", icon: BarChart3 },
+    { key: "pie", label: "Pie", icon: PieChartIcon },
+    { key: "line", label: "Line", icon: LineChartIcon },
   ];
   if (!rows || !rows.length) return null;
   const dataKey = columns.find((c) => /stock|quantity|qty|price|count|units|amount/i.test(c));
@@ -449,45 +493,54 @@ function GraphContainer({ rows, columns, title, onClose }) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-800">📊 {title || "Visualization"}</span>
+      <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Visualization</p>
+          <h3 className="mt-1 truncate text-base font-semibold text-slate-950">{title || "Inventory view"}</h3>
         </div>
-        <div className="flex items-center gap-1.5">
-          {graphTypes.map((gt) => (
-            <button
-              key={gt.key}
-              type="button"
-              onClick={() => setGraphType(gt.key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                graphType === gt.key
-                  ? "bg-violet-100 text-violet-700 ring-1 ring-violet-200"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              {gt.icon} {gt.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+            {graphTypes.map((gt) => {
+              const Icon = gt.icon;
+              return (
+                <button
+                  key={gt.key}
+                  type="button"
+                  onClick={() => setGraphType(gt.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    graphType === gt.key
+                      ? "bg-slate-950 text-white shadow-sm"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                  }`}
+                  title={`${gt.label} chart`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {gt.label}
+                </button>
+              );
+            })}
+          </div>
           {onClose && (
-            <button type="button" onClick={onClose} className="ml-2 rounded-full p-1 text-slate-400 hover:bg-slate-100">
+            <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700" title="Close chart">
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
       </div>
       {/* AI Insight */}
-      <div className="border-b border-slate-100 bg-gradient-to-r from-violet-50/50 to-emerald-50/50 px-5 py-3">
-        <p className="text-xs leading-relaxed text-slate-600">
-          💡 {top ? `**${top[nameCol] || "N/A"}** has the highest stock (${top[stockCol] ?? 0} units).` : ""}
-          {bottom && bottom[stockCol] > 0 ? ` **${bottom[nameCol] || "N/A"}** has the lowest (${bottom[stockCol] ?? 0} units).` : ""}
-          {outOfStock.length > 0 ? ` ${outOfStock.length} product${outOfStock.length > 1 ? "s are" : " is"} out of stock.` : ""}
+      <div className="border-b border-slate-100 bg-white px-5 py-3">
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-600">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" />
+          <span>{top ? `${top[nameCol] || "N/A"} has the highest value (${top[stockCol] ?? 0}).` : ""}
+          {bottom && bottom[stockCol] > 0 ? ` ${bottom[nameCol] || "N/A"} has the lowest (${bottom[stockCol] ?? 0} units).` : ""}
+          {outOfStock.length > 0 ? ` ${outOfStock.length} product${outOfStock.length > 1 ? "s are" : " is"} out of stock.` : ""}</span>
         </p>
       </div>
       {/* Chart */}
-      <div className="px-4 py-4">
+      <div className="bg-white px-4 py-5">
         {graphType === "bar" && <BarGraph data={rows} dataKey={stockCol} nameKey={nameCol} />}
         {graphType === "pie" && <PieGraph data={rows} dataKey={stockCol} nameKey={nameCol} />}
         {graphType === "line" && <LineGraph data={rows} dataKey={stockCol} nameKey={nameCol} />}
@@ -500,7 +553,6 @@ function GraphContainer({ rows, columns, title, onClose }) {
 function TablePreview({ title, columns, rows, total, exportTsv, exportFilename, onVisualize }) {
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const filtered = (() => {
     if (!search) return rows || [];
     const q = search.toLowerCase();
@@ -511,6 +563,19 @@ function TablePreview({ title, columns, rows, total, exportTsv, exportFilename, 
   const displayed = showAll ? filtered : filtered.slice(0, 10);
   const hasMore = filtered.length > 10;
   const colKey = (col) => col.replace(/\s+/g, "_").toLowerCase();
+  const numericColumn = (col) => /stock|quantity|qty|price|count|units|amount|total|value|cost/i.test(col);
+
+  function formatTableValue(col, value) {
+    const key = colKey(col);
+    if (value == null || value === "") return "—";
+    if (/price|amount|total|value|cost/i.test(key) && !Number.isNaN(Number(value))) {
+      return `₹${Number(value).toLocaleString("en-IN")}`;
+    }
+    if (/stock|quantity|qty|units|count/i.test(key) && !Number.isNaN(Number(value))) {
+      return Number(value).toLocaleString("en-IN");
+    }
+    return String(value);
+  }
 
   if (!rows || !rows.length) return null;
 
@@ -539,74 +604,85 @@ function TablePreview({ title, columns, rows, total, exportTsv, exportFilename, 
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <div>
-          <h3 className="text-base font-semibold text-slate-900">{title || "Data"}</h3>
-          <p className="mt-0.5 text-sm text-slate-500">{total || rows.length} entries</p>
+      <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Data table</p>
+          <h3 className="mt-1 truncate text-base font-semibold text-slate-950">{title || "Inventory data"}</h3>
+          <p className="mt-1 text-sm text-slate-500">{Number(total || rows.length).toLocaleString("en-IN")} entries</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onVisualize && (
+            <button
+              type="button"
+              onClick={() => onVisualize(rows, columns, title)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              title="Create chart"
+            >
+              <BarChart3 className="h-4 w-4 text-violet-600" />
+              Visualize
+            </button>
+          )}
           <button
             type="button"
             onClick={downloadExcel}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            title="Download Excel"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Download Excel
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
           </button>
         </div>
       </div>
 
       {/* Search */}
-      <div className="border-b border-slate-100 px-5 py-3">
-        <div className="relative">
-          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      <div className="border-b border-slate-100 bg-white px-5 py-3">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search in table..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/80">
+      <div className="max-h-[520px] overflow-auto">
+        <table className="w-full border-separate border-spacing-0 text-left text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-white shadow-[inset_0_-1px_0_#e2e8f0]">
               {columns.map((col) => (
-                <th key={col} className="whitespace-nowrap px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th
+                  key={col}
+                  className={`whitespace-nowrap px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 ${numericColumn(col) ? "text-right" : "text-left"}`}
+                >
                   {col}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white">
             {displayed.map((row, i) => (
               <motion.tr
                 key={i}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.03 }}
-                className="border-b border-slate-50 transition-colors hover:bg-emerald-50/50"
+                className="group transition-colors odd:bg-slate-50/40 hover:bg-violet-50/60"
               >
                 {columns.map((col) => {
                   const val = row[colKey(col)] ?? "";
                   return (
-                    <td key={col} className="whitespace-nowrap px-5 py-3 text-slate-700">
-                      {colKey(col) === "price" && val != null && val !== ""
-                        ? `₹${Number(val).toLocaleString("en-IN")}`
-                        : colKey(col) === "stock"
-                          ? `${val} units`
-                          : String(val)}
+                    <td
+                      key={col}
+                      className={`whitespace-nowrap border-b border-slate-100 px-5 py-3.5 text-slate-700 first:font-medium first:text-slate-950 group-last:border-b-0 ${numericColumn(col) ? "text-right font-mono text-[13px]" : ""}`}
+                    >
+                      {formatTableValue(col, val)}
                     </td>
                   );
                 })}
@@ -617,27 +693,18 @@ function TablePreview({ title, columns, rows, total, exportTsv, exportFilename, 
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+      <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs text-slate-400">
           {search
             ? `Showing ${displayed.length} of ${filtered.length} filtered`
             : `Showing ${displayed.length} of ${rows.length}`}
         </span>
         <div className="flex items-center gap-2">
-          {onVisualize && (
-            <button
-              type="button"
-              onClick={() => onVisualize(rows, columns, title)}
-              className="rounded-lg bg-violet-50 px-3.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
-            >
-              📊 Visualize
-            </button>
-          )}
           {hasMore && (
             <button
               type="button"
               onClick={() => setShowAll(!showAll)}
-              className="rounded-lg bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+              className="rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               {showAll ? "Show Less" : `Show ${filtered.length - 10} More`}
             </button>

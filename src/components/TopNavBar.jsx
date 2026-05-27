@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Search, User, Bell, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown, FileText, UploadCloud, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
@@ -14,7 +14,7 @@ function getAvatarUrl(path) {
     return `${API_BASE}${path}`;
 }
 
-// Convert raw role slug â†’ human-readable label
+// Convert raw role slug to a human-readable label.
 function getRoleLabel(user) {
     if (!user) return 'User';
     // Prefer explicit display name fields if backend sends them
@@ -165,37 +165,46 @@ export default function TopNavBar({ onTransferStock }) {
     return (
         <div style={{ 
             height: '64px', 
-            background: '#fff', 
-            borderBottom: '1px solid #E5E7EB', 
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
+            borderBottom: '1px solid rgba(226,232,240,0.85)',
             display: 'flex', 
             alignItems: 'center', 
-            padding: '0 24px',
+            gap: '18px',
+            padding: '0 22px',
             width: '100%',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            boxShadow: '0 1px 0 rgba(15,23,42,0.03), 0 18px 45px rgba(15,23,42,0.045)'
         }}>
             {/* Left Section - Company Name */}
-            <div style={{ 
-                fontSize: '18px', 
-                fontWeight: '700', 
-                color: '#111827',
+            <div style={{
+                fontSize: '19px',
+                fontWeight: '800',
+                letterSpacing: '-0.04em',
+                color: '#0F172A',
                 cursor: 'pointer',
-                flex: '0 0 auto'
+                flex: '0 0 auto',
+                padding: '8px 10px',
+                borderRadius: '12px',
+                transition: 'background 0.24s cubic-bezier(.2,.8,.2,1), transform 0.24s cubic-bezier(.2,.8,.2,1)'
             }} onClick={() => router.push('/dashboard')}>
                 insora.in
             </div>
 
             {/* Center Section - Search */}
-            <div style={{ flex: '1', maxWidth: '600px', margin: '0 auto', position: 'relative' }} ref={searchRef}>
+            <div style={{ flex: '1 1 420px', maxWidth: '620px', minWidth: '260px', position: 'relative' }} ref={searchRef}>
                 <form onSubmit={handleSearch} style={{ position: 'relative' }}>
                     <div style={{ position: 'relative' }}>
-                        <Search 
-                            size={18} 
-                            style={{ 
-                                position: 'absolute', 
-                                left: '14px', 
-                                top: '50%', 
-                                transform: 'translateY(-50%)', 
-                                color: '#9CA3AF' 
+                        <Search
+                            size={18}
+                            style={{
+                                position: 'absolute',
+                                left: '16px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: showSuggestions ? '#2563EB' : '#94A3B8',
+                                transition: 'color 0.22s ease'
                             }} 
                         />
                         <input
@@ -211,19 +220,17 @@ export default function TopNavBar({ onTransferStock }) {
                             }}
                             style={{
                                 width: '100%',
-                                height: '40px',
-                                paddingLeft: '44px',
-                                paddingRight: searchQuery ? '40px' : '16px',
-                                border: '1px solid #E5E7EB',
-                                borderRadius: '8px',
-                                fontSize: '14px',
+                                height: '42px',
+                                paddingLeft: '46px',
+                                paddingRight: searchQuery ? '42px' : '16px',
+                                border: showSuggestions ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
+                                borderRadius: '14px',
+                                fontSize: '14.5px',
                                 outline: 'none',
-                                background: '#F9FAFB',
-                                transition: 'all 0.2s',
-                                ':focus': {
-                                    borderColor: '#3B82F6',
-                                    background: '#fff'
-                                }
+                                color: '#0F172A',
+                                background: showSuggestions ? '#FFFFFF' : '#F8FAFC',
+                                transition: 'all 0.28s cubic-bezier(.2,.8,.2,1)',
+                                boxShadow: showSuggestions ? '0 0 0 4px rgba(37,99,235,0.08), 0 12px 30px rgba(15,23,42,0.08)' : 'inset 0 1px 0 rgba(255,255,255,0.8)'
                             }}
                         />
                         {searchQuery && (
@@ -241,13 +248,18 @@ export default function TopNavBar({ onTransferStock }) {
                                     transform: 'translateY(-50%)',
                                     background: 'none',
                                     border: 'none',
-                                    color: '#9CA3AF',
+                                    color: '#94A3B8',
                                     cursor: 'pointer',
-                                    fontSize: '16px',
-                                    padding: '4px'
+                                    padding: '4px',
+                                    width: '26px',
+                                    height: '26px',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                 }}
                             >
-                                âœ•
+                                <X size={15} />
                             </button>
                         )}
                     </div>
@@ -262,24 +274,26 @@ export default function TopNavBar({ onTransferStock }) {
                             top: '100%',
                             left: 0,
                             right: 0,
-                            marginTop: '4px',
-                            background: '#fff',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '12px',
-                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                            marginTop: '10px',
+                            background: 'rgba(255,255,255,0.98)',
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '18px',
+                            boxShadow: '0 24px 70px rgba(15,23,42,0.14)',
                             zIndex: 1000,
                             overflow: 'hidden'
                         }}
                     >
-                        <div style={{ 
-                            padding: '12px 16px', 
+                        <div style={{
+                            padding: '13px 16px',
                             borderBottom: '1px solid #F3F4F6',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Navigate to</span>
-                            <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{filteredItems.length} results</span>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Navigate</span>
+                            <span style={{ fontSize: '11px', color: '#94A3B8', background: '#F1F5F9', borderRadius: '999px', padding: '3px 8px' }}>{filteredItems.length} results</span>
                         </div>
                         <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                             {filteredItems.map((item, index) => (
@@ -293,9 +307,10 @@ export default function TopNavBar({ onTransferStock }) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '12px',
-                                        background: index === selectedIndex ? '#F3F4F6' : 'transparent',
+                                        background: index === selectedIndex ? '#F8FAFC' : 'transparent',
                                         borderBottom: index < filteredItems.length - 1 ? '1px solid #F3F4F6' : 'none',
-                                        transition: 'background 0.1s'
+                                        transition: 'background 0.18s ease, transform 0.18s ease',
+                                        transform: index === selectedIndex ? 'translateX(2px)' : 'translateX(0)'
                                     }}
                                 >
                                     <div style={{ fontSize: '16px' }}>{item.icon}</div>
@@ -305,11 +320,11 @@ export default function TopNavBar({ onTransferStock }) {
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <span>{item.category}</span>
-                                            <span>â€¢</span>
+                                            <span>/</span>
                                             <span>{item.path}</span>
                                         </div>
                                     </div>
-                                    <div style={{ color: '#9CA3AF', fontSize: '14px' }}>â†’</div>
+                                    <div style={{ color: '#CBD5E1', fontSize: '14px' }}>-&gt;</div>
                                 </div>
                             ))}
                         </div>
@@ -319,7 +334,7 @@ export default function TopNavBar({ onTransferStock }) {
                             background: '#F9FAFB'
                         }}>
                             <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                                Use â†‘â†“ to navigate, Enter to select, Esc to close
+                                Use up/down to navigate, Enter to select, Esc to close
                             </span>
                         </div>
                     </div>
@@ -327,7 +342,7 @@ export default function TopNavBar({ onTransferStock }) {
             </div>
 
             {/* Right Section - Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '0 0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '0 0 auto' }}>
                 {/* Product Upload Button */}
                 <button 
                     onClick={() => {
@@ -339,27 +354,22 @@ export default function TopNavBar({ onTransferStock }) {
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: '#8b5cf6',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
+                        gap: '7px',
+                        padding: '9px 14px',
+                        background: '#FFFFFF',
+                        color: '#4F46E5',
+                        border: '1px solid #E0E7FF',
+                        borderRadius: '12px',
                         fontSize: '14px',
-                        fontWeight: '600',
+                        fontWeight: '750',
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.24s cubic-bezier(.2,.8,.2,1)',
+                        boxShadow: '0 8px 20px rgba(79,70,229,0.08)'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#7c3aed'}
-                    onMouseLeave={(e) => e.target.style.background = '#8b5cf6'}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 14px 30px rgba(79,70,229,0.13)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(79,70,229,0.08)'; }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10 9 9 9 8 9"/>
-                    </svg>
+                    <FileText size={16} />
                     Product Upload
                 </button>
 
@@ -374,25 +384,22 @@ export default function TopNavBar({ onTransferStock }) {
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: '#059669',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
+                        gap: '7px',
+                        padding: '9px 14px',
+                        background: '#FFFFFF',
+                        color: '#047857',
+                        border: '1px solid #D1FAE5',
+                        borderRadius: '12px',
                         fontSize: '14px',
-                        fontWeight: '600',
+                        fontWeight: '750',
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.24s cubic-bezier(.2,.8,.2,1)',
+                        boxShadow: '0 8px 20px rgba(4,120,87,0.08)'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#047857'}
-                    onMouseLeave={(e) => e.target.style.background = '#059669'}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 14px 30px rgba(4,120,87,0.13)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(4,120,87,0.08)'; }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
+                    <UploadCloud size={16} />
                     Bulk Upload
                 </button>
 
@@ -408,19 +415,20 @@ export default function TopNavBar({ onTransferStock }) {
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: '#3B82F6',
+                        gap: '7px',
+                        padding: '9px 15px',
+                        background: '#2563EB',
                         color: '#fff',
                         border: 'none',
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         fontSize: '14px',
-                        fontWeight: '600',
+                        fontWeight: '750',
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.24s cubic-bezier(.2,.8,.2,1)',
+                        boxShadow: '0 12px 28px rgba(37,99,235,0.22)'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#2563EB'}
-                    onMouseLeave={(e) => e.target.style.background = '#3B82F6'}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 16px 34px rgba(37,99,235,0.28)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(37,99,235,0.22)'; }}
                 >
                     <ArrowUpDown size={16} />
                     Transfer Stock
@@ -439,12 +447,13 @@ export default function TopNavBar({ onTransferStock }) {
                         alignItems: 'center',
                         gap: '12px',
                         cursor: 'pointer',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        transition: 'background 0.2s'
+                        padding: '7px',
+                        borderRadius: '14px',
+                        transition: 'all 0.22s cubic-bezier(.2,.8,.2,1)',
+                        border: '1px solid transparent'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#F3F4F6'}
-                    onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                 >
                     <div style={{
                         width: '32px',

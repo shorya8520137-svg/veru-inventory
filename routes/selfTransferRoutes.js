@@ -67,7 +67,17 @@ router.post('/', authenticateToken, (req, res) => {
             destinationType,
             destinationId,
             items,
-            notes
+            notes,
+            orderRef,
+            awbNumber,
+            logistics,
+            paymentMode,
+            processedBy,
+            invoiceAmount,
+            length,
+            width,
+            height,
+            weight
         } = req.body;
 
         // Validate
@@ -127,8 +137,10 @@ router.post('/', authenticateToken, (req, res) => {
             const insertSql = `
                 INSERT INTO self_transfer (
                     transfer_reference, transfer_type, source_location, destination_location,
+                    order_ref, awb_number, logistics, payment_mode, executive,
+                    invoice_amount, length, width, height, weight,
                     remarks, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             `;
 
             db.query(insertSql, [
@@ -136,6 +148,16 @@ router.post('/', authenticateToken, (req, res) => {
                 transferType, 
                 sourceId, 
                 destinationId,
+                orderRef || null,
+                awbNumber || null,
+                logistics || null,
+                paymentMode || null,
+                processedBy || null,
+                invoiceAmount || 0,
+                length || null,
+                width || null,
+                height || null,
+                weight || null,
                 notes || '',
                 'Completed'
             ], (err, result) => {

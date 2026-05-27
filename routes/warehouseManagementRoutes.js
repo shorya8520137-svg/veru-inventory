@@ -198,6 +198,236 @@ router.get('/stores', authenticateToken, (req, res) => {
     }
 });
 
+// GET /api/warehouse-management/logistics - Get logistics partners
+router.get('/logistics', authenticateToken, (req, res) => {
+    const sql = `
+        SELECT id, name
+        FROM logistics
+        ORDER BY name ASC
+    `;
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error fetching logistics:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch logistics',
+                error: err.message
+            });
+        }
+
+        res.json({
+            success: true,
+            logistics: results
+        });
+    });
+});
+
+// POST /api/warehouse-management/logistics - Create logistics partner
+router.post('/logistics', authenticateToken, (req, res) => {
+    const { name } = req.body;
+    const cleanName = String(name || '').trim();
+
+    if (!cleanName) {
+        return res.status(400).json({
+            success: false,
+            message: 'Logistics name is required'
+        });
+    }
+
+    db.query('SELECT id FROM logistics WHERE LOWER(name) = LOWER(?)', [cleanName], (err, existing) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: 'Database error', error: err.message });
+        }
+        if (existing.length > 0) {
+            return res.status(409).json({ success: false, message: 'Logistics partner already exists' });
+        }
+
+        db.query('INSERT INTO logistics (name) VALUES (?)', [cleanName], (insertErr, result) => {
+            if (insertErr) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to create logistics partner',
+                    error: insertErr.message
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Logistics partner created successfully',
+                logistics_id: result.insertId
+            });
+        });
+    });
+});
+
+// PUT /api/warehouse-management/logistics/:id - Update logistics partner
+router.put('/logistics/:id', authenticateToken, (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    const cleanName = String(name || '').trim();
+
+    if (!cleanName) {
+        return res.status(400).json({
+            success: false,
+            message: 'Logistics name is required'
+        });
+    }
+
+    db.query(
+        'UPDATE logistics SET name = ? WHERE id = ?',
+        [cleanName, id],
+        (err) => {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update logistics partner',
+                    error: err.message
+                });
+            }
+
+            res.json({ success: true, message: 'Logistics partner updated successfully' });
+        }
+    );
+});
+
+// DELETE /api/warehouse-management/logistics/:id - Delete logistics partner
+router.delete('/logistics/:id', authenticateToken, (req, res) => {
+    const { id } = req.params;
+
+    db.query('DELETE FROM logistics WHERE id = ?', [id], (err) => {
+        if (err) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to delete logistics partner',
+                error: err.message
+            });
+        }
+
+        res.json({ success: true, message: 'Logistics partner deleted successfully' });
+    });
+});
+
+// GET /api/warehouse-management/processed-by - Get warehouse/store processing users
+router.get('/processed-by', authenticateToken, (req, res) => {
+    const sql = `
+        SELECT id, warehouse as location_code, name
+        FROM warehousestaff_processed
+        ORDER BY warehouse ASC, name ASC
+    `;
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error fetching processed-by users:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch processed-by users',
+                error: err.message
+            });
+        }
+
+        res.json({
+            success: true,
+            processedBy: results
+        });
+    });
+});
+
+// POST /api/warehouse-management/processed-by - Create processing user
+router.post('/processed-by', authenticateToken, (req, res) => {
+    const locationCode = String(req.body.location_code || req.body.warehouse || '').trim();
+    const name = String(req.body.name || '').trim();
+
+    if (!locationCode || !name) {
+        return res.status(400).json({
+            success: false,
+            message: 'Location and name are required'
+        });
+    }
+
+    const checkSql = `
+        SELECT id
+        FROM warehousestaff_processed
+        WHERE LOWER(warehouse) = LOWER(?) AND LOWER(name) = LOWER(?)
+    `;
+
+    db.query(checkSql, [locationCode, name], (err, existing) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: 'Database error', error: err.message });
+        }
+        if (existing.length > 0) {
+            return res.status(409).json({ success: false, message: 'Processed-by user already exists for this location' });
+        }
+
+        db.query(
+            'INSERT INTO warehousestaff_processed (warehouse, name) VALUES (?, ?)',
+            [locationCode, name],
+            (insertErr, result) => {
+                if (insertErr) {
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to create processed-by user',
+                        error: insertErr.message
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: 'Processed-by user created successfully',
+                    processed_by_id: result.insertId
+                });
+            }
+        );
+    });
+});
+
+// PUT /api/warehouse-management/processed-by/:id - Update processing user
+router.put('/processed-by/:id', authenticateToken, (req, res) => {
+    const { id } = req.params;
+    const locationCode = String(req.body.location_code || req.body.warehouse || '').trim();
+    const name = String(req.body.name || '').trim();
+
+    if (!locationCode || !name) {
+        return res.status(400).json({
+            success: false,
+            message: 'Location and name are required'
+        });
+    }
+
+    db.query(
+        'UPDATE warehousestaff_processed SET warehouse = ?, name = ? WHERE id = ?',
+        [locationCode, name, id],
+        (err) => {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update processed-by user',
+                    error: err.message
+                });
+            }
+
+            res.json({ success: true, message: 'Processed-by user updated successfully' });
+        }
+    );
+});
+
+// DELETE /api/warehouse-management/processed-by/:id - Delete processing user
+router.delete('/processed-by/:id', authenticateToken, (req, res) => {
+    const { id } = req.params;
+
+    db.query('DELETE FROM warehousestaff_processed WHERE id = ?', [id], (err) => {
+        if (err) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to delete processed-by user',
+                error: err.message
+            });
+        }
+
+        res.json({ success: true, message: 'Processed-by user deleted successfully' });
+    });
+});
+
 // POST /api/warehouse-management/stores - Create new store
 router.post('/stores', authenticateToken, (req, res) => {
     try {

@@ -95,15 +95,15 @@ const Sidebar = ({ children }) => {
     return (
         <motion.aside
             initial={false}
-            animate={{ width: collapsed ? 60 : 220 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="hidden md:flex flex-col border-r border-slate-200 bg-white shrink-0 z-30 shadow-sm"
+            animate={{ width: collapsed ? 64 : 236 }}
+            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden md:flex flex-col border-r border-slate-200/80 bg-white/95 shrink-0 z-30 shadow-[8px_0_32px_rgba(15,23,42,0.045)] backdrop-blur-xl"
             style={{ position: 'sticky', top: '64px', height: 'calc(100vh - 64px)' }}
         >
              {/* Collapse Toggle Button */}
             <motion.button
                 onClick={toggleCollapse}
-                className="absolute -right-3 top-4 bg-white border border-slate-200 rounded-full p-1 shadow-md hover:bg-slate-50 text-slate-500 z-50 transition-all duration-200 hover:shadow-lg"
+                className="absolute -right-3 top-5 bg-white border border-slate-200 rounded-full p-1.5 shadow-lg shadow-slate-900/10 hover:bg-slate-50 text-slate-500 z-50 transition-all duration-300 hover:shadow-xl"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
             >
@@ -127,18 +127,18 @@ const SidebarContent = ({ children, style }) => (
 );
 
 const SidebarMenu = ({ children }) => (
-    <ul className="flex flex-col gap-0.5 px-2 py-2">{children}</ul>
+    <ul className="flex flex-col gap-1.5 px-3 py-2">{children}</ul>
 );
 
 const SidebarMenuItem = ({ children }) => <li>{children}</li>;
 
 const sidebarMenuButtonVariants = cva(
-    "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
+    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-300 hover:scale-[1.015] active:scale-[0.985]",
     {
         variants: {
             active: {
-                true: "bg-slate-100 text-slate-900 shadow-sm border-l-2 border-blue-500",
-                false: "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                true: "bg-slate-100 text-slate-950 shadow-sm ring-1 ring-slate-200/80",
+                false: "text-slate-600 hover:bg-slate-50 hover:text-slate-950 hover:shadow-sm",
             },
             collapsed: {
                 true: "justify-center px-2",
@@ -227,8 +227,8 @@ const InventoryMenu = ({ onOpenOperation }) => {
                             <Link 
                                 href={basePath} 
                                 className={cn(
-                                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all duration-200",
-                                    isActive ? "bg-slate-100 text-slate-900 border-l-2 border-blue-500" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-300",
+                                    isActive ? "bg-slate-100 text-slate-950 shadow-sm ring-1 ring-slate-200/80" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950 hover:shadow-sm"
                                 )}
                             >
                                 <Icon size={16} />
@@ -237,7 +237,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </motion.div>
                         <motion.button
                             onClick={onToggle}
-                            className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors rounded-md hover:bg-slate-100"
+                            className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-100"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                         >
@@ -256,8 +256,8 @@ const InventoryMenu = ({ onOpenOperation }) => {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="overflow-hidden ml-3 pl-2 border-l border-slate-200 space-y-0.5"
+                                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                                className="overflow-hidden ml-4 pl-3 border-l border-slate-200 space-y-1"
                             >
                                 {children}
                             </motion.div>
@@ -272,7 +272,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
         <div className="flex flex-col h-full bg-white overflow-hidden">
             {/* No Logo Section - Completely Removed */}
 
-            <SidebarContent style={{ paddingTop: '16px' }}>
+            <SidebarContent style={{ paddingTop: '18px', paddingBottom: '12px' }}>
                 <SidebarMenu>
                     
                     {/* DASHBOARD - DISABLED - Code removed for cleaner build */}
