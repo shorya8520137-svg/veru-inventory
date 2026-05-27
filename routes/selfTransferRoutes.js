@@ -325,7 +325,7 @@ router.post('/', authenticateToken, (req, res) => {
 
         function createNewStoreInventoryProduct(storeCode, barcode, productName, quantity) {
             const getProductSql = `
-                SELECT dp.product_name, dp.category_id, pc.name as category_name
+                SELECT dp.product_name, dp.category_id, pc.name as category_name, dp.price
                 FROM dispatch_product dp
                 LEFT JOIN product_categories pc ON dp.category_id = pc.id
                 WHERE BINARY dp.barcode = ?
@@ -342,6 +342,7 @@ router.post('/', authenticateToken, (req, res) => {
                     const product = productResult[0];
                     actualProductName = product.product_name || productName;
                     actualCategory = product.category_name || 'General';
+                    actualPrice = product.price || 0.00;
                 } else if (err) {
                     console.error('Error fetching product details:', err);
                 }
@@ -440,19 +441,26 @@ router.post('/', authenticateToken, (req, res) => {
             
             // W to S: Destination store only
             if (transferType === 'W to S') {
-                const getDestStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
-                db.query(getDestStockSql, [barcode, destinationId], (err, destResult) => {
-                    const destBalance = destResult && destResult.length > 0 ? destResult[0].stock : 0;
-                    const destTimelineSql = `
-                        INSERT INTO store_timeline (
-                            store_code, product_barcode, product_name, 
-                            movement_type, direction, quantity, 
-                            balance_after, reference, created_at
-                        ) VALUES (?, ?, ?, 'DISPATCH', 'IN', ?, ?, ?, NOW())
-                    `;
-                    db.query(destTimelineSql, [destinationId, barcode, productName, quantity, destBalance, transferRef], (err) => {
-                        if (err) console.error('Error creating store timeline W to S:', err);
-                        else console.log(`✅ Store timeline IN: ${destinationId} (from warehouse)`);
+                // Determine if this is the first entry for this product at this store
+                const checkExistsSql = `SELECT COUNT(*) as cnt FROM store_timeline WHERE store_code = ? AND product_barcode = ?`;
+                db.query(checkExistsSql, [destinationId, barcode], (checkErr, checkResult) => {
+                    const isFirstEntry = !checkErr && checkResult && checkResult[0] && checkResult[0].cnt === 0;
+                    const movementType = isFirstEntry ? 'OPENING' : 'SELF_TRANSFER';
+
+                    const getDestStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
+                    db.query(getDestStockSql, [barcode, destinationId], (err, destResult) => {
+                        const destBalance = destResult && destResult.length > 0 ? destResult[0].stock : 0;
+                        const destTimelineSql = `
+                            INSERT INTO store_timeline (
+                                store_code, product_barcode, product_name, 
+                                movement_type, direction, quantity, 
+                                balance_after, reference, created_at
+                            ) VALUES (?, ?, ?, ?, 'IN', ?, ?, ?, NOW())
+                        `;
+                        db.query(destTimelineSql, [destinationId, barcode, productName, movementType, quantity, destBalance, transferRef], (err) => {
+                            if (err) console.error('Error creating store timeline W to S:', err);
+                            else console.log(`✅ Store timeline ${movementType} IN: ${destinationId} (from warehouse)`);
+                        });
                     });
                 });
             }

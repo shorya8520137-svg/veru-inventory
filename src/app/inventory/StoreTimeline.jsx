@@ -418,7 +418,7 @@ export default function StoreTimeline() {
                         destination: item.destination_location || (item.direction === 'IN' ? storeCode : 'External'),
                         source_location: item.source_location,
                         destination_location: item.destination_location,
-                        notes: item.reference ? `Reference: ${item.reference}` : '',
+                        notes: item.reference ? `Ref: ${item.reference}` : '',
                         status: 'COMPLETED',
                         unit: 'units',
                         productName: item.product_name,
@@ -652,6 +652,27 @@ export default function StoreTimeline() {
                                             </div>
                                         </div>
 
+                                        {/* Transfer Path - show when source/destination exist */}
+                                        {(event.source_location || event.destination_location) && (
+                                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F3F4F6' }}>
+                                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>TRANSFER PATH</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#374151', fontWeight: '500' }}>
+                                                    <span style={{ background: '#F3F4F6', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                                                        {event.source_location || 'Unknown'}
+                                                    </span>
+                                                    <span style={{ color: '#9CA3AF' }}>→</span>
+                                                    <span style={{ background: '#F3F4F6', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                                                        {event.destination_location || 'Unknown'}
+                                                    </span>
+                                                    {event.reference && (
+                                                        <span style={{ color: '#9CA3AF', fontSize: '11px', marginLeft: '4px' }}>
+                                                            ({event.reference})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Notes */}
                                         {event.notes && (
                                             <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F3F4F6' }}>
@@ -701,8 +722,8 @@ export default function StoreTimeline() {
                                                 )}
                                             </div>
                                             
-                                            {/* Download Invoice Button for Self Transfer */}
-                                            {event.movementType === 'SELF_TRANSFER' && (
+                                            {/* Download Invoice Button for Self Transfer / Opening */}
+                                            {(event.movementType === 'SELF_TRANSFER' || event.movementType === 'OPENING') && (
                                                 <button
                                                     onClick={() => downloadInvoice(event)}
                                                     style={{
