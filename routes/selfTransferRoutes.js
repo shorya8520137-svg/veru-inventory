@@ -123,143 +123,156 @@ router.post('/', authenticateToken, (req, res) => {
         console.log(`📊 Store-based: ${isStoreBased}, W to W: ${isWarehouseToWarehouse}`);
 
         // Start database transaction for data consistency
-        db.beginTransaction((err) => {
-            if (err) {
-                console.error('Transaction start error:', err);
+        db.getConnection((connErr, conn) => {
+            if (connErr) {
+                console.error('Database connection error:', connErr);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to start transaction',
-                    error: err.message
+                    message: 'Failed to get database connection',
+                    error: connErr.message
                 });
             }
 
-            // Create transfer record in self_transfer table
-            const insertSql = `
-                INSERT INTO self_transfer (
-                    transfer_reference, transfer_type, source_location, destination_location,
-                    order_ref, awb_number, logistics, payment_mode, executive,
-                    invoice_amount, length, width, height, weight,
-                    remarks, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            `;
-
-            db.query(insertSql, [
-                transferRef, 
-                transferType, 
-                sourceId, 
-                destinationId,
-                orderRef || null,
-                awbNumber || null,
-                logistics || null,
-                paymentMode || null,
-                processedBy || null,
-                invoiceAmount || 0,
-                length || null,
-                width || null,
-                height || null,
-                weight || null,
-                notes || '',
-                'Completed'
-            ], (err, result) => {
+            conn.beginTransaction((err) => {
                 if (err) {
-                    console.error('Error creating transfer:', err);
-                    return db.rollback(() => {
-                        res.status(500).json({
-                            success: false,
-                            message: 'Failed to create transfer',
-                            error: err.message
-                        });
+                    conn.release();
+                    console.error('Transaction start error:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to start transaction',
+                        error: err.message
                     });
                 }
 
-                const transferId = result.insertId;
-
-                // Insert transfer items into self_transfer_items
-                const itemInsertSql = `
-                    INSERT INTO self_transfer_items (transfer_id, product_name, barcode, qty)
-                    VALUES (?, ?, ?, ?)
+                // Create transfer record in self_transfer table
+                const insertSql = `
+                    INSERT INTO self_transfer (
+                        transfer_reference, transfer_type, source_location, destination_location,
+                        order_ref, awb_number, logistics, payment_mode, executive,
+                        invoice_amount, length, width, height, weight,
+                        remarks, status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 `;
 
-                let itemsInserted = 0;
-                let hasErrors = false;
-                
-                if (items.length === 0) {
-                    return db.commit((err) => {
-                        if (err) {
-                            return db.rollback(() => {
-                                res.status(500).json({
+                conn.query(insertSql, [
+                    transferRef, 
+                    transferType, 
+                    sourceId, 
+                    destinationId,
+                    orderRef || null,
+                    awbNumber || null,
+                    logistics || null,
+                    paymentMode || null,
+                    processedBy || null,
+                    invoiceAmount || 0,
+                    length || null,
+                    width || null,
+                    height || null,
+                    weight || null,
+                    notes || '',
+                    'Completed'
+                ], (err, result) => {
+                    if (err) {
+                        console.error('Error creating transfer:', err);
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(500).json({
+                                success: false,
+                                message: 'Failed to create transfer',
+                                error: err.message
+                            });
+                        });
+                    }
+
+                    const transferId = result.insertId;
+
+                    // Insert transfer items into self_transfer_items
+                    const itemInsertSql = `
+                        INSERT INTO self_transfer_items (transfer_id, product_name, barcode, qty)
+                        VALUES (?, ?, ?, ?)
+                    `;
+
+                    let itemsInserted = 0;
+                    let hasErrors = false;
+                    
+                    if (items.length === 0) {
+                        return conn.commit((err) => {
+                            if (err) {
+                                conn.release();
+                                return res.status(500).json({
                                     success: false,
                                     message: 'Transaction commit failed'
                                 });
+                            }
+                            conn.release();
+                            res.json({
+                                success: true,
+                                message: 'Transfer created successfully',
+                                transferId: transferRef,
+                                transferType: transferType,
+                                affectsStoreSystem: false
                             });
-                        }
-                        res.json({
-                            success: true,
-                            message: 'Transfer created successfully',
-                            transferId: transferRef,
-                            transferType: transferType,
-                            affectsStoreSystem: false
                         });
-                    });
-                }
+                    }
 
-                items.forEach(item => {
-                    // Extract product name and barcode from productId
-                    const productParts = item.productId.split('|');
-                    const productName = productParts[0]?.trim() || item.productId;
-                    const barcode = productParts[2]?.trim() || item.productId;
-                    
-                    db.query(itemInsertSql, [transferId, productName, barcode, item.transferQty], (err) => {
-                        if (err) {
-                            console.error('Error inserting item:', err);
-                            hasErrors = true;
-                            return;
-                        }
-                        itemsInserted++;
+                    items.forEach(item => {
+                        // Extract product name and barcode from productId
+                        const productParts = item.productId.split('|');
+                        const productName = productParts[0]?.trim() || item.productId;
+                        const barcode = productParts[2]?.trim() || item.productId;
+                        
+                        conn.query(itemInsertSql, [transferId, productName, barcode, item.transferQty], (err) => {
+                            if (err) {
+                                console.error('Error inserting item:', err);
+                                hasErrors = true;
+                                return;
+                            }
+                            itemsInserted++;
 
-                        // ALWAYS CREATE TIMELINE ENTRIES for all transfers
-                        console.log(`📋 Creating timeline entries for ${transferType} transfer`);
-                        createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
+                            // ALWAYS CREATE TIMELINE ENTRIES for all transfers
+                            console.log(`📋 Creating timeline entries for ${transferType} transfer`);
+                            createTimelineEntries(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, barcode, productName, item.transferQty);
 
-                        // CRITICAL LOGIC: Only process store systems for store-based transfers
-                        if (isStoreBased && !isWarehouseToWarehouse) {
-                            console.log(`📋 Processing store documentation for ${transferType} transfer`);
-                            processStoreDocumentation(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, item, productName, barcode);
-                        } else {
-                            console.log(`🏭 ${transferType} transfer - skipping store system updates`);
-                        }
+                            // CRITICAL LOGIC: Only process store systems for store-based transfers
+                            if (isStoreBased && !isWarehouseToWarehouse) {
+                                console.log(`📋 Processing store documentation for ${transferType} transfer`);
+                                processStoreDocumentation(transferRef, transferType, sourceType, destinationType, sourceId, destinationId, item, productName, barcode);
+                            } else {
+                                console.log(`🏭 ${transferType} transfer - skipping store system updates`);
+                            }
 
-                        // After all items processed
-                        if (itemsInserted === items.length && !hasErrors) {
-                            // Commit transaction
-                            db.commit((err) => {
-                                if (err) {
-                                    console.error('Transaction commit error:', err);
-                                    return db.rollback(() => {
-                                        res.status(500).json({
+                            // After all items processed
+                            if (itemsInserted === items.length && !hasErrors) {
+                                // Commit transaction
+                                conn.commit((err) => {
+                                    if (err) {
+                                        console.error('Transaction commit error:', err);
+                                        conn.release();
+                                        return res.status(500).json({
                                             success: false,
                                             message: 'Transaction commit failed'
                                         });
-                                    });
-                                }
-
-                                // Return comprehensive response
-                                res.json({
-                                    success: true,
-                                    message: `${transferType} transfer completed successfully`,
-                                    transferId: transferRef,
-                                    transferType: transferType,
-                                    affectsStoreSystem: isStoreBased && !isWarehouseToWarehouse,
-                                    documentation: {
-                                        transfer_record: true,
-                                        items_recorded: itemsInserted,
-                                        timeline_created: true,
-                                        store_inventory_updated: isStoreBased && !isWarehouseToWarehouse,
-                                        billing_created: isStoreBased && !isWarehouseToWarehouse
                                     }
+
+                                    conn.release();
+                                    // Return comprehensive response
+                                    res.json({
+                                        success: true,
+                                        message: `${transferType} transfer completed successfully`,
+                                        transferId: transferRef,
+                                        transferType: transferType,
+                                        affectsStoreSystem: isStoreBased && !isWarehouseToWarehouse,
+                                        documentation: {
+                                            transfer_record: true,
+                                            items_recorded: itemsInserted,
+                                            timeline_created: true,
+                                            store_inventory_updated: isStoreBased && !isWarehouseToWarehouse,
+                                            billing_created: isStoreBased && !isWarehouseToWarehouse
+                                        }
+                                    });
                                 });
-                            });
-                        }
+                            }
+                        });
                     });
                 });
             });
