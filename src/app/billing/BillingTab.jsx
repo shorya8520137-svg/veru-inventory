@@ -113,7 +113,25 @@ export default function BillingTab() {
     }, [productSearch]);
 
     // Add product to bill
-    const addProduct = (product) => {
+    const addProduct = async (product) => {
+        let finalPrice = product.price || 0;
+        let finalGst = product.gst_percentage || 18;
+
+        // If price is missing, try fetching from store_inventory
+        if (!finalPrice) {
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch(`${API_BASE}/api/billing/store-inventory?search=${encodeURIComponent(product.barcode)}&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await resp.json();
+                if (data.success && data.data?.length > 0) {
+                    finalPrice = parseFloat(data.data[0].price) || 0;
+                    finalGst = parseFloat(data.data[0].gst_percentage) || finalGst;
+                }
+            } catch (_) { /* fallback to 0 */ }
+        }
+
         const existing = selectedProducts.find(p => p.barcode === product.barcode);
         if (existing) {
             setSelectedProducts(selectedProducts.map(p => 
@@ -125,8 +143,8 @@ export default function BillingTab() {
             setSelectedProducts([...selectedProducts, {
                 ...product,
                 quantity: 1,
-                price: product.price || 0,
-                gst: product.gst_percentage || 18
+                price: finalPrice,
+                gst: finalGst
             }]);
         }
         setProductSearch("");

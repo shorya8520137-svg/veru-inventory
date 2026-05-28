@@ -925,18 +925,27 @@ exports.searchProducts = (req, res) => {
 
     const sql = `
         SELECT 
-            p_id,
-            product_name,
-            product_variant,
-            barcode,
-            price,
-            cost_price,
-            weight,
-            dimensions
-        FROM dispatch_product
-        WHERE is_active = 1 
-        AND (product_name LIKE ? OR barcode LIKE ? OR product_variant LIKE ?)
-        ORDER BY product_name
+            dp.p_id,
+            dp.product_name,
+            dp.product_variant,
+            dp.barcode,
+            COALESCE(dp.price, (
+                SELECT unit_cost FROM stock_batches 
+                WHERE barcode = dp.barcode AND status = 'active' 
+                ORDER BY created_at DESC LIMIT 1
+            ), 0) as price,
+            dp.cost_price,
+            dp.weight,
+            dp.dimensions,
+            (
+                SELECT gst_percentage FROM stock_batches 
+                WHERE barcode = dp.barcode AND status = 'active' 
+                ORDER BY created_at DESC LIMIT 1
+            ) as gst_percentage
+        FROM dispatch_product dp
+        WHERE dp.is_active = 1 
+        AND (dp.product_name LIKE ? OR dp.barcode LIKE ? OR dp.product_variant LIKE ?)
+        ORDER BY dp.product_name
         LIMIT 10
     `;
 
