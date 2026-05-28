@@ -74,6 +74,7 @@ router.post('/', authenticateToken, (req, res) => {
             paymentMode,
             processedBy,
             invoiceAmount,
+            transportationAmount,
             length,
             width,
             height,
@@ -149,9 +150,9 @@ router.post('/', authenticateToken, (req, res) => {
                     INSERT INTO self_transfer (
                         transfer_reference, transfer_type, source_location, destination_location,
                         order_ref, awb_number, logistics, payment_mode, executive,
-                        invoice_amount, length, width, height, weight,
+                        invoice_amount, transportation_amount, length, width, height, weight,
                         remarks, status, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 `;
 
                 conn.query(insertSql, [
@@ -165,6 +166,7 @@ router.post('/', authenticateToken, (req, res) => {
                     paymentMode || null,
                     processedBy || null,
                     invoiceAmount || 0,
+                    transportationAmount || 0,
                     length || null,
                     width || null,
                     height || null,

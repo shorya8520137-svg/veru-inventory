@@ -12,7 +12,7 @@ export default function TransferForm({ onClose }) {
     const [stores, setStores] = useState([]);
     const [logistics, setLogistics] = useState([]);
     const [executives, setExecutives] = useState([]);
-    const [products, setProducts] = useState([{ name: "", qty: 1, suggestions: [] }]);
+    const [products, setProducts] = useState([{ name: "", qty: 1, suggestions: [], price: 0 }]);
 
     // Stock checking + UI states
     const [stockData, setStockData] = useState({});
@@ -21,7 +21,7 @@ export default function TransferForm({ onClose }) {
     const [error, setError] = useState("");
 
     const initialForm = {
-        transferType: "W to W", // Main transfer type selector
+        transferType: "W to W",
         sourceWarehouse: "",
         sourceStore: "",
         destinationWarehouse: "",
@@ -32,6 +32,7 @@ export default function TransferForm({ onClose }) {
         paymentMode: "",
         processedBy: "",
         invoiceAmount: "",
+        transportationAmount: "",
         weight: "",
         length: "",
         width: "",
@@ -154,10 +155,11 @@ export default function TransferForm({ onClose }) {
         if (barcodeMatch) checkStock(barcodeMatch[1]);
     };
 
-    const selectProduct = (index, value) => {
+    const selectProduct = (index, value, price) => {
         const updated = [...products];
         updated[index].name = value;
         updated[index].suggestions = [];
+        updated[index].price = price || 0;
         setProducts(updated);
 
         // Extract barcode for stock check
@@ -166,7 +168,7 @@ export default function TransferForm({ onClose }) {
     };
 
     const addProduct = () =>
-        setProducts([...products, { name: "", qty: 1, suggestions: [] }]);
+        setProducts([...products, { name: "", qty: 1, suggestions: [], price: 0 }]);
 
     const removeProduct = (i) =>
         setProducts(products.filter((_, idx) => idx !== i));
@@ -227,6 +229,7 @@ export default function TransferForm({ onClose }) {
             paymentMode: form.paymentMode,
             processedBy: form.processedBy,
             invoiceAmount: form.invoiceAmount,
+            transportationAmount: form.transportationAmount,
             weight: form.weight,
             length: form.length,
             width: form.width,
@@ -259,7 +262,7 @@ export default function TransferForm({ onClose }) {
             setShowSuccess(true);
             setTimeout(() => {
                 setForm(initialForm);
-                setProducts([{ name: "", qty: 1, suggestions: [] }]);
+                setProducts([{ name: "", qty: 1, suggestions: [], price: 0 }]);
                 setStockData({});
                 setShowSuccess(false);
                 onClose();
@@ -771,11 +774,41 @@ export default function TransferForm({ onClose }) {
                                         >
                                             <option value="">Select Payment Mode</option>
                                             <option>Internal</option>
+                                            <option>External</option>
                                             <option>Transfer</option>
                                             <option>Adjustment</option>
                                         </select>
                                     </div>
                                 </div>
+
+                                {(form.paymentMode === 'Internal' || form.paymentMode === 'External') && (
+                                    <div>
+                                        <label style={{ 
+                                            display: 'block', 
+                                            fontSize: '13px', 
+                                            fontWeight: '500', 
+                                            color: '#374151', 
+                                            marginBottom: '6px' 
+                                        }}>
+                                            Transportation Amount (₹)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 12px',
+                                                border: '1px solid #d1d5db',
+                                                borderRadius: '8px',
+                                                fontSize: '14px'
+                                            }}
+                                            placeholder="Enter transportation cost"
+                                            value={form.transportationAmount}
+                                            onChange={e => update("transportationAmount", e.target.value)}
+                                        />
+                                    </div>
+                                )}
 
                                 <div>
                                     <label style={{ 
@@ -1084,6 +1117,11 @@ export default function TransferForm({ onClose }) {
                                                 }}>
                                                     SKU: {p.name.split('|')[2]?.trim() || 'N/A'}
                                                 </div>
+                                                {p.price > 0 && (
+                                                    <div style={{ fontSize: '12px', color: '#059669', marginTop: '2px' }}>
+                                                        ₹{parseFloat(p.price).toFixed(2)} / unit
+                                                    </div>
+                                                )}
                                                 {p.name.split('|')[2] && stockData[p.name.split('|')[2]?.trim()] !== undefined && (
                                                     <div style={{
                                                         fontSize: '11px',
@@ -1130,13 +1168,13 @@ export default function TransferForm({ onClose }) {
                                                         }}
                                                         onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
                                                         onMouseLeave={(e) => e.target.style.backgroundColor = '#ffffff'}
-                                                        onClick={() => selectProduct(i, `${s.product_name} | ${s.product_variant} | ${s.barcode}`)}
+                                                        onClick={() => selectProduct(i, `${s.product_name} | ${s.product_variant} | ${s.barcode}`, s.price)}
                                                     >
                                                         <div style={{ fontSize: '14px', fontWeight: '500', color: '#0f172a' }}>
                                                             {s.product_name}
                                                         </div>
                                                         <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                                                            {s.product_variant} • {s.barcode}
+                                                            {s.product_variant} • {s.barcode} • ₹{parseFloat(s.price || 0).toFixed(2)}
                                                         </div>
                                                         {stockData[s.barcode] !== undefined && (
                                                             <div style={{ fontSize: '11px', color: '#059669', marginTop: '2px' }}>
@@ -1285,47 +1323,16 @@ export default function TransferForm({ onClose }) {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <div style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a' }}>
-                                            ${(products.reduce((sum, p) => sum + (p.qty || 1) * 50, 0)).toLocaleString()}.00
+                                            ₹{(products.reduce((sum, p) => sum + (p.qty || 0) * (parseFloat(p.price) || 0), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                                            Est. Value
+                                            Total Value
                                         </div>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                                            {products.reduce((sum, p) => sum + (p.qty || 1), 0)} items
+                                            {products.reduce((sum, p) => sum + (p.qty || 0), 0)} items
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* Status Indicators */}
-                                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{
-                                            width: '8px',
-                                            height: '8px',
-                                            backgroundColor: '#10b981',
-                                            borderRadius: '50%'
-                                        }} />
-                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>Inventory Reserved</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{
-                                            width: '8px',
-                                            height: '8px',
-                                            backgroundColor: '#3b82f6',
-                                            borderRadius: '50%'
-                                        }} />
-                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>Routing Optimized</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{
-                                            width: '8px',
-                                            height: '8px',
-                                            backgroundColor: '#8b5cf6',
-                                            borderRadius: '50%'
-                                        }} />
-                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>Insurance Active</span>
                                     </div>
                                 </div>
                             </div>
