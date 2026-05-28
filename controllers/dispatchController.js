@@ -914,56 +914,6 @@ exports.getProcessedPersons = (req, res) => {
 };
 
 /**
- * SEARCH PRODUCTS FOR DISPATCH
- */
-exports.searchProducts = (req, res) => {
-    const { query } = req.query;
-
-    if (!query || query.length < 2) {
-        return res.json([]);
-    }
-
-    const sql = `
-        SELECT 
-            dp.p_id,
-            dp.product_name,
-            dp.product_variant,
-            dp.barcode,
-            COALESCE(dp.price, (
-                SELECT unit_cost FROM stock_batches 
-                WHERE barcode = dp.barcode AND status = 'active' 
-                ORDER BY created_at DESC LIMIT 1
-            ), 0) as price,
-            dp.cost_price,
-            dp.weight,
-            dp.dimensions,
-            (
-                SELECT gst_percentage FROM stock_batches 
-                WHERE barcode = dp.barcode AND status = 'active' 
-                ORDER BY created_at DESC LIMIT 1
-            ) as gst_percentage
-        FROM dispatch_product dp
-        WHERE dp.is_active = 1 
-        AND (dp.product_name LIKE ? OR dp.barcode LIKE ? OR dp.product_variant LIKE ?)
-        ORDER BY dp.product_name
-        LIMIT 10
-    `;
-
-    const searchTerm = `%${query}%`;
-
-    db.query(sql, [searchTerm, searchTerm, searchTerm], (err, rows) => {
-        if (err) {
-            return res.status(500).json({
-                success: false,
-                error: err.message
-            });
-        }
-
-        res.json(rows);
-    });
-};
-
-/**
  * CHECK INVENTORY FOR DISPATCH
  */
 exports.checkInventory = (req, res) => {
@@ -1082,22 +1032,39 @@ exports.getProcessedPersons = (req, res) => {
 };
 
 /**
- * SEARCH PRODUCTS - For auto-suggestions
+ * SEARCH PRODUCTS - For auto-suggestions (with price & GST)
  */
 exports.searchProducts = (req, res) => {
     const { query, q } = req.query;
-    const searchTerm = query || q; // Support both 'query' and 'q' parameters
+    const searchTerm = query || q;
 
     if (!searchTerm || searchTerm.length < 2) {
         return res.json([]);
     }
 
     const sql = `
-        SELECT p_id, product_name, product_variant, barcode
-        FROM dispatch_product 
-        WHERE is_active = 1 
-        AND (product_name LIKE ? OR barcode LIKE ? OR product_variant LIKE ?)
-        ORDER BY product_name
+        SELECT 
+            dp.p_id,
+            dp.product_name,
+            dp.product_variant,
+            dp.barcode,
+            COALESCE(dp.price, (
+                SELECT unit_cost FROM stock_batches 
+                WHERE barcode = dp.barcode AND status = 'active' 
+                ORDER BY created_at DESC LIMIT 1
+            ), 0) as price,
+            dp.cost_price,
+            dp.weight,
+            dp.dimensions,
+            (
+                SELECT gst_percentage FROM stock_batches 
+                WHERE barcode = dp.barcode AND status = 'active' 
+                ORDER BY created_at DESC LIMIT 1
+            ) as gst_percentage
+        FROM dispatch_product dp
+        WHERE dp.is_active = 1 
+        AND (dp.product_name LIKE ? OR dp.barcode LIKE ? OR dp.product_variant LIKE ?)
+        ORDER BY dp.product_name
         LIMIT 10
     `;
 
