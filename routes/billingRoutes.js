@@ -467,4 +467,107 @@ router.post('/generate', authenticateToken, (req, res) => {
     });
 });
 
+// GET /api/billing/history - Get bill history with pagination and filters
+router.get('/history', authenticateToken, (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 15,
+            search = '',
+            status = 'all'
+        } = req.query;
+
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        let whereConditions = [];
+        let queryParams = [];
+
+        if (search && search.trim()) {
+            whereConditions.push(`(
+                invoice_number LIKE ? OR 
+                customer_name LIKE ? OR 
+                customer_phone LIKE ?
+            )`);
+            const searchPattern = `%${search.trim()}%`;
+            queryParams.push(searchPattern, searchPattern, searchPattern);
+        }
+
+        if (status !== 'all') {
+            whereConditions.push('payment_status = ?');
+            queryParams.push(status);
+        }
+
+        const whereClause = whereConditions.length > 0
+            ? 'WHERE ' + whereConditions.join(' AND ')
+            : '';
+
+        // Get total count
+        const countSql = `SELECT COUNT(*) as total FROM bills ${whereClause}`;
+
+        db.query(countSql, queryParams, (err, countResult) => {
+            if (err) {
+                console.error('Error counting bills:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to count bills',
+                    error: err.message
+                });
+            }
+
+            const total = countResult[0].total;
+
+            // Get bills
+            const dataSql = `
+                SELECT 
+                    id,
+                    invoice_number,
+                    customer_name,
+                    customer_phone,
+                    customer_email,
+                    subtotal,
+                    discount,
+                    shipping,
+                    gst_amount,
+                    grand_total,
+                    payment_mode,
+                    payment_status,
+                    items,
+                    total_items,
+                    created_at
+                FROM bills 
+                ${whereClause}
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+
+            db.query(dataSql, [...queryParams, parseInt(limit), offset], (err, results) => {
+                if (err) {
+                    console.error('Error fetching bills:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to fetch bills',
+                        error: err.message
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    data: results,
+                    total,
+                    page: parseInt(page),
+                    limit: parseInt(limit)
+                });
+            });
+        });
+
+    } catch (error) {
+        console.error('Bill history API error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
