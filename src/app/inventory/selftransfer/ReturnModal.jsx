@@ -104,7 +104,7 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
 
         const token = localStorage.getItem('token');
         const timeoutId = setTimeout(() => {
-            fetch(`${API}/search-products?query=${encodeURIComponent(productSearch)}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/search-products?query=${encodeURIComponent(productSearch)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
                 .then(r => r.json())

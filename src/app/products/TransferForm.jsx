@@ -130,7 +130,7 @@ export default function TransferForm({ onClose }) {
         if (value.length > 2) {
             const token = localStorage.getItem('token');
             
-            fetch(`${API}/search-products?query=${encodeURIComponent(value)}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/search-products?query=${encodeURIComponent(value)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             .then(res => res.json())
