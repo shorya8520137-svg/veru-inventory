@@ -97,11 +97,12 @@ export default function BillingTab() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/api/dispatch/search-products?query=${encodeURIComponent(query)}`, {
+            const response = await fetch(`${API_BASE}/api/products?search=${encodeURIComponent(query)}&limit=10`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
-            setProducts(Array.isArray(data) ? data : (data.data || []));
+            const list = data.success && data.data?.products ? data.data.products : (Array.isArray(data) ? data : (data.data || []));
+            setProducts(list);
         } catch (err) {
             console.error('Error searching products:', err);
             setProducts([]);
