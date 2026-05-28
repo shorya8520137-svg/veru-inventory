@@ -130,19 +130,13 @@ export default function TransferForm({ onClose }) {
         if (value.length > 2) {
             const token = localStorage.getItem('token');
             
-            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/search-products?query=${encodeURIComponent(value)}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/products?search=${encodeURIComponent(value)}&limit=10`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             .then(res => res.json())
             .then(data => {
-                // Handle the response - it should be an array directly
-                if (Array.isArray(data)) {
-                    updated[index].suggestions = data;
-                } else if (data && Array.isArray(data.data)) {
-                    updated[index].suggestions = data.data;
-                } else {
-                    updated[index].suggestions = [];
-                }
+                const suggestions = data?.success ? (data.data?.products || []) : (Array.isArray(data) ? data : []);
+                updated[index].suggestions = suggestions;
                 setProducts([...updated]);
             })
             .catch(err => {

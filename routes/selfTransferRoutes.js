@@ -1,19 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/connection');
-const { authenticateToken, checkPermission } = require('../middleware/auth');
-const dispatchController = require('../controllers/dispatchController');
+const { authenticateToken } = require('../middleware/auth');
 
 /**
  * SELF TRANSFER ROUTES
  * Handle inventory transfers between warehouses and stores
  * Uses existing self_transfer and self_transfer_items tables
  */
-
-// GET /api/self-transfer/search-products - Search products for self-transfer
-router.get('/search-products', authenticateToken, (req, res) => {
-  dispatchController.searchProducts(req, res);
-});
 
 // GET /api/self-transfer - Get all transfers
 router.get('/', authenticateToken, (req, res) => {

@@ -104,12 +104,12 @@ export default function ReturnModal({ onClose, prefilledProduct = null, prefille
 
         const token = localStorage.getItem('token');
         const timeoutId = setTimeout(() => {
-            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/search-products?query=${encodeURIComponent(productSearch)}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/products?search=${encodeURIComponent(productSearch)}&limit=10`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
                 .then(r => r.json())
                 .then(data => {
-                    const allProducts = Array.isArray(data) ? data : (data.data || []);
+                    const allProducts = data?.success ? (data.data?.products || []) : (Array.isArray(data) ? data : []);
                     setProductSuggestions(allProducts.slice(0, 10)); // Limit to 10 suggestions
                 })
                 .catch(() => setProductSuggestions([]));

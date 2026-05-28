@@ -110,12 +110,12 @@ export default function DamageRecoveryModal({ onClose, initialMode = 'damage', p
         }
 
         const token = localStorage.getItem('token');
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/self-transfer/search-products?query=${encodeURIComponent(value)}`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/products?search=${encodeURIComponent(value)}&limit=10`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(r => r.json())
             .then(data => {
-                updated[rowIndex].products = Array.isArray(data) ? data : (data.data || []);
+                updated[rowIndex].products = data?.success ? (data.data?.products || []) : (Array.isArray(data) ? data : []);
                 setRows([...updated]);
             })
             .catch(() => {
