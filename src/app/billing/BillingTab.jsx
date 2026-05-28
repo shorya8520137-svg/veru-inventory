@@ -554,7 +554,7 @@ export default function BillingTab() {
                                         </div>
                                         <div style={{ textAlign:'right', flexShrink:0 }}>
                                             <div style={{ fontSize:15, fontWeight:700, color:'#059669', display:'flex', alignItems:'center', gap:2 }}>
-                                                <IndianRupee size={13} />{product.price?.toFixed(2) || '0.00'}
+                                                <IndianRupee size={13} />{Number(product.price || 0).toFixed(2)}
                                             </div>
                                             <div style={{ fontSize:10, color:'#9CA3AF' }}>per unit</div>
                                         </div>
@@ -600,7 +600,7 @@ export default function BillingTab() {
                                             />
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'right', fontSize:14, fontWeight:600, color:'#111827' }}>
-                                            ₹{product.price.toFixed(2)}
+                                            ₹{Number(product.price || 0).toFixed(2)}
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'center', fontSize:14, fontWeight:600, color:'#059669' }}>
                                             {product.gst}%
