@@ -318,7 +318,7 @@ exports.compareProducts = async (req, res) => {
         `SELECT store_code as warehouse, stock FROM store_inventory WHERE barcode = ?`, [bc]
       );
       const movementCounts = await asyncQuery(
-        `SELECT movement_type, COUNT(*) as count, SUM(quantity) as total_qty FROM inventory_ledger_base WHERE barcode = ? GROUP BY movement_type`, [bc]
+        `SELECT movement_type, COUNT(*) as count, SUM(qty) as total_qty FROM inventory_ledger_base WHERE barcode = ? GROUP BY movement_type`, [bc]
       );
       const storeMovementCounts = await asyncQuery(
         `SELECT movement_type, COUNT(*) as count, SUM(quantity) as total_qty FROM store_timeline WHERE product_barcode = ? GROUP BY movement_type`, [bc]
