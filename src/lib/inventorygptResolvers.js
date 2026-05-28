@@ -1082,7 +1082,9 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
 }
 
 function buildCompareAnswer(compareResult, product1Name, product2Name, wantsExport) {
-  const lines = [`🔄 **Product Comparison: ${compareResult.p1?.name || product1Name} vs ${compareResult.p2?.name || product2Name}**`, ''];
+  const p1 = compareResult.p1;
+  const p2 = compareResult.p2;
+  const lines = [`🔄 **Product Comparison: ${p1?.name || product1Name} vs ${p2?.name || product2Name}**`, ''];
 
   for (const [label, p] of [['Product 1', compareResult.p1], ['Product 2', compareResult.p2]]) {
     if (!p) continue;
@@ -1106,8 +1108,6 @@ function buildCompareAnswer(compareResult, product1Name, product2Name, wantsExpo
   }
 
   // Quick comparison summary
-  const p1 = compareResult.p1;
-  const p2 = compareResult.p2;
   if (p1 && p2) {
     lines.push('**⚡ Quick Comparison:**');
     const stock1 = p1.current_stock || 0;
@@ -1136,6 +1136,25 @@ function buildCompareAnswer(compareResult, product1Name, product2Name, wantsExpo
   return {
     answer: lines.join('\n'),
     render: 'text',
+    extraData: p1 && p2 ? {
+      type: 'comparison',
+      product1: {
+        name: p1.name,
+        barcode: p1.barcode,
+        price: p1.price,
+        current_stock: p1.current_stock || 0,
+        stock_by_location: Array.isArray(p1.stock_by_location) ? p1.stock_by_location : [],
+        movements: Array.isArray(p1.movements) ? p1.movements : [],
+      },
+      product2: {
+        name: p2.name,
+        barcode: p2.barcode,
+        price: p2.price,
+        current_stock: p2.current_stock || 0,
+        stock_by_location: Array.isArray(p2.stock_by_location) ? p2.stock_by_location : [],
+        movements: Array.isArray(p2.movements) ? p2.movements : [],
+      },
+    } : undefined,
   };
 }
 

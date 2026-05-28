@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import MarkdownBody from "./MarkdownBody";
+import ParallelComparison from "./ParallelComparison";
 import * as XLSX from "xlsx";
 import {
   BarChart,
@@ -1235,6 +1236,9 @@ function AssistantMessage({
   // Check for table preview (interactive data table)
   const showTablePreview = message.extraData?.type === "table_preview" && Array.isArray(message.extraData?.rows) && message.extraData.rows.length > 0;
 
+  // Check for parallel comparison
+  const showComparison = message.extraData?.type === "comparison" && message.extraData?.product1 && message.extraData?.product2 && !isStreaming;
+
   async function copyText() {
     try {
       await navigator.clipboard.writeText(fullContent);
@@ -1312,6 +1316,9 @@ function AssistantMessage({
             title={`${intent?.category ? `${intent.category} Products` : "Products"}`}
             onAskAI={() => {}}
           />
+        ) : showComparison ? (
+          /* Parallel comparison UI */
+          <ParallelComparison data={message.extraData} />
         ) : (
           /* Regular text response */
           <>
