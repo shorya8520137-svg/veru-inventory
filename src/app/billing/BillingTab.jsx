@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Trash2, User, Building2, CreditCard, Wallet, Banknote, Smartphone } from "lucide-react";
+import { Search, Plus, Trash2, User, Building2, CreditCard, Wallet, Banknote, Smartphone, Package, Barcode, IndianRupee } from "lucide-react";
 
-const API_BASE = ""; // Use relative URLs for local API routes
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE; // Use env var for Express API
 
 export default function BillingTab() {
     const [billType, setBillType] = useState("B2C"); // B2B or B2C
@@ -484,16 +484,61 @@ export default function BillingTab() {
                             style={{ width:'100%', padding:'12px 14px 12px 46px', borderRadius:10, border:'2px solid #1E40AF', fontSize:14, outline:'none', background:'#F9FAFB' }}
                         />
                         {products.length > 0 && (
-                            <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #E5E7EB', borderRadius:8, marginTop:4, maxHeight:200, overflow:'auto', zIndex:100, boxShadow:'0 4px 6px rgba(0,0,0,0.1)' }}>
+                            <div style={{
+                                position:'absolute', top:'100%', left:0, right:0,
+                                background:'#fff',
+                                border:'1px solid #E5E7EB',
+                                borderRadius:12,
+                                marginTop:6,
+                                maxHeight:320,
+                                overflow:'auto',
+                                zIndex:100,
+                                boxShadow:'0 8px 24px rgba(0,0,0,0.12)',
+                                padding:6
+                            }}>
                                 {products.map(product => (
-                                    <div 
+                                    <div
                                         key={product.p_id}
                                         onClick={() => addProduct(product)}
-                                        style={{ padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid #F3F4F6' }}
-                                        onMouseEnter={e => e.currentTarget.style.background='#F9FAFB'}
-                                        onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                                        <div style={{ fontSize:14, fontWeight:600, color:'#111827' }}>{product.product_name}</div>
-                                        <div style={{ fontSize:12, color:'#6B7280' }}>SKU: {product.barcode} | Price: ₹{product.price}</div>
+                                        style={{
+                                            display:'flex',
+                                            alignItems:'center',
+                                            gap:12,
+                                            padding:'10px 12px',
+                                            cursor:'pointer',
+                                            borderRadius:8,
+                                            transition:'all 0.15s',
+                                            borderBottom:'1px solid #F3F4F6'
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background='#F0F4FF'; e.currentTarget.style.borderColor='#1E40AF' }}
+                                        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor='transparent' }}>
+                                        <div style={{
+                                            width:40, height:40, borderRadius:8,
+                                            background:'#EFF6FF',
+                                            display:'flex', alignItems:'center', justifyContent:'center',
+                                            flexShrink:0
+                                        }}>
+                                            <Package size={18} color="#1E40AF" />
+                                        </div>
+                                        <div style={{ flex:1, minWidth:0 }}>
+                                            <div style={{ fontSize:14, fontWeight:600, color:'#111827', marginBottom:2 }}>{product.product_name}</div>
+                                            <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:'#6B7280' }}>
+                                                <span style={{ display:'flex', alignItems:'center', gap:3 }}>
+                                                    <Barcode size={11} /> {product.barcode}
+                                                </span>
+                                                {product.product_variant && (
+                                                    <span style={{ background:'#F3F4F6', padding:'1px 6px', borderRadius:4 }}>
+                                                        {product.product_variant}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign:'right', flexShrink:0 }}>
+                                            <div style={{ fontSize:15, fontWeight:700, color:'#059669', display:'flex', alignItems:'center', gap:2 }}>
+                                                <IndianRupee size={13} />{product.price?.toFixed(2) || '0.00'}
+                                            </div>
+                                            <div style={{ fontSize:10, color:'#9CA3AF' }}>per unit</div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
