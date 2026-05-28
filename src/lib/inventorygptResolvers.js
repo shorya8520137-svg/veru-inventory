@@ -600,6 +600,27 @@ export async function resolveInventoryGptStock(
   };
 }
 
+export async function resolveInventoryGptJourney(
+  query,
+  token,
+) {
+  if (!query || query.length < 2) return { journey: [], summary: null };
+  const journey = await apiGet(
+    `/api/inventory/product-journey?query=${encodeURIComponent(query)}&limit=100`,
+    token,
+  );
+  if (journey.error) {
+    return { journey: [], summary: null, error: journey.error };
+  }
+  const data = journey.data?.data || journey.data || {};
+  return {
+    journey: Array.isArray(data.journey) ? data.journey : [],
+    summary: data.summary || null,
+    product: data.product || null,
+    current_stock: data.current_stock || null,
+  };
+}
+
 export async function resolveInventoryGptTimeline(
   barcode,
   token,
@@ -840,6 +861,87 @@ function buildTimelineAnswer(barcode, product, timelineResult, wantsExport) {
         ])
       : null,
     exportFilename: wantsExport ? `inventorygpt-journey-${barcode}.tsv` : null,
+  };
+}
+
+function buildJourneyAnswer(query, journeyResult, wantsExport) {
+  const product = journeyResult.product || null;
+  const events = journeyResult.journey || [];
+  const currentStock = journeyResult.current_stock || null;
+  const summary = journeyResult.summary || null;
+
+  const name = product?.name || query;
+  const barcode = product?.barcode || '';
+  const lines = [
+    `🧭 **Complete Product Journey — ${name}**${barcode ? ` (\`${barcode}\`)` : ''}`,
+    '',
+  ];
+
+  if (currentStock) {
+    lines.push(`📦 **Current Stock:** ${currentStock.total || 0} units across all locations`);
+    if (currentStock.by_location?.length) {
+      currentStock.by_location.forEach(loc => {
+        lines.push(`   · ${loc.warehouse}: **${loc.stock}** units`);
+      });
+    }
+    lines.push('');
+  }
+
+  if (summary) {
+    lines.push(`📊 **Journey Summary:**`);
+    lines.push(`   · Total In: **+${summary.total_in || 0}**`);
+    lines.push(`   · Total Out: **-${summary.total_out || 0}**`);
+    if (summary.by_type) {
+      lines.push(`   · By Type:`);
+      Object.entries(summary.by_type).forEach(([type, qty]) => {
+        const sign = qty > 0 ? '+' : '';
+        lines.push(`      · ${type}: **${sign}${qty}**`);
+      });
+    }
+    lines.push('');
+  }
+
+  if (!events.length) {
+    lines.push("No journey events found for this product.");
+    lines.push("I checked warehouse ledger, store timeline, and sale logs.");
+  } else {
+    lines.push(`📋 **${events.length} events** (across all warehouses & stores):`);
+    lines.push('');
+    events.slice(0, 15).forEach((event) => {
+      const type = event.movement_type || event.type || 'EVENT';
+      const qty = parseInt(event.quantity) || 0;
+      const direction = event.direction === 'IN' ? '+' : event.direction === 'OUT' ? '-' : '';
+      const when = event.timestamp || event.created_at || '';
+      const where = event.location || event.location_code || event.store_code || '';
+      const locIcon = event.location_type === 'store' ? '🏪' : '🏭';
+      lines.push(
+        `· **${type}** ${direction}${qty} ${locIcon}${where}${when ? ` · ${new Date(when).toLocaleString('en-IN')}` : ''}`,
+      );
+    });
+    if (events.length > 15) {
+      lines.push(`\n… and ${events.length - 15} more events.`);
+    }
+  }
+
+  lines.push('');
+  lines.push('To compare this product with another, ask: **compare amul butter with amul cheese**');
+
+  const exportRows = events.map((event) => ({
+    time: event.timestamp || event.created_at || '',
+    type: event.movement_type || event.type || '',
+    direction: event.direction || '',
+    quantity: event.quantity || 0,
+    location: event.location || event.location_code || event.store_code || '',
+    location_type: event.location_type || '',
+    reference: event.reference || '',
+  }));
+
+  return {
+    answer: lines.join('\n'),
+    exportTsv: wantsExport
+      ? rowsToTsv(exportRows, ['time', 'type', 'direction', 'quantity', 'location', 'location_type', 'reference'])
+      : null,
+    exportFilename: wantsExport ? `inventorygpt-journey-${barcode || query}.tsv` : null,
   };
 }
 
@@ -1981,6 +2083,16 @@ export async function tryInventoryGptDeterministicAnswer({
   }
 
   if (intent.type === "timeline") {
+    const searchName = barcode || product?.barcode || intent.productName || q;
+    if (searchName && searchName.length > 2) {
+      const journey = await resolveInventoryGptJourney(searchName, authToken);
+      if (journey.journey?.length > 0) {
+        return {
+          ...buildJourneyAnswer(searchName, journey, intent.wantsExport),
+          render: "text",
+        };
+      }
+    }
     const timeline = await resolveInventoryGptTimeline(
       barcode,
       authToken,

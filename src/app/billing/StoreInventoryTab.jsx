@@ -1,8 +1,10 @@
 ﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Package, AlertTriangle, TrendingDown, RefreshCw, Clock, BarChart3, Activity, TrendingUp } from "lucide-react";
+import { Search, Package, AlertTriangle, TrendingDown, RefreshCw, Clock, BarChart3, Activity, TrendingUp, Route, Layers } from "lucide-react";
 import ProductLedger from "../inventory/ProductLedger";
+import ProductJourney from "../inventory/ProductJourney";
+import ProductComparison from "../inventory/ProductComparison";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
 const PAGE_SIZE = 20;
@@ -22,6 +24,8 @@ export default function StoreInventoryTab() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [showProductLedger, setShowProductLedger] = useState(false);
     const [showProductGraph, setShowProductGraph] = useState(false);
+    const [showProductJourney, setShowProductJourney] = useState(false);
+    const [showProductComparison, setShowProductComparison] = useState(false);
 
     const [stats, setStats] = useState({
         totalProducts: 0,
@@ -197,6 +201,13 @@ export default function StoreInventoryTab() {
                         <RefreshCw size={16} />
                         Refresh
                     </button>
+
+                    <button 
+                        onClick={() => setShowProductComparison(true)}
+                        style={{ padding:'10px 16px', borderRadius:10, border:'1px solid #E5E7EB', background:'#F5F3FF', color:'#6D28D9', fontSize:14, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                        <Layers size={16} />
+                        Compare
+                    </button>
                 </div>
             </div>
 
@@ -338,6 +349,35 @@ export default function StoreInventoryTab() {
                                                     }}>
                                                     <TrendingUp size={16} color='#22C55E' />
                                                 </button>
+
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedProduct(item);
+                                                        setShowProductJourney(true);
+                                                    }}
+                                                    title="Product Journey"
+                                                    style={{
+                                                        width:32,
+                                                        height:32,
+                                                        borderRadius:8,
+                                                        border:'1px solid #E5E7EB',
+                                                        background:'#fff',
+                                                        cursor:'pointer',
+                                                        display:'flex',
+                                                        alignItems:'center',
+                                                        justifyContent:'center',
+                                                        transition:'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        e.currentTarget.style.background='#F5F3FF';
+                                                        e.currentTarget.style.borderColor='#8B5CF6';
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        e.currentTarget.style.background='#fff';
+                                                        e.currentTarget.style.borderColor='#E5E7EB';
+                                                    }}>
+                                                    <Route size={16} color='#8B5CF6' />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -381,6 +421,23 @@ export default function StoreInventoryTab() {
                 />
             )}
             
+            {/* Product Journey Modal */}
+            {showProductJourney && selectedProduct && (
+                <ProductJourney
+                    initialQuery={selectedProduct.barcode || selectedProduct.product_name}
+                    onClose={() => { setShowProductJourney(false); setSelectedProduct(null); }}
+                />
+            )}
+
+            {/* Product Comparison Modal */}
+            {showProductComparison && (
+                <ProductComparison
+                    initialProduct1=""
+                    initialProduct2=""
+                    onClose={() => setShowProductComparison(false)}
+                />
+            )}
+
             {/* Product Graph Modal */}
             {showProductGraph && selectedProduct && (
                 <div 

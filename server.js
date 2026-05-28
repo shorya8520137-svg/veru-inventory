@@ -197,6 +197,9 @@ app.use("/api", require("./routes/reviewRoutes"));
 // inventory routes
 app.use('/api/inventory', require('./routes/inventoryRoutes'));
 
+// product journey & comparison routes
+app.use('/api/inventory', require('./routes/productJourneyRoutes'));
+
 // bulk uplode routes
 app.use('/api/bulk-upload', require('./routes/bulkUploadRoutes'));
 
