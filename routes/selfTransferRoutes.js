@@ -404,10 +404,11 @@ router.post('/', authenticateToken, (req, res) => {
             
             // S to S: Both source and destination
             if (transferType === 'S to S') {
-                // Source OUT
-                const getSourceStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
-                db.query(getSourceStockSql, [barcode, sourceId], (err, sourceResult) => {
-                    const sourceBalance = sourceResult && sourceResult.length > 0 ? sourceResult[0].stock : 0;
+                // Source OUT — get last balance from store_timeline
+                const getSourceLastSql = `SELECT balance_after FROM store_timeline WHERE store_code = ? AND product_barcode = ? ORDER BY created_at DESC LIMIT 1`;
+                db.query(getSourceLastSql, [sourceId, barcode], (sErr, sRes) => {
+                    const lastSrcBal = sRes && sRes.length > 0 ? sRes[0].balance_after : 0;
+                    const srcBalAfter = Math.max(0, lastSrcBal - quantity);
                     const sourceTimelineSql = `
                         INSERT INTO store_timeline (
                             store_code, product_barcode, product_name, 
@@ -415,16 +416,17 @@ router.post('/', authenticateToken, (req, res) => {
                             balance_after, reference, created_at
                         ) VALUES (?, ?, ?, 'SELF_TRANSFER', 'OUT', ?, ?, ?, NOW())
                     `;
-                    db.query(sourceTimelineSql, [sourceId, barcode, productName, quantity, sourceBalance, transferRef], (err) => {
+                    db.query(sourceTimelineSql, [sourceId, barcode, productName, quantity, srcBalAfter, transferRef], (err) => {
                         if (err) console.error('Error creating source store timeline:', err);
-                        else console.log(`✅ Store timeline OUT: ${sourceId}`);
+                        else console.log(`✅ Store timeline OUT: ${sourceId} — balance: ${srcBalAfter}`);
                     });
                 });
                 
-                // Destination IN
-                const getDestStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
-                db.query(getDestStockSql, [barcode, destinationId], (err, destResult) => {
-                    const destBalance = destResult && destResult.length > 0 ? destResult[0].stock : 0;
+                // Destination IN — get last balance from store_timeline
+                const getDestLastSql = `SELECT balance_after FROM store_timeline WHERE store_code = ? AND product_barcode = ? ORDER BY created_at DESC LIMIT 1`;
+                db.query(getDestLastSql, [destinationId, barcode], (dErr, dRes) => {
+                    const lastDstBal = dRes && dRes.length > 0 ? dRes[0].balance_after : 0;
+                    const dstBalAfter = lastDstBal + quantity;
                     const destTimelineSql = `
                         INSERT INTO store_timeline (
                             store_code, product_barcode, product_name, 
@@ -432,44 +434,43 @@ router.post('/', authenticateToken, (req, res) => {
                             balance_after, reference, created_at
                         ) VALUES (?, ?, ?, 'SELF_TRANSFER', 'IN', ?, ?, ?, NOW())
                     `;
-                    db.query(destTimelineSql, [destinationId, barcode, productName, quantity, destBalance, transferRef], (err) => {
+                    db.query(destTimelineSql, [destinationId, barcode, productName, quantity, dstBalAfter, transferRef], (err) => {
                         if (err) console.error('Error creating destination store timeline:', err);
-                        else console.log(`✅ Store timeline IN: ${destinationId}`);
+                        else console.log(`✅ Store timeline IN: ${destinationId} — balance: ${dstBalAfter}`);
                     });
                 });
             }
             
             // W to S: Destination store only
             if (transferType === 'W to S') {
-                // Determine if this is the first entry for this product at this store
-                const checkExistsSql = `SELECT COUNT(*) as cnt FROM store_timeline WHERE store_code = ? AND product_barcode = ?`;
-                db.query(checkExistsSql, [destinationId, barcode], (checkErr, checkResult) => {
-                    const isFirstEntry = !checkErr && checkResult && checkResult[0] && checkResult[0].cnt === 0;
+                // Get last known balance from store_timeline to avoid async race with store_inventory
+                const getLastBalanceSql = `SELECT balance_after FROM store_timeline WHERE store_code = ? AND product_barcode = ? ORDER BY created_at DESC LIMIT 1`;
+                db.query(getLastBalanceSql, [destinationId, barcode], (balErr, balResult) => {
+                    const lastBalance = balResult && balResult.length > 0 ? balResult[0].balance_after : 0;
+                    const isFirstEntry = !balResult || balResult.length === 0;
                     const movementType = isFirstEntry ? 'OPENING' : 'SELF_TRANSFER';
+                    const balanceAfter = lastBalance + quantity;
 
-                    const getDestStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
-                    db.query(getDestStockSql, [barcode, destinationId], (err, destResult) => {
-                        const destBalance = destResult && destResult.length > 0 ? destResult[0].stock : 0;
-                        const destTimelineSql = `
-                            INSERT INTO store_timeline (
-                                store_code, product_barcode, product_name, 
-                                movement_type, direction, quantity, 
-                                balance_after, reference, created_at
-                            ) VALUES (?, ?, ?, ?, 'IN', ?, ?, ?, NOW())
-                        `;
-                        db.query(destTimelineSql, [destinationId, barcode, productName, movementType, quantity, destBalance, transferRef], (err) => {
-                            if (err) console.error('Error creating store timeline W to S:', err);
-                            else console.log(`✅ Store timeline ${movementType} IN: ${destinationId} (from warehouse)`);
-                        });
+                    const destTimelineSql = `
+                        INSERT INTO store_timeline (
+                            store_code, product_barcode, product_name, 
+                            movement_type, direction, quantity, 
+                            balance_after, reference, created_at
+                        ) VALUES (?, ?, ?, ?, 'IN', ?, ?, ?, NOW())
+                    `;
+                    db.query(destTimelineSql, [destinationId, barcode, productName, movementType, quantity, balanceAfter, transferRef], (err) => {
+                        if (err) console.error('Error creating store timeline W to S:', err);
+                        else console.log(`✅ Store timeline ${movementType} IN: ${destinationId} (from warehouse) — balance: ${balanceAfter}`);
                     });
                 });
             }
             
             // S to W: Source store only
             if (transferType === 'S to W') {
-                const getSourceStockSql = `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`;
-                db.query(getSourceStockSql, [barcode, sourceId], (err, sourceResult) => {
-                    const sourceBalance = sourceResult && sourceResult.length > 0 ? sourceResult[0].stock : 0;
+                const getSourceLastSql = `SELECT balance_after FROM store_timeline WHERE store_code = ? AND product_barcode = ? ORDER BY created_at DESC LIMIT 1`;
+                db.query(getSourceLastSql, [sourceId, barcode], (sErr, sRes) => {
+                    const lastBal = sRes && sRes.length > 0 ? sRes[0].balance_after : 0;
+                    const srcBalAfter = Math.max(0, lastBal - quantity);
                     const sourceTimelineSql = `
                         INSERT INTO store_timeline (
                             store_code, product_barcode, product_name, 
@@ -477,9 +478,9 @@ router.post('/', authenticateToken, (req, res) => {
                             balance_after, reference, created_at
                         ) VALUES (?, ?, ?, 'RETURN', 'OUT', ?, ?, ?, NOW())
                     `;
-                    db.query(sourceTimelineSql, [sourceId, barcode, productName, quantity, sourceBalance, transferRef], (err) => {
+                    db.query(sourceTimelineSql, [sourceId, barcode, productName, quantity, srcBalAfter, transferRef], (err) => {
                         if (err) console.error('Error creating store timeline S to W:', err);
-                        else console.log(`✅ Store timeline OUT: ${sourceId} (to warehouse)`);
+                        else console.log(`✅ Store timeline OUT: ${sourceId} (to warehouse) — balance: ${srcBalAfter}`);
                     });
                 });
             }
