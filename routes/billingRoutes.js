@@ -332,4 +332,139 @@ router.post('/fix-product-names', authenticateToken, (req, res) => {
     }
 });
 
+// POST /api/billing/generate - Generate invoice
+router.post('/generate', authenticateToken, (req, res) => {
+    const {
+        bill_type, customer, gst_details, products,
+        payment, discount, shipping, totals
+    } = req.body;
+
+    if (!customer?.name || !customer?.phone || !products || products.length === 0) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    db.getConnection((connErr, conn) => {
+        if (connErr) {
+            console.error('DB connection error:', connErr);
+            return res.status(500).json({ success: false, message: 'Database connection failed' });
+        }
+
+        conn.beginTransaction((txErr) => {
+            if (txErr) {
+                conn.release();
+                return res.status(500).json({ success: false, message: 'Transaction failed' });
+            }
+
+            const insertBillSql = `
+                INSERT INTO bills (
+                    invoice_number, bill_type, customer_name, customer_phone,
+                    customer_email, billing_address, shipping_address,
+                    gstin, business_name, place_of_supply,
+                    subtotal, discount, shipping, gst_amount, grand_total,
+                    payment_mode, payment_status, items, total_items, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `;
+
+            conn.query(insertBillSql, [
+                invoiceNumber, bill_type || 'B2C',
+                customer.name, customer.phone, customer.email || null,
+                customer.billing_address || null, customer.shipping_address || null,
+                gst_details?.gstin || null, gst_details?.business_name || null,
+                gst_details?.place_of_supply || null,
+                totals.subtotal, discount || 0, shipping || 0,
+                totals.gstAmount, totals.grandTotal,
+                payment.mode, payment.status,
+                JSON.stringify(products), products.length
+            ], (billErr, billResult) => {
+                if (billErr) {
+                    return conn.rollback(() => {
+                        conn.release();
+                        res.status(500).json({ success: false, message: 'Failed to create bill', error: billErr.message });
+                    });
+                }
+
+                let processed = 0;
+                let hasError = false;
+
+                products.forEach((product) => {
+                    conn.query(
+                        `SELECT stock FROM store_inventory WHERE barcode = ?`,
+                        [product.barcode],
+                        (stockErr, stockRows) => {
+                            if (hasError) return;
+
+                            if (stockErr || stockRows.length === 0) {
+                                hasError = true;
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    res.status(400).json({
+                                        success: false,
+                                        message: `Product ${product.product_name} not found in store inventory`
+                                    });
+                                });
+                            }
+
+                            const currentStock = stockRows[0].stock;
+                            if (currentStock < product.quantity) {
+                                hasError = true;
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    res.status(400).json({
+                                        success: false,
+                                        message: `Insufficient stock for ${product.product_name}. Available: ${currentStock}, Required: ${product.quantity}`
+                                    });
+                                });
+                            }
+
+                            conn.query(
+                                `UPDATE store_inventory SET stock = stock - ?, last_updated = NOW() WHERE barcode = ?`,
+                                [product.quantity, product.barcode],
+                                (updErr) => {
+                                    if (hasError) return;
+                                    if (updErr) {
+                                        hasError = true;
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            res.status(500).json({ success: false, message: 'Failed to update stock' });
+                                        });
+                                    }
+
+                                    conn.query(
+                                        `INSERT INTO store_inventory_logs (barcode, product_name, movement_type, quantity, reference_id, reference_type, created_at)
+                                         VALUES (?, ?, 'SALE', ?, ?, 'BILL', NOW())`,
+                                        [product.barcode, product.product_name, product.quantity, invoiceNumber],
+                                        (logErr) => {
+                                            if (logErr) console.error('Log error:', logErr);
+
+                                            processed++;
+                                            if (processed === products.length && !hasError) {
+                                                conn.commit((commitErr) => {
+                                                    if (commitErr) {
+                                                        return conn.rollback(() => {
+                                                            conn.release();
+                                                            res.status(500).json({ success: false, message: 'Commit failed' });
+                                                        });
+                                                    }
+                                                    conn.release();
+                                                    res.json({
+                                                        success: true,
+                                                        message: 'Invoice generated successfully',
+                                                        data: { bill_id: billResult.insertId, invoice_number: invoiceNumber }
+                                                    });
+                                                });
+                                            }
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                });
+            });
+        });
+    });
+});
+
 module.exports = router;

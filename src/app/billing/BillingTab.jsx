@@ -122,7 +122,7 @@ export default function BillingTab() {
         if (!finalPrice) {
             try {
                 const token = localStorage.getItem('token');
-                const resp = await fetch(`/api/billing/store-inventory?search=${encodeURIComponent(product.barcode)}&limit=1`, {
+                const resp = await fetch(`${API_BASE}/api/billing/store-inventory?search=${encodeURIComponent(product.barcode)}&limit=1`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await resp.json();
@@ -197,7 +197,7 @@ export default function BillingTab() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/api/billing/generate`, {
+            const response = await fetch(`${API_BASE}/api/billing/generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
