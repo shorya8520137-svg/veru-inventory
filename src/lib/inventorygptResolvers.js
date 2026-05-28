@@ -872,59 +872,135 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
 
   const name = product?.name || query;
   const barcode = product?.barcode || '';
-  const lines = [
-    `🧭 **Complete Product Journey — ${name}**${barcode ? ` (\`${barcode}\`)` : ''}`,
-    '',
-  ];
+  const lines = [];
 
-  if (currentStock) {
-    lines.push(`📦 **Current Stock:** ${currentStock.total || 0} units across all locations`);
+  // ── Opening ──
+  lines.push(`🧾 **Here is the complete journey of ${name}**`);
+  if (barcode) lines.push(`Product Code: \`${barcode}\``);
+  lines.push('');
+
+  // ── Current stock ──
+  if (currentStock && currentStock.total > 0) {
+    lines.push(`📦 **Right now, we have ${currentStock.total} units of ${name} in stock** across ${currentStock.by_location?.length || 0} locations:`);
     if (currentStock.by_location?.length) {
       currentStock.by_location.forEach(loc => {
-        lines.push(`   · ${loc.warehouse}: **${loc.stock}** units`);
+        const locName = loc.location_name || loc.warehouse || 'Unknown';
+        lines.push(`   🔹 ${locName} — **${loc.stock} units**`);
       });
     }
-    lines.push('');
-  }
-
-  if (summary) {
-    lines.push(`📊 **Journey Summary:**`);
-    lines.push(`   · Total In: **+${summary.total_in || 0}**`);
-    lines.push(`   · Total Out: **-${summary.total_out || 0}**`);
-    if (summary.by_type) {
-      lines.push(`   · By Type:`);
-      Object.entries(summary.by_type).forEach(([type, qty]) => {
-        const sign = qty > 0 ? '+' : '';
-        lines.push(`      · ${type}: **${sign}${qty}**`);
-      });
-    }
-    lines.push('');
-  }
-
-  if (!events.length) {
-    lines.push("No journey events found for this product.");
-    lines.push("I checked warehouse ledger, store timeline, and sale logs.");
   } else {
-    lines.push(`📋 **${events.length} events** (across all warehouses & stores):`);
+    lines.push(`📦 **${name} is currently out of stock across all locations.**`);
+  }
+  lines.push('');
+
+  // ── High-level summary in plain language ──
+  if (summary && events.length > 0) {
+    if (summary.total_in > 0 && summary.total_out > 0) {
+      lines.push(`📊 **Journey Overview:** A total of **${summary.total_in} units** came in and **${summary.total_out} units** went out, leaving us with the current stock position above.`);
+    } else if (summary.total_in > 0) {
+      lines.push(`📊 **Journey Overview:** A total of **${summary.total_in} units** have been added — no outward movements yet.`);
+    }
+
+    // Narrative by movement type
+    const byType = summary.by_type || {};
+    const narratives = {
+      BULK_UPLOAD: (q) => q > 0 ? `**${q} units** were added as initial stock via bulk upload.` : null,
+      OPENING: (q) => q > 0 ? `**${q} units** were set up as opening stock.` : null,
+      PURCHASE: (q) => q > 0 ? `**${q} units** were added through purchase.` : null,
+      SELF_TRANSFER: (q) => q < 0 ? `**${Math.abs(q)} units** were transferred out to other locations.` : q > 0 ? `**${q} units** were received from other locations.` : null,
+      DISPATCH: (q) => q < 0 ? `**${Math.abs(q)} units** were dispatched to customers.` : null,
+      SALE: (q) => q < 0 ? `**${Math.abs(q)} units** were sold to customers.` : null,
+      RETURN: (q) => q > 0 ? `**${q} units** were returned back.` : null,
+      DAMAGE: (q) => q < 0 ? `**${Math.abs(q)} units** were marked as damaged.` : null,
+      RECOVER: (q) => q > 0 ? `**${q} units** were recovered from damage.` : null,
+      MANUAL: (q) => `**${Math.abs(q)} units** were adjusted manually.`,
+    };
+
+    const narrativeLines = [];
+    for (const [type, qty] of Object.entries(byType)) {
+      const fn = narratives[type];
+      if (fn) {
+        const msg = fn(qty);
+        if (msg) narrativeLines.push(`   · ${msg}`);
+      }
+    }
+    if (narrativeLines.length) {
+      lines.push('');
+      narrativeLines.forEach(l => lines.push(l));
+    }
+  }
+
+  // ── Chronological events with full context ──
+  if (events.length > 0) {
     lines.push('');
-    events.slice(0, 15).forEach((event) => {
+    if (events.length === 1) {
+      lines.push(`📅 **There is 1 event in the timeline:**`);
+    } else {
+      lines.push(`📅 **All ${events.length} events in chronological order:**`);
+    }
+    lines.push('');
+
+    events.slice(0, 30).forEach((event, i) => {
       const type = event.movement_type || event.type || 'EVENT';
       const qty = parseInt(event.quantity) || 0;
-      const direction = event.direction === 'IN' ? '+' : event.direction === 'OUT' ? '-' : '';
       const when = event.timestamp || event.created_at || '';
-      const where = event.location || event.location_code || event.store_code || '';
-      const locIcon = event.location_type === 'store' ? '🏪' : '🏭';
-      lines.push(
-        `· **${type}** ${direction}${qty} ${locIcon}${where}${when ? ` · ${new Date(when).toLocaleString('en-IN')}` : ''}`,
-      );
+      const dateStr = when ? new Date(when).toLocaleString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown date';
+      const locName = event.location_name || event.location || 'Unknown location';
+      const desc = event.description || '';
+      const isIn = event.direction === 'IN';
+
+      let emoji = '📌';
+      if (type === 'OPENING' || type === 'BULK_UPLOAD') emoji = '🆕';
+      else if (type === 'DISPATCH' || type === 'SALE') emoji = '📦';
+      else if (type === 'SELF_TRANSFER') emoji = '🔄';
+      else if (type === 'RETURN') emoji = '↩️';
+      else if (type === 'DAMAGE') emoji = '⚠️';
+      else if (type === 'RECOVER') emoji = '✅';
+      else if (type === 'PURCHASE') emoji = '🛒';
+
+      let detail = '';
+      if (isIn) detail = `✅ **IN +${qty}** — ${desc || `${qty} units received`}`;
+      else detail = `🔴 **OUT -${qty}** — ${desc || `${qty} units sent out`}`;
+
+      lines.push(`${emoji} **${dateStr}**`);
+      lines.push(`   ${detail}`);
+      lines.push(`   📍 ${locName}`);
+
+      // Extra details for specific event types
+      if (event.source_name && event.destination_name && type === 'SELF_TRANSFER') {
+        lines.push(`   🔄 Route: ${event.source_name} → ${event.destination_name}`);
+      }
+      if (event.customer && (type === 'DISPATCH' || type === 'SALE')) {
+        lines.push(`   👤 Customer: ${event.customer}${event.customer_phone ? ` (${event.customer_phone})` : ''}`);
+      }
+      if (event.awb) {
+        lines.push(`   📮 AWB: ${event.awb}`);
+      }
+      if (event.amount && type === 'SALE') {
+        lines.push(`   💰 Amount: ₹${parseFloat(event.amount).toFixed(2)}`);
+      }
+      if (event.reference && type !== 'SALE') {
+        lines.push(`   🆔 Ref: ${event.reference}`);
+      }
+      lines.push('');
     });
-    if (events.length > 15) {
-      lines.push(`\n… and ${events.length - 15} more events.`);
+
+    if (events.length > 30) {
+      lines.push(`_…and ${events.length - 30} more events. Ask me for a detailed export if you need everything._`);
+      lines.push('');
     }
+  } else {
+    lines.push('');
+    lines.push(`📭 No events found for this product across warehouses, stores, or sale logs.`);
+    lines.push('');
   }
 
-  lines.push('');
-  lines.push('To compare this product with another, ask: **compare amul butter with amul cheese**');
+  // ── Closing / next steps ──
+  lines.push('💡 **What would you like to do next?**');
+  lines.push('   · Compare this product with another — just say **compare with [product name]**');
+  if (wantsExport) {
+    lines.push('   · Export this journey as an Excel-ready table — say **export this**');
+  }
 
   const exportRows = events.map((event) => ({
     time: event.timestamp || event.created_at || '',
@@ -932,14 +1008,19 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
     direction: event.direction || '',
     quantity: event.quantity || 0,
     location: event.location || event.location_code || event.store_code || '',
-    location_type: event.location_type || '',
+    location_name: event.location_name || '',
+    description: event.description || '',
+    source: event.source_name || '',
+    destination: event.destination_name || '',
+    customer: event.customer || '',
+    awb: event.awb || '',
     reference: event.reference || '',
   }));
 
   return {
     answer: lines.join('\n'),
     exportTsv: wantsExport
-      ? rowsToTsv(exportRows, ['time', 'type', 'direction', 'quantity', 'location', 'location_type', 'reference'])
+      ? rowsToTsv(exportRows, ['time', 'type', 'direction', 'quantity', 'location', 'location_name', 'description', 'source', 'destination', 'customer', 'awb', 'reference'])
       : null,
     exportFilename: wantsExport ? `inventorygpt-journey-${barcode || query}.tsv` : null,
   };
