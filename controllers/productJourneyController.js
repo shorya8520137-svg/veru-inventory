@@ -225,13 +225,44 @@ exports.getProductJourney = async (req, res) => {
         ...currentStockStore.map(r => ({ ...r, location_name: getLocationName(r.warehouse, 'store') })),
       ];
 
-      const summary = { total_in: 0, total_out: 0, by_type: {} };
+      const summary = { total_in: 0, total_out: 0, by_type: {}, paired_transfer_qty: 0, paired_transfer_details: [] };
       for (const e of allEntries) {
         const qty = parseInt(e.quantity) || 0;
         if (e.direction === 'IN') summary.total_in += qty;
         else if (e.direction === 'OUT') summary.total_out += qty;
         const t = e.movement_type || 'OTHER';
         summary.by_type[t] = (summary.by_type[t] || 0) + (e.direction === 'OUT' ? -qty : qty);
+      }
+
+      // Pair SELF_TRANSFER OUT (warehouse) with OPENING IN (store) — same physical movement
+      const transferOuts = allEntries.filter(
+        e => e.movement_type === 'SELF_TRANSFER' && e.direction === 'OUT' && e.destination
+      );
+      for (const entry of allEntries) {
+        if (entry.movement_type === 'OPENING' && entry.direction === 'IN') {
+          const match = transferOuts.find(te =>
+            te.destination === entry.location &&
+            Math.abs(parseInt(te.quantity)) === Math.abs(parseInt(entry.quantity)) &&
+            Math.abs(new Date(te.timestamp) - new Date(entry.timestamp)) < 120000
+          );
+          if (match) {
+            entry.paired_transfer = true;
+            entry.transfer_source = match.source_name;
+            entry.description = `Opening stock (received from ${match.source_name})`;
+            const pq = Math.abs(parseInt(entry.quantity));
+            summary.paired_transfer_qty += pq;
+            const exists = summary.paired_transfer_details.some(d =>
+              d.source === match.source_name && d.destination === entry.location_name
+            );
+            if (!exists) {
+              summary.paired_transfer_details.push({
+                qty: pq,
+                source: match.source_name,
+                destination: entry.location_name,
+              });
+            }
+          }
+        }
       }
 
       result.push({

@@ -901,8 +901,10 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
       lines.push(`📊 **Journey Overview:** A total of **${summary.total_in} units** have been added — no outward movements yet.`);
     }
 
-    // Narrative by movement type
+    // Narrative by movement type — paired transfer out + opening in are one event
     const byType = summary.by_type || {};
+    const pairedQty = summary.paired_transfer_qty || 0;
+    const pairedDetails = summary.paired_transfer_details || [];
     const narratives = {
       BULK_UPLOAD: (q) => q > 0 ? `**${q} units** were added as initial stock via bulk upload.` : null,
       OPENING: (q) => q > 0 ? `**${q} units** were set up as opening stock.` : null,
@@ -918,11 +920,21 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
 
     const narrativeLines = [];
     for (const [type, qty] of Object.entries(byType)) {
+      let adjusted = qty;
+      if (pairedQty > 0) {
+        if (type === 'SELF_TRANSFER') adjusted = qty + pairedQty;
+        if (type === 'OPENING') adjusted = qty - pairedQty;
+      }
+      if (adjusted === 0) continue;
       const fn = narratives[type];
       if (fn) {
-        const msg = fn(qty);
+        const msg = fn(adjusted);
         if (msg) narrativeLines.push(`   · ${msg}`);
       }
+    }
+    // Add combined transfer line from paired data
+    for (const pd of pairedDetails) {
+      narrativeLines.push(`   · **${pd.qty} units** were transferred from **${pd.source}** to **${pd.destination}** (opening stock at destination)`);
     }
     if (narrativeLines.length) {
       lines.push('');
