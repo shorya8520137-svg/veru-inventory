@@ -323,9 +323,12 @@ exports.compareProducts = async (req, res) => {
       const storeMovementCounts = await asyncQuery(
         `SELECT movement_type, COUNT(*) as count, SUM(quantity) as total_qty FROM store_timeline WHERE product_barcode = ? GROUP BY movement_type`, [bc]
       );
+      const saleMovementCounts = await asyncQuery(
+        `SELECT 'SALE' as movement_type, COUNT(*) as count, SUM(quantity) as total_qty FROM store_inventory_logs WHERE barcode = ? AND movement_type = 'SALE' GROUP BY movement_type`, [bc]
+      );
 
       // Merge movements and pair SELF_TRANSFER OUT with OPENING IN (same physical movement)
-      let allMovements = [...movementCounts, ...storeMovementCounts];
+      let allMovements = [...movementCounts, ...storeMovementCounts, ...saleMovementCounts];
       const pairedMovements = [];
       let remainingSelfTransfer = 0;
       let remainingOpening = 0;
