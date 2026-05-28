@@ -324,11 +324,44 @@ exports.compareProducts = async (req, res) => {
         `SELECT movement_type, COUNT(*) as count, SUM(quantity) as total_qty FROM store_timeline WHERE product_barcode = ? GROUP BY movement_type`, [bc]
       );
 
+      // Merge movements and pair SELF_TRANSFER OUT with OPENING IN (same physical movement)
+      let allMovements = [...movementCounts, ...storeMovementCounts];
+      const pairedMovements = [];
+      let remainingSelfTransfer = 0;
+      let remainingOpening = 0;
+
+      const stIdx = allMovements.findIndex(m => m.movement_type === 'SELF_TRANSFER');
+      const opIdx = allMovements.findIndex(m => m.movement_type === 'OPENING');
+
+      if (stIdx !== -1 && opIdx !== -1) {
+        const st = allMovements[stIdx];
+        const op = allMovements[opIdx];
+        const paired = Math.min(parseFloat(st.total_qty) || 0, parseFloat(op.total_qty) || 0);
+        if (paired > 0) {
+          pairedMovements.push({
+            movement_type: 'TRANSFER (warehouse → store)',
+            count: Math.min(st.count, op.count),
+            total_qty: paired,
+          });
+          remainingSelfTransfer = (parseFloat(st.total_qty) || 0) - paired;
+          remainingOpening = (parseFloat(op.total_qty) || 0) - paired;
+          allMovements.splice(stIdx, 1);
+          const opNewIdx = stIdx < opIdx ? opIdx - 1 : opIdx;
+          allMovements.splice(opNewIdx, 1);
+        }
+      }
+      if (remainingSelfTransfer > 0) {
+        allMovements.push({ movement_type: 'SELF_TRANSFER', count: 1, total_qty: remainingSelfTransfer });
+      }
+      if (remainingOpening > 0) {
+        allMovements.push({ movement_type: 'OPENING', count: 1, total_qty: remainingOpening });
+      }
+
       return {
         name: product.product_name, barcode: bc, price: product.price,
         current_stock: [...currentStockWarehouse, ...currentStockStore].reduce((s, r) => s + parseInt(r.stock || 0), 0),
         stock_by_location: [...currentStockWarehouse, ...currentStockStore],
-        movements: [...movementCounts, ...storeMovementCounts],
+        movements: [...allMovements, ...pairedMovements],
       };
     };
 
