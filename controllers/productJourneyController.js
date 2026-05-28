@@ -265,6 +265,10 @@ exports.getProductJourney = async (req, res) => {
         }
       }
 
+      // Paired transfers are internal movement, not stock entering/leaving the system
+      summary.total_in -= summary.paired_transfer_qty;
+      summary.total_out -= summary.paired_transfer_qty;
+
       result.push({
         product: { name: pName, barcode: bc, price: product.price },
         current_stock: {
