@@ -89,8 +89,9 @@ export function extractInventoryGptWarehouse(text) {
 export function extractLastInventoryGptBarcode(history) {
   if (!Array.isArray(history)) return null;
   for (const message of [...history].reverse()) {
+    if (message?.role !== 'user') continue;
     const content = String(message?.content || "");
-    const skuMatch = content.match(/SKU:\s*`?(\d{4,16})`?/i);
+    const skuMatch = content.match(/(?:SKU|Product Code|Barcode):\s*`?([A-Za-z0-9-]+)`?/i);
     if (skuMatch) return skuMatch[1];
     const anyBarcode = content.match(/\b(\d{8,16})\b/);
     if (anyBarcode) return anyBarcode[1];
@@ -131,15 +132,18 @@ export function extractActiveContext(conversationHistory = []) {
           context.category = cat;
         }
       }
-      // Match: SKU: `FG-082-5KG` or SKU: FG-082-5KG
-      const skuMatch = content.match(/SKU:\s*`?([A-Za-z0-9-]+)`?/i);
+      // Match: SKU: `FG-082-5KG` or SKU: FG-082-5KG or Product Code: `FG-086-500`
+      const skuMatch = content.match(/(?:SKU|Product Code):\s*`?([A-Za-z0-9-]+)`?/i);
       if (skuMatch && !context.sku) {
         context.sku = skuMatch[1];
       }
-      // Match product name from bold text at start: "**H&M Women Jeans**"
-      const productMatch = content.match(/\*\*([^*]+)\*\*.*SKU:/i);
+      // Match product name from bold text at start: "**H&M Women Jeans**"  or "**Here is the complete journey of Amul Butter**"
+      const productMatch = content.match(/\*\*([^*]+)\*\*.*(?:SKU|Product Code):/i);
       if (productMatch && !context.product) {
-        context.product = productMatch[1].trim();
+        let extracted = productMatch[1].trim();
+        // Strip prefix like "Here is the complete journey of " to get just the product name
+        extracted = extracted.replace(/^(Here is the complete journey of|Here is the journey of|Journey of|Stock of|Details of)\s+/i, '').trim();
+        context.product = extracted;
       }
     }
 
@@ -185,7 +189,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   const detectedCategory = categoryNames.find(cat => lower.includes(cat)) || activeContext.category;
   
   // Detect if query is JUST a product name (no action words, no question words)
-  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location/.test(lower);
+  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao/.test(lower);
   
   // ========================================
   // STEP 2 — IF ONLY PRODUCT NAME → PRODUCT_OVERVIEW
@@ -459,6 +463,30 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "product", field: "price", wantsExport };
   if (/stock|quantity|qty|available|availability/.test(lower))
     return { type: "stock", wantsExport };
+  // Compare products: "compare amul butter with aashirvaad atta", "compare X and Y", "compare X vs Y"
+  let compareMatch = lower.match(/compare\s+(.+?)\s+(?:and|with|vs\.?)\s+(.+)/i);
+  if (!compareMatch) {
+    // "compare with X" — compare X with the last product from context
+    compareMatch = lower.match(/compare\s+with\s+(.+)/i);
+    if (compareMatch) {
+      const lastProduct = activeContext?.product || null;
+      return {
+        type: "compare",
+        product1: lastProduct || compareMatch[1].trim(),
+        product2: compareMatch[1].trim(),
+        wantsExport,
+        contextFallback: !lastProduct,
+      };
+    }
+  }
+  if (compareMatch) {
+    return {
+      type: "compare",
+      product1: compareMatch[1].trim(),
+      product2: compareMatch[2].trim(),
+      wantsExport,
+    };
+  }
   if (/sku|barcode|product|item|name|what about this/.test(lower))
     return { type: "product", field: "summary", wantsExport };
   if (wantsExport) return { type: "export_help", wantsExport };
@@ -619,6 +647,21 @@ export async function resolveInventoryGptJourney(
     product: data.product || null,
     current_stock: data.current_stock || null,
   };
+}
+
+export async function resolveInventoryGptCompare(
+  product1,
+  product2,
+  token,
+) {
+  if (!product1 || !product2) return { error: "Need two product names" };
+  const result = await apiGet(
+    `/api/inventory/compare-products?product1=${encodeURIComponent(product1)}&product2=${encodeURIComponent(product2)}`,
+    token,
+  );
+  if (result.error) return { error: result.error };
+  const data = result.data?.comparison || result.data?.data?.comparison || [];
+  return Array.isArray(data) && data.length === 2 ? { p1: data[0], p2: data[1] } : { error: "Could not compare these products" };
 }
 
 export async function resolveInventoryGptTimeline(
@@ -1035,6 +1078,64 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
       ? rowsToTsv(exportRows, ['time', 'type', 'direction', 'quantity', 'location', 'location_name', 'description', 'source', 'destination', 'customer', 'awb', 'reference'])
       : null,
     exportFilename: wantsExport ? `inventorygpt-journey-${barcode || query}.tsv` : null,
+  };
+}
+
+function buildCompareAnswer(compareResult, product1Name, product2Name, wantsExport) {
+  const lines = [`🔄 **Product Comparison: ${compareResult.p1?.name || product1Name} vs ${compareResult.p2?.name || product2Name}**`, ''];
+
+  for (const [label, p] of [['Product 1', compareResult.p1], ['Product 2', compareResult.p2]]) {
+    if (!p) continue;
+    lines.push(`**${p.name || label}**`);
+    lines.push(`   📦 Barcode: \`${p.barcode || '—'}\``);
+    lines.push(`   💰 Price: ${p.price ? `₹${parseFloat(p.price).toFixed(2)}` : '—'}`);
+    lines.push(`   📊 Current Stock: **${p.current_stock || 0} units**`);
+    if (Array.isArray(p.stock_by_location) && p.stock_by_location.length) {
+      lines.push(`   📍 Locations:`);
+      p.stock_by_location.forEach(loc => {
+        lines.push(`      · ${loc.warehouse || loc.location || 'Unknown'}: **${loc.stock || 0} units**`);
+      });
+    }
+    if (Array.isArray(p.movements) && p.movements.length) {
+      lines.push(`   🔄 Movement Summary:`);
+      p.movements.forEach(m => {
+        lines.push(`      · ${m.movement_type}: ${m.count} events, ${m.total_qty} units`);
+      });
+    }
+    lines.push('');
+  }
+
+  // Quick comparison summary
+  const p1 = compareResult.p1;
+  const p2 = compareResult.p2;
+  if (p1 && p2) {
+    lines.push('**⚡ Quick Comparison:**');
+    const stock1 = p1.current_stock || 0;
+    const stock2 = p2.current_stock || 0;
+    if (stock1 > stock2) {
+      lines.push(`   **${p1.name}** has **${stock1 - stock2} more units** in stock than **${p2.name}**.`);
+    } else if (stock2 > stock1) {
+      lines.push(`   **${p2.name}** has **${stock2 - stock1} more units** in stock than **${p1.name}**.`);
+    } else {
+      lines.push(`   Both products have the **same stock level** (**${stock1} units**).`);
+    }
+    const price1 = parseFloat(p1.price) || 0;
+    const price2 = parseFloat(p2.price) || 0;
+    if (price1 > 0 && price2 > 0) {
+      if (price1 > price2) {
+        lines.push(`   **${p1.name}** is **₹${(price1 - price2).toFixed(2)} more expensive** than **${p2.name}**.`);
+      } else if (price2 > price1) {
+        lines.push(`   **${p2.name}** is **₹${(price2 - price1).toFixed(2)} more expensive** than **${p1.name}**.`);
+      }
+    }
+  }
+
+  lines.push('');
+  lines.push('Want the full journey of either product? Just say **show journey of [product name]**');
+
+  return {
+    answer: lines.join('\n'),
+    render: 'text',
   };
 }
 
@@ -2022,7 +2123,13 @@ export async function tryInventoryGptDeterministicAnswer({
       .replace(/(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
       .replace(/what('s| is| are)(\s+the)?\s+(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
       .replace(/(tell|show|check|get|give)\s+(me\s+)?(the\s+)?(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
-      .replace(/\b(of|this|it|that|the|for|on|please|pls|now|complete|full|detailed|entire|whole)\b/gi, "")
+      // Hindi/Hinglish: strip prefixes like "muja", "mujhe", "mera"
+      .replace(/^(muje|muja|mujhe|mujha|mujhko|mera|hum|hame|ham|apna|aap)\s+(ko\s+)?/i, "")
+      // Hindi: strip postfixes like "ka journey", "ke journey", "dikha", "deka", "bhai"
+      .replace(/\s+(dikha|dikhao|deka|dekhao|batao|bta|dikhao|show)\s*/gi, " ")
+      .replace(/\s+(ka\s+journey|ke\s+journey|ki\s+journey|ka\s+timeline|ke\s+timeline|ki\s+timeline|ka\s+ledger|ke\s+ledger)\s*/gi, " ")
+      .replace(/\b(please|pls|now|bro|bhai|dost|friend|yaar|yar)\b/gi, "")
+      .replace(/\b(of|this|it|that|the|for|on|complete|full|detailed|entire|whole|ka|ke|ki|ko|se|mein|me|par|aur|bhi|to|hi|jo|tha|the|ne|ho|hai|bhai)\b/gi, "")
       .replace(/\s+/g, " ")
       .trim();
     if (productNameFromQuery && productNameFromQuery.length > 2) {
@@ -2193,6 +2300,26 @@ export async function tryInventoryGptDeterministicAnswer({
     );
     return {
       ...buildTimelineAnswer(barcode, product, timeline, intent.wantsExport),
+      render: "text",
+    };
+  }
+
+  if (intent.type === "compare") {
+    if (intent.contextFallback) {
+      return {
+        answer: `To compare, tell me like: **compare ${intent.product2} with [another product]** or **compare product X and product Y**. I need two products to compare.`,
+        render: "text",
+      };
+    }
+    const compareResult = await resolveInventoryGptCompare(intent.product1, intent.product2, authToken);
+    if (compareResult.error) {
+      return {
+        answer: `I could not compare these products. ${compareResult.error}. Please check the product names and try again.`,
+        render: "text",
+      };
+    }
+    return {
+      ...buildCompareAnswer(compareResult, intent.product1, intent.product2, intent.wantsExport),
       render: "text",
     };
   }

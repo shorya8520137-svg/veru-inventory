@@ -25,9 +25,11 @@ function normalizeType(type) {
 function extractProductName(raw) {
   if (!raw) return '';
   let s = raw.trim();
-  s = s.replace(/^(show|tell|get|give|fetch|display|find|search|check|view|see)\s+(me\s+)?(the\s+)?(complete\s+)?(full\s+)?(product\s+)?(journey|timeline|ledger|history|movement|stock|details?|info|data|trail|audit)\s+(of\s+|for\s+|on\s+)?/i, '');
+  s = s.replace(/^(show|tell|get|give|fetch|display|find|search|check|view|see|muje|muja|mujhe|mujha|mujhko|mera|hum|hame|ham|apna|aap)\s+(me\s+|ko\s+)?(the\s+)?(complete\s+)?(full\s+)?(product\s+)?(journey|timeline|ledger|history|movement|stock|details?|info|data|trail|audit)\s+(of\s+|for\s+|on\s+|ka\s+|ke\s+|ki\s+)?/i, '');
+  s = s.replace(/\s+(dikha|dikhao|deka|dekhao|batao|bta|show)\s*/gi, ' ');
   s = s.replace(/\s+(journey|timeline|ledger|history|movement|stock|details?|info|data|trail|audit)\s*$/i, '');
-  s = s.replace(/\b(please|pls|now|bro|bhai|dost|friend)\b/gi, '');
+  s = s.replace(/\b(please|pls|now|bro|bhai|dost|friend|yaar|yar)\b/gi, '');
+  s = s.replace(/\b(of|this|it|that|the|for|on|ka|ke|ki|ko|se|mein|me|par|aur|bhi|to|hi|jo|tha|the|ne|ho|hai)\b/gi, '');
   s = s.replace(/\s+/g, ' ').trim();
   return s;
 }
