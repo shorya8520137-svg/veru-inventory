@@ -22,6 +22,16 @@ function normalizeType(type) {
   return map[type] || type;
 }
 
+function extractProductName(raw) {
+  if (!raw) return '';
+  let s = raw.trim();
+  s = s.replace(/^(show|tell|get|give|fetch|display|find|search|check|view|see)\s+(me\s+)?(the\s+)?(complete\s+)?(full\s+)?(product\s+)?(journey|timeline|ledger|history|movement|stock|details?|info|data|trail|audit)\s+(of\s+|for\s+|on\s+)?/i, '');
+  s = s.replace(/\s+(journey|timeline|ledger|history|movement|stock|details?|info|data|trail|audit)\s*$/i, '');
+  s = s.replace(/\b(please|pls|now|bro|bhai|dost|friend)\b/gi, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
 exports.getProductJourney = async (req, res) => {
   try {
     const { query, barcode, limit = 100 } = req.query;
@@ -30,7 +40,8 @@ exports.getProductJourney = async (req, res) => {
     }
 
     let products = [];
-    const searchTerm = query || barcode;
+    const rawTerm = query || barcode;
+    const searchTerm = barcode ? barcode : extractProductName(rawTerm) || rawTerm;
 
     if (barcode) {
       const rows = await asyncQuery(
@@ -50,17 +61,41 @@ exports.getProductJourney = async (req, res) => {
       }
     } else {
       const like = `%${searchTerm}%`;
-      const dpRows = await asyncQuery(
+      let dpRows = await asyncQuery(
         `SELECT p_id as id, product_name, barcode, price, category_id FROM dispatch_product WHERE product_name LIKE ? OR barcode LIKE ? LIMIT 5`,
         [like, like]
       );
+      if (!dpRows.length) {
+        dpRows = await asyncQuery(
+          `SELECT p_id as id, product_name, barcode, price, category_id FROM dispatch_product WHERE product_name LIKE ? LIMIT 5`,
+          [searchTerm]
+        );
+      }
       if (dpRows.length) {
         products = dpRows;
       } else {
-        const siRows = await asyncQuery(
+        let siRows = await asyncQuery(
           `SELECT DISTINCT barcode, product_name, price FROM store_inventory WHERE product_name LIKE ? OR barcode LIKE ? LIMIT 5`,
           [like, like]
         );
+        if (!siRows.length) {
+          siRows = await asyncQuery(
+            `SELECT DISTINCT barcode, product_name, price FROM store_inventory WHERE product_name LIKE ? LIMIT 5`,
+            [searchTerm]
+          );
+        }
+        if (!siRows.length) {
+          siRows = await asyncQuery(
+            `SELECT DISTINCT barcode, product_name, 0 as price FROM stock_batches WHERE product_name LIKE ? OR barcode LIKE ? LIMIT 5`,
+            [like, like]
+          );
+        }
+        if (!siRows.length) {
+          siRows = await asyncQuery(
+            `SELECT DISTINCT barcode, product_name, 0 as price FROM stock_batches WHERE product_name LIKE ? LIMIT 5`,
+            [searchTerm]
+          );
+        }
         products = siRows;
       }
     }

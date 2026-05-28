@@ -1925,11 +1925,11 @@ export async function tryInventoryGptDeterministicAnswer({
   if (["product", "stock", "timeline"].includes(intent.type) && !barcode && !intent.productName) {
     // Try to extract product name from natural language query like "3M Sticky Notes what is the stock of this"
     const productNameFromQuery = q
-      .replace(/what('s| is| are)(\s+the)?\s+(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
-      .replace(/(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
-      .replace(/what('s| is| are)(\s+the)?\s+(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
-      .replace(/(tell|show|check|get|give)\s+(me\s+)?(the\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
-      .replace(/\b(of|this|it|that|the|for|on|please|pls|now)\b/gi, "")
+      .replace(/what('s| is| are)(\s+the)?\s+(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
+      .replace(/(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)\s+(of|for|on)\s+(this|it|that|the product)/i, "")
+      .replace(/what('s| is| are)(\s+the)?\s+(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
+      .replace(/(tell|show|check|get|give)\s+(me\s+)?(the\s+)?(complete\s+|full\s+|detailed\s+)?(stock|price|timeline|journey|description|details?|status|info|quantity|qty)(\s+of)?/i, "")
+      .replace(/\b(of|this|it|that|the|for|on|please|pls|now|complete|full|detailed|entire|whole)\b/gi, "")
       .replace(/\s+/g, " ")
       .trim();
     if (productNameFromQuery && productNameFromQuery.length > 2) {
@@ -2083,7 +2083,7 @@ export async function tryInventoryGptDeterministicAnswer({
   }
 
   if (intent.type === "timeline") {
-    const searchName = barcode || product?.barcode || intent.productName || q;
+    const searchName = barcode || product?.barcode || intent.productName || null;
     if (searchName && searchName.length > 2) {
       const journey = await resolveInventoryGptJourney(searchName, authToken);
       if (journey.journey?.length > 0) {
