@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, LockKeyhole, LogIn, Package, Brain, Shield,
   Repeat, LayoutGrid, ShoppingCart, BarChart2, Truck,
   Headphones, BrainCircuit, Star, Receipt, MessageSquare, Globe,
-  Zap, TrendingUp, Layers, Users, Sparkles, Cpu
+  Zap, TrendingUp, Layers, Users, Sparkles, Cpu,
+  Warehouse, Route, MapPin, Activity, Radio
 } from "lucide-react";
+
+const BrainNetwork = lazy(() => import('@/app/components/BrainNetwork'))
+const Truck3D = lazy(() => import('@/app/components/Truck3D'))
 
 const iconMap = {
   sync_alt: Repeat, grid_view: LayoutGrid, shopping_cart: ShoppingCart,
@@ -194,48 +198,18 @@ export default function Home() {
               </motion.div>
             </motion.div>
 
-            {/* Right - AI Brain visual */}
+            {/* Right - 3D Brain Network */}
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.4 }} className="relative flex items-center justify-center"
             >
-              <motion.div
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-                className="absolute w-[420px] h-[420px] border border-emerald-500/10 rounded-full"
-              />
-              <motion.div
-                animate={{ rotate: [360, 0] }}
-                transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-                className="absolute w-[340px] h-[340px] border border-emerald-500/15 rounded-full"
-              />
-              <motion.div
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="relative bg-gradient-to-br from-emerald-500/10 to-green-600/5 backdrop-blur-2xl border border-emerald-500/20 rounded-3xl p-8 shadow-2xl"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                    <BrainCircuit size={40} className="text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white">InventoryGPT</h3>
-                  <p className="text-sm text-slate-400 text-center">Artificial Intelligence Engine</p>
-                  <div className="flex gap-2 mt-2">
-                    {[1, 2, 3].map((_, i) => (
-                      <motion.div key={i}
-                        animate={{ opacity: [0.3, 1, 0.3] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                        className="w-2 h-2 rounded-full bg-emerald-400"
-                      />
-                    ))}
-                  </div>
+              <Suspense fallback={
+                <div className="w-full min-h-[400px] flex items-center justify-center">
+                  <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
                 </div>
-                {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-emerald-500/40 rounded-tl-xl" />
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-emerald-500/40 rounded-tr-xl" />
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-emerald-500/40 rounded-bl-xl" />
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-emerald-500/40 rounded-br-xl" />
-              </motion.div>
+              }>
+                <BrainNetwork />
+              </Suspense>
             </motion.div>
           </div>
         </motion.div>
@@ -294,6 +268,199 @@ export default function Home() {
             })}
           </motion.div>
         </motion.div>
+      </section>
+
+      {/* LOGISTICS TREE - EventGPT */}
+      <section className="relative py-32 px-6 md:px-20 overflow-hidden bg-white" id="logistics">
+        <div className="max-w-6xl mx-auto">
+          <motion.div className="text-center mb-20" {...fadeInUp}>
+            <span className="text-xs font-bold tracking-widest text-emerald-600 mb-4 block uppercase">Logistics Intelligence</span>
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight">
+              EventGPT for <span className="text-emerald-600">Logistics</span>
+            </h2>
+            <p className="text-slate-500 max-w-2xl mx-auto text-lg">
+              Real-time logistics orchestration with event-driven AI — from warehouse dispatch to last-mile delivery.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
+            {/* 3D Truck */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="relative bg-slate-50 rounded-2xl border border-slate-200 p-8 min-h-[350px]"
+            >
+              <Suspense fallback={
+                <div className="w-full min-h-[300px] flex items-center justify-center">
+                  <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                </div>
+              }>
+                <Truck3D />
+              </Suspense>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs font-semibold text-slate-400">
+                <Radio size={12} className="text-emerald-500" />
+                LIVE 3D TRACKING
+              </div>
+            </motion.div>
+
+            {/* EventGPT Info */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <h3 className="text-2xl font-bold text-slate-900 mb-4">Event-Driven Logistics AI</h3>
+              <p className="text-slate-500 mb-8 leading-relaxed">
+                EventGPT processes every logistics event in real-time — dispatch confirmation, pickup scan, in-transit updates, delivery attempts, and proof of delivery — and makes intelligent routing decisions automatically.
+              </p>
+              <div className="space-y-4">
+                {[
+                  { icon: Route, label: "Real-time route optimization based on traffic and priority" },
+                  { icon: Activity, label: "Event stream processing for 20+ logistics event types" },
+                  { icon: MapPin, label: "Geo-fencing alerts and automated ETA updates" },
+                  { icon: Users, label: "Driver assignment with AI workload balancing" }
+                ].map((item, i) => (
+                  <motion.div key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.4 + i * 0.1 }}
+                    className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                      <item.icon size={18} className="text-emerald-600" />
+                    </div>
+                    <span className="text-sm text-slate-600 pt-1">{item.label}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Tree Structure Infographic */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <h3 className="text-2xl font-bold text-slate-900 text-center mb-12">Logistics Operations Tree</h3>
+            <div className="relative">
+              {/* Vertical trunk line */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-400 to-emerald-200 -translate-x-1/2 hidden lg:block" />
+
+              <div className="space-y-24 relative">
+                {/* Level 1: Warehouse */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12 justify-center"
+                >
+                  <div className="bg-white border-2 border-emerald-500 rounded-2xl p-6 shadow-lg text-center w-64 order-2 lg:order-1">
+                    <Warehouse size={32} className="text-emerald-600 mx-auto mb-3" />
+                    <h4 className="font-bold text-slate-900">Warehouse Dispatch</h4>
+                    <p className="text-xs text-slate-500 mt-1">Pick, pack, and dispatch</p>
+                  </div>
+                  <motion.div
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-8 h-8 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30 flex items-center justify-center order-1 lg:order-2 z-10"
+                  >
+                    <Truck size={14} className="text-white" />
+                  </motion.div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center w-56 order-3">
+                    <span className="text-xs font-semibold text-emerald-600">EventGPT triggers</span>
+                    <p className="text-sm text-slate-700 mt-1">Auto-dispatch on stock availability</p>
+                  </div>
+                </motion.div>
+
+                {/* Branch connectors (horizontal lines) */}
+                <div className="relative">
+                  <div className="absolute left-1/2 top-0 w-0.5 h-12 bg-emerald-300 -translate-x-1/2 hidden lg:block" />
+
+                  {/* Level 2: Two branches */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 relative">
+                    {/* Left branch line */}
+                    <div className="hidden lg:block absolute left-[25%] top-0 w-[25%] h-0.5 bg-emerald-300" />
+                    {/* Right branch line */}
+                    <div className="hidden lg:block absolute left-[50%] top-0 w-[25%] h-0.5 bg-emerald-300" />
+
+                    {/* Branch 1: In-Transit */}
+                    <motion.div
+                      initial={{ opacity: 0, x: -30 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.3 }}
+                      className="flex flex-col items-center text-center relative pt-12"
+                    >
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-emerald-400 bg-white" />
+                      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full max-w-xs">
+                        <Route size={28} className="text-emerald-600 mx-auto mb-3" />
+                        <h4 className="font-semibold text-slate-900">In-Transit Tracking</h4>
+                        <ul className="mt-3 space-y-2 text-xs text-slate-500 text-left">
+                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Real-time GPS tracking</li>
+                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Geofence alerts</li>
+                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> ETA predictions via AI</li>
+                        </ul>
+                      </div>
+                    </motion.div>
+
+                    {/* Branch 2: Last Mile */}
+                    <motion.div
+                      initial={{ opacity: 0, x: 30 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.5 }}
+                      className="flex flex-col items-center text-center relative pt-12"
+                    >
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-emerald-400 bg-white" />
+                      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full max-w-xs">
+                        <MapPin size={28} className="text-emerald-600 mx-auto mb-3" />
+                        <h4 className="font-semibold text-slate-900">Last-Mile Delivery</h4>
+                        <ul className="mt-3 space-y-2 text-xs text-slate-500 text-left">
+                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Driver assignment</li>
+                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Proof of delivery</li>
+                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Customer notifications</li>
+                        </ul>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Bottom: EventGPT Intelligence */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.6 }}
+                  className="flex justify-center"
+                >
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-2xl blur" />
+                    <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-emerald-500/30 rounded-2xl p-8 shadow-2xl text-center max-w-lg">
+                      <BrainCircuit size={36} className="text-emerald-400 mx-auto mb-4" />
+                      <h4 className="text-xl font-bold text-white mb-2">EventGPT Intelligence Layer</h4>
+                      <p className="text-sm text-slate-400">Orchestrating every event across warehouse, transit, and delivery — learning from each shipment to optimize the next.</p>
+                      <div className="flex justify-center gap-1.5 mt-4">
+                        {[1, 2, 3, 4].map((_, i) => (
+                          <motion.div key={i}
+                            animate={{ height: [8, 20, 8] }}
+                            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+                            className="w-1.5 bg-gradient-to-t from-emerald-400 to-green-500 rounded-full"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       {/* INVENTORYGPT AI - HERO SECTION */}
