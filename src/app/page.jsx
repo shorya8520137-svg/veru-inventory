@@ -1,7 +1,8 @@
 "use client";
 
+import dynamic from 'next/dynamic'
 import Link from "next/link";
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, LockKeyhole, LogIn, Package, Brain, Shield,
@@ -11,8 +12,8 @@ import {
   Warehouse, Route, MapPin, Activity, Radio
 } from "lucide-react";
 
-const BrainNetwork = lazy(() => import('@/app/components/BrainNetwork'))
-const Truck3D = lazy(() => import('@/app/components/Truck3D'))
+const BrainNetwork = dynamic(() => import('@/app/components/BrainNetwork'), { ssr: false })
+const Truck3D = dynamic(() => import('@/app/components/Truck3D'), { ssr: false })
 
 const iconMap = {
   sync_alt: Repeat, grid_view: LayoutGrid, shopping_cart: ShoppingCart,
@@ -143,16 +144,19 @@ export default function Home() {
 
         {/* Floating particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {Array.from({ length: 20 }).map((_, i) => (
+          {Array.from({ length: 20 }).map((_, i) => {
+            const s = (seed) => { const x = Math.sin(seed) * 10000; return x - Math.floor(x) }
+            return (
             <div key={i} className="absolute w-1 h-1 bg-emerald-400/30 rounded-full"
               style={{
-                left: `${5 + Math.random() * 90}%`,
-                top: `${10 + Math.random() * 80}%`,
-                animation: `float ${8 + Math.random() * 10}s ease-in-out infinite`,
-                animationDelay: `${Math.random() * 5}s`
+                left: `${5 + s(i * 7 + 1) * 90}%`,
+                top: `${10 + s(i * 13 + 3) * 80}%`,
+                animation: `float ${8 + s(i * 5 + 7) * 10}s ease-in-out infinite`,
+                animationDelay: `${s(i * 11) * 5}s`
               }}
             />
-          ))}
+            )
+          })}
         </div>
 
         {/* Gradient orbs */}
@@ -203,13 +207,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.4 }} className="relative flex items-center justify-center"
             >
-              <Suspense fallback={
-                <div className="w-full min-h-[400px] flex items-center justify-center">
-                  <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                </div>
-              }>
-                <BrainNetwork />
-              </Suspense>
+              <BrainNetwork />
             </motion.div>
           </div>
         </motion.div>
@@ -292,13 +290,7 @@ export default function Home() {
               transition={{ duration: 0.8 }}
               className="relative bg-slate-50 rounded-2xl border border-slate-200 p-8 min-h-[350px]"
             >
-              <Suspense fallback={
-                <div className="w-full min-h-[300px] flex items-center justify-center">
-                  <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                </div>
-              }>
-                <Truck3D />
-              </Suspense>
+              <Truck3D />
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs font-semibold text-slate-400">
                 <Radio size={12} className="text-emerald-500" />
                 LIVE 3D TRACKING
