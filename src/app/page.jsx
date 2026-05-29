@@ -146,13 +146,18 @@ export default function Home() {
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {Array.from({ length: 20 }).map((_, i) => {
             const s = (seed) => { const x = Math.sin(seed) * 10000; return x - Math.floor(x) }
+            const dur = (8 + s(i * 5 + 7) * 10).toFixed(3)
+            const delay = (s(i * 11) * 5).toFixed(3)
             return (
             <div key={i} className="absolute w-1 h-1 bg-emerald-400/30 rounded-full"
               style={{
-                left: `${5 + s(i * 7 + 1) * 90}%`,
-                top: `${10 + s(i * 13 + 3) * 80}%`,
-                animation: `float ${8 + s(i * 5 + 7) * 10}s ease-in-out infinite`,
-                animationDelay: `${s(i * 11) * 5}s`
+                left: `${(5 + s(i * 7 + 1) * 90).toFixed(4)}%`,
+                top: `${(10 + s(i * 13 + 3) * 80).toFixed(4)}%`,
+                animationDuration: `${dur}s`,
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationName: 'float',
+                animationDelay: `${delay}s`
               }}
             />
             )
