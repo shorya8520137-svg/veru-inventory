@@ -291,20 +291,44 @@ export function WarehouseIntelligenceCard({ entity, type = 'warehouses', onViewD
   const [enriched, setEnriched] = useState(null)
 
   useEffect(() => {
-    if (type !== 'stores' || entity._billing) {
-      setEnriched(null)
+    if (type === 'warehouses' && entity._health) { setEnriched(null); return }
+    if (type === 'stores' && entity._billing) { setEnriched(null); return }
+
+    if (type === 'warehouses') {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''
+      fetch(`/api/inventorygpt/warehouse-intelligence?code=${entity.code}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            const w = data.data.warehouse || {}
+            setEnriched({
+              _health: data.data.health || {},
+              _ai_summary: data.data.ai_summary || '',
+              utilization_pct: w.utilization_pct ?? 0,
+              used_capacity: w.used_capacity ?? 0,
+              available_capacity: w.available_capacity ?? 0,
+              capacity: w.capacity ?? 0,
+            })
+          }
+        })
+        .catch(() => {})
       return
     }
+
     fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}/api/inventorygpt/store-intelligence?code=${entity.code}`)
       .then(r => r.json())
       .then(data => {
         if (data.success) setEnriched(data)
       })
       .catch(() => {})
-  }, [entity.code, type, entity._billing])
+  }, [entity.code, type, entity._billing, entity._health])
 
   const activeEntity = enriched
-    ? { ...entity, _inventory: enriched.inventory, _billing: enriched.billing, _health: { score: enriched.performance?.score ?? 0, status: enriched.performance?.status || 'Good' }, _ai_summary: enriched.aiSummary || '' }
+    ? type === 'warehouses'
+      ? { ...entity, ...enriched }
+      : { ...entity, _inventory: enriched.inventory, _billing: enriched.billing, _health: { score: enriched.performance?.score ?? 0, status: enriched.performance?.status || 'Good' }, _ai_summary: enriched.aiSummary || '' }
     : entity
 
   return (

@@ -25,27 +25,38 @@ export async function GET(req) {
       return NextResponse.json({ success: false, error: 'Warehouse code required' }, { status: 400 });
     }
 
-    const [whResult, metricsResult, dispatchResult, stockResult] = await Promise.all([
-      apiGet(`/api/warehouse-management/warehouses?code=${encodeURIComponent(code)}`, token),
-      apiGet('/api/inventorygpt/warehouse-metrics', token),
-      apiGet(`/api/dispatch?warehouse=${encodeURIComponent(code)}&limit=100`, token),
-      apiGet(`/api/inventory?warehouse=${encodeURIComponent(code)}&limit=500`, token),
-    ]);
-
+    // Step 1: Get all warehouses (Express returns all regardless of ?code=)
+    const whResult = await apiGet('/api/warehouse-management/warehouses', token);
     const warehouses = Array.isArray(whResult?.data)
       ? whResult.data
       : Array.isArray(whResult?.warehouses)
         ? whResult.warehouses
         : [];
 
-    const warehouse = warehouses.find(w =>
-      w.code === code || w.warehouse_code === code || w.id?.toString() === code
-    );
+    // Broader matching: exact code, warehouse_code, id, or case-insensitive name/code match
+    const normalizedSearch = code.toLowerCase().replace(/[\s-]+/g, '');
+    const warehouse = warehouses.find(w => {
+      if (w.warehouse_code === code || w.code === code || w.id?.toString() === code) return true;
+      const name = (w.warehouse_name || w.name || '').toLowerCase().replace(/[\s-]+/g, '');
+      const wcode = (w.warehouse_code || w.code || '').toLowerCase().replace(/[\s-]+/g, '');
+      return name.includes(normalizedSearch) || wcode.includes(normalizedSearch) || name === normalizedSearch;
+    });
+
+    const realCode = warehouse?.warehouse_code || warehouse?.code || code;
+
+    // Step 2: Fetch metrics, dispatch, inventory with the real warehouse code
+    const [metricsResult, dispatchResult, stockResult] = await Promise.all([
+      apiGet('/api/inventorygpt/warehouse-metrics', token),
+      apiGet(`/api/dispatch?warehouse=${encodeURIComponent(realCode)}&limit=100`, token),
+      apiGet(`/api/inventory?warehouse=${encodeURIComponent(realCode)}&limit=500`, token),
+    ]);
 
     const allMetrics = Array.isArray(metricsResult?.data) ? metricsResult.data : [];
-    const metrics = allMetrics.find(m =>
-      m.warehouse_id === code || m.warehouse_name === code || m.warehouse_code === code
-    );
+    const metrics = allMetrics.find(m => {
+      if (m.warehouse_code === realCode || m.warehouse_id === realCode || m.warehouse_name === realCode) return true;
+      const name = (m.warehouse_name || '').toLowerCase().replace(/[\s-]+/g, '');
+      return name.includes(normalizedSearch);
+    });
 
     const dispatches = Array.isArray(dispatchResult?.data?.dispatches)
       ? dispatchResult.data.dispatches
