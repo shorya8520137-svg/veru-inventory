@@ -340,22 +340,27 @@ router.post('/generate', authenticateToken, (req, res) => {
     } = req.body;
 
     if (!customer?.name || !customer?.phone || !products || products.length === 0) {
+        console.error('[DEBUG] Missing required fields:', { name: !!customer?.name, phone: !!customer?.phone, products: products?.length });
         return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
     if (!store_code) {
+        console.error('[DEBUG] Store code is missing in request body');
         return res.status(400).json({ success: false, message: 'Store code is required' });
     }
+
+    console.log('[DEBUG] Generating invoice for store:', store_code, 'products:', products.length, 'customer:', customer?.name);
 
     const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     db.getConnection((connErr, conn) => {
         if (connErr) {
-            console.error('DB connection error:', connErr);
+            console.error('[DEBUG] DB connection error:', connErr);
             return res.status(500).json({ success: false, message: 'Database connection failed' });
         }
 
         conn.beginTransaction((txErr) => {
             if (txErr) {
+                console.error('[DEBUG] beginTransaction error:', txErr);
                 conn.release();
                 return res.status(500).json({ success: false, message: 'Transaction failed' });
             }
@@ -384,20 +389,26 @@ router.post('/generate', authenticateToken, (req, res) => {
                     vals.splice(19, 0, store_code);
                 }
                 const sql = `INSERT INTO bills (${cols.join(', ')}) VALUES (${vals.map(() => '?').join(', ')})`;
+                console.log('[DEBUG] insertBill SQL:', sql.replace(/\n/g, ' '), 'useStoreCode:', useStoreCode);
                 conn.query(sql, vals, afterInsertBill);
             }
 
             function afterInsertBill(billErr, billResult) {
                 if (billErr) {
+                    console.error('[DEBUG] afterInsertBill error:', billErr.message);
                     // If store_code column missing, retry without it
                     if (billErr.message && billErr.message.includes("Unknown column 'store_code'")) {
+                        console.log('[DEBUG] store_code column missing, retrying without it');
                         return insertBill(false);
                     }
                     return conn.rollback(() => {
                         conn.release();
+                        console.error('[DEBUG] Rolling back after insertBill failure');
                         res.status(500).json({ success: false, message: 'Failed to create bill', error: billErr.message });
                     });
                 }
+
+                console.log('[DEBUG] Bill inserted successfully, id:', billResult.insertId, 'invoice:', invoiceNumber);
 
                 let processed = 0;
                 let hasError = false;
@@ -410,6 +421,7 @@ router.post('/generate', authenticateToken, (req, res) => {
                             if (hasError) return;
 
                             if (stockErr || stockRows.length === 0) {
+                                console.error('[DEBUG] Stock check failed for', product.barcode, 'store:', store_code, 'error:', stockErr?.message, 'rows:', stockRows?.length);
                                 hasError = true;
                                 return conn.rollback(() => {
                                     conn.release();
@@ -422,6 +434,7 @@ router.post('/generate', authenticateToken, (req, res) => {
 
                             const currentStock = stockRows[0].stock;
                             if (currentStock < product.quantity) {
+                                console.error('[DEBUG] Insufficient stock for', product.product_name, 'barcode:', product.barcode, 'available:', currentStock, 'required:', product.quantity);
                                 hasError = true;
                                 return conn.rollback(() => {
                                     conn.release();
@@ -438,6 +451,7 @@ router.post('/generate', authenticateToken, (req, res) => {
                                 (updErr) => {
                                     if (hasError) return;
                                     if (updErr) {
+                                        console.error('[DEBUG] Stock update failed for', product.barcode, 'error:', updErr.message);
                                         hasError = true;
                                         return conn.rollback(() => {
                                             conn.release();
@@ -450,17 +464,19 @@ router.post('/generate', authenticateToken, (req, res) => {
                                          VALUES (?, ?, 'SALE', ?, ?, 'BILL', NOW())`,
                                         [product.barcode, product.product_name, product.quantity, invoiceNumber],
                                         (logErr) => {
-                                            if (logErr) console.error('Log error:', logErr);
+                                            if (logErr) console.error('[DEBUG] store_inventory_logs error:', logErr.message);
 
                                             processed++;
                                             if (processed === products.length && !hasError) {
                                                 conn.commit((commitErr) => {
                                                     if (commitErr) {
+                                                        console.error('[DEBUG] commit error:', commitErr.message);
                                                         return conn.rollback(() => {
                                                             conn.release();
                                                             res.status(500).json({ success: false, message: 'Commit failed' });
                                                         });
                                                     }
+                                                    console.log('[DEBUG] Invoice committed successfully:', invoiceNumber);
                                                     conn.release();
                                                     res.json({
                                                         success: true,
