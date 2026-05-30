@@ -190,7 +190,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     [/\b(sabhi|sab|tamam|tamaam|poora|pura|saare|saara|saari)\b/gi, 'all'],
     [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo)\b/gi, 'show'],
     [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
-    [/\b(vistar|jaankari|jankari|sampurna|poori)\b/gi, 'details'],
+    [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|detalis|detial)\b/gi, 'details'],
   ];
   for (const [pattern, replacement] of NORM_MAP) {
     lower = lower.replace(pattern, replacement);
@@ -525,11 +525,13 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
 
   // Catch-all: any query mentioning warehouse/store with action words
   // Handles Hindi word order and loose spelling variations
-  if (/\bwarehouse\b/.test(lower) && /\b(show|list|all|total|count|detail|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
-    return { type: "warehouses", wantsExport };
+  if (/\bwarehouse\b/.test(lower) && /\b(show|list|all|total|count|detail|deatil|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
+    const wantsDetails = /detail|deatil|vistar|jaankari|complete|full/.test(lower);
+    return { type: wantsDetails ? "warehouse_details" : "warehouses", wantsExport };
   }
-  if (/\bstore\b/.test(lower) && /\b(show|list|all|total|count|detail|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
-    return { type: "stores", wantsExport };
+  if (/\bstore\b/.test(lower) && /\b(show|list|all|total|count|detail|deatil|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
+    const wantsDetails = /detail|deatil|vistar|jaankari|complete|full/.test(lower);
+    return { type: wantsDetails ? "store_details" : "stores", wantsExport };
   }
 
   if (wantsExport) return { type: "export_help", wantsExport };
@@ -2349,9 +2351,8 @@ export async function tryInventoryGptDeterministicAnswer({
         };
       }
 
-      // Not a preference response — check frustration
-      // If frustrated or user didn't ask for details explicitly, show direct
-      if (isUserFrustrated(q) || !/details|complete|vistar|jaankari|full|sampurna/i.test(q)) {
+      // Not a preference response or frustrated user — show detailed text directly
+      if (isUserFrustrated(q)) {
         return {
           ...buildLocationsAnswer(locations, intent.type, intent.wantsExport, true),
           render: "text",
