@@ -470,7 +470,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
   if (
-    /how\s*(many|much|may).*(?:warehouse|wearhouse|werahouse|warhorse)|total.*(?:warehouse|wearhouse|werahouse|warhorse)|list.*(?:warehouse|wearhouse|werahouse|warhorse)|(?:warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses)\s*(?:i have|count|list)?$/.test(
+    /how\s*(many|much|may).*(?:warehouse|wearhouse|werahouse|warhorse)|total.*(?:warehouse|wearhouse|werahouse|warhorse)|list.*(?:warehouse|wearhouse|werahouse|warhorse)|^(?:warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses)\s*(?:i have|count|list)?$/.test(
       lower,
     ) ||
     (/show\s+(?:me\s+)?(?:all\s+)?(?:the\s+)?(?:warehouse|warehouses|wearhouse|wearhouses|warhorse|warhorses)(?:\s+with\s+(?:complete\s+)?details)?\s*$/.test(lower) && !/stock|inventory|quantity|product/.test(lower))
