@@ -191,7 +191,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     [/\b(sabhi|sab|tamam|tamaam|poora|pura|saare|saara|saari)\b/gi, 'all'],
     [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo)\b/gi, 'show'],
     [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
-    [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|detalis|detial)\b/gi, 'details'],
+    [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|deatils|detalis|detial|detaills)\b/gi, 'details'],
   ];
   for (const [pattern, replacement] of NORM_MAP) {
     lower = lower.replace(pattern, replacement);
