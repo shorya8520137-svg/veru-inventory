@@ -221,8 +221,16 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   const detectedCategory = categoryNames.find(cat => lower.includes(cat)) || activeContext.category;
   
   // Detect if query is JUST a product name (no action words, no question words)
-  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao/.test(lower);
-  
+  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao|cards?|table|chat/.test(lower);
+
+  // Display preference response: user said cards/table/chat after being asked
+  if (/^(?:card|cards|table|tables?|chat|text)\s*$/.test(lower) && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+    const lastAssistant = [...conversationHistory].reverse().find((m) => m?.role === "assistant");
+    if (lastAssistant?.content && /how.*(?:see|view|like|c.*rds|table|chat)/i.test(lastAssistant.content)) {
+      return { type: "display_preference", wantsExport };
+    }
+  }
+
   // ========================================
   // STEP 2 — IF ONLY PRODUCT NAME → PRODUCT_OVERVIEW
   // ========================================
@@ -2270,6 +2278,51 @@ export async function tryInventoryGptDeterministicAnswer({
     return {
       answer:
         "I’m following the last conversation context. Ask me like **show timeline**, **export this to Excel**, **show audit by user**, **show website categories**, or **how many warehouses/stores do I have** — I’ll use the recent chat context where it fits.",
+      render: "text",
+    };
+  }
+
+  if (intent.type === "display_preference") {
+    const lastAssistant = [...(conversationHistory || [])].reverse().find(m => m?.role === "assistant");
+    const content = lastAssistant?.content || "";
+    const isWarehouse = /warehouse|warhorse/i.test(content);
+    const isStore = /store/i.test(content) && !isWarehouse;
+    const bareType = isWarehouse ? "warehouses" : isStore ? "stores" : "warehouses";
+    const locations = await resolveInventoryGptLocations(authToken, bareType);
+    const rows = locations.rows || [];
+    const pref = q.toLowerCase().trim();
+
+    if (/^cards?$/.test(pref)) {
+      return {
+        answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in card view:\n\n**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found.`,
+        render: "text",
+        extraData: {
+          type: "warehouse_cards",
+          warehouses: rows.map(r => ({
+            code: r.code, name: r.name, city: r.city, state: r.state,
+            address: r.address, phone: r.phone, email: r.email,
+            manager_name: r.manager_name, capacity: r.capacity,
+          })),
+        },
+      };
+    }
+    if (/^tables?$/.test(pref)) {
+      const cols = ["name","code","address","city","state","phone","email","manager_name","capacity"];
+      return {
+        answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in table view:`,
+        render: "text",
+        extraData: {
+          type: "table_preview",
+          title: isWarehouse ? "Warehouse Details" : "Store Details",
+          columns: cols,
+          rows: rows.map(r => cols.map(c => r[c] || "")),
+          total: rows.length,
+        },
+      };
+    }
+    // chat/text — detailed text
+    return {
+      ...buildLocationsAnswer({ rows }, isWarehouse ? "warehouse_details" : "store_details", false, true),
       render: "text",
     };
   }

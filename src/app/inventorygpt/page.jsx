@@ -1231,7 +1231,7 @@ function AssistantMessage({
   const cleanContent = fullContent.replace(/\[READ_MORE:\d+:(category|price|warehouse):[^\]]+\]/g, "").trim();
 
   // Check for warehouse prompt extra data
-  const showWarehouseGrid = message.extraData?.type === "warehouse_prompt" && Array.isArray(message.extraData?.warehouses) && !isStreaming;
+  const showWarehouseGrid = (message.extraData?.type === "warehouse_prompt" || message.extraData?.type === "warehouse_cards") && Array.isArray(message.extraData?.warehouses) && !isStreaming;
 
   // Check for table preview (interactive data table)
   const showTablePreview = message.extraData?.type === "table_preview" && Array.isArray(message.extraData?.rows) && message.extraData.rows.length > 0;
