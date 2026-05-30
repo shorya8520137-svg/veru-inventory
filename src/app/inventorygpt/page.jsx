@@ -1305,7 +1305,7 @@ function AssistantMessage({
           />
         ) : showComparison ? (
           /* Parallel comparison UI */
-          <ParallelComparison data={message.extraData} />
+          <ParallelComparison data={message.extraData} onVisualize={(rows, cols, title) => setGraphData({ rows, columns: cols, title })} />
         ) : (
           /* Regular text response */
           <>

@@ -192,6 +192,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo)\b/gi, 'show'],
     [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
     [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|deatils|detalis|detial|detaills)\b/gi, 'details'],
+    [/\b(compair|comapir|compaire|comapre)\b/gi, 'compare'],
   ];
   for (const [pattern, replacement] of NORM_MAP) {
     lower = lower.replace(pattern, replacement);
@@ -507,7 +508,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   if (/stock|quantity|qty|available|availability/.test(lower))
     return { type: "stock", wantsExport };
   // Compare products: "compare amul butter with aashirvaad atta", "compare X and Y", "compare X vs Y"
-  let compareMatch = lower.match(/compare\s+(.+?)\s+(?:and|with|vs\.?)\s+(.+)/i);
+  let compareMatch = lower.match(/compare\s+(.+?)\s+(?:and|with|vs\.?|to)\s+(.+)/i);
   if (!compareMatch) {
     // "compare with X" — compare X with the last product from context
     compareMatch = lower.match(/compare\s+with\s+(.+)/i);
@@ -523,10 +524,27 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     }
   }
   if (compareMatch) {
+    let p1 = compareMatch[1].trim();
+    let p2 = compareMatch[2].trim();
+    // Extract warehouse/store scope from product2: "product2 warehouse_name warehouse"
+    let warehouseScope = null;
+    const whSuffix = p2.match(/^(.+?)\s+warehouse$/i);
+    if (whSuffix) {
+      const beforeWarehouse = whSuffix[1].trim();
+      const lastSpace = beforeWarehouse.lastIndexOf(' ');
+      if (lastSpace >= 0) {
+        warehouseScope = beforeWarehouse.slice(lastSpace + 1);
+        p2 = beforeWarehouse.slice(0, lastSpace);
+      } else {
+        warehouseScope = beforeWarehouse;
+        p2 = '';
+      }
+    }
     return {
       type: "compare",
-      product1: compareMatch[1].trim(),
-      product2: compareMatch[2].trim(),
+      product1: p1,
+      product2: p2,
+      warehouseScope,
       wantsExport,
     };
   }
@@ -708,6 +726,7 @@ export async function resolveInventoryGptCompare(
   product1,
   product2,
   token,
+  warehouseScope = null,
 ) {
   if (!product1 || !product2) return { error: "Need two product names" };
   const result = await apiGet(
@@ -716,7 +735,26 @@ export async function resolveInventoryGptCompare(
   );
   if (result.error) return { error: result.error };
   const data = result.data?.comparison || result.data?.data?.comparison || [];
-  return Array.isArray(data) && data.length === 2 ? { p1: data[0], p2: data[1] } : { error: "Could not compare these products" };
+  if (!Array.isArray(data) || data.length !== 2) return { error: "Could not compare these products" };
+  let p1 = data[0];
+  let p2 = data[1];
+  // Filter stock_by_location to specific warehouse if requested
+  if (warehouseScope) {
+    const whLower = warehouseScope.toLowerCase().replace(/[\s-]+/g, '');
+    const filterStock = (p) => {
+      if (!Array.isArray(p.stock_by_location)) return p;
+      p.stock_by_location = p.stock_by_location.filter(loc => {
+        const locName = (loc.warehouse || loc.location || '').toLowerCase().replace(/[\s-]+/g, '');
+        return locName.includes(whLower) || whLower.includes(locName);
+      });
+      // Recalculate current_stock as sum of filtered locations
+      p.current_stock = p.stock_by_location.reduce((s, l) => s + (parseInt(l.stock) || 0), 0);
+      return p;
+    };
+    p1 = filterStock(p1);
+    p2 = filterStock(p2);
+  }
+  return { p1, p2 };
 }
 
 export async function resolveInventoryGptTimeline(
@@ -1136,10 +1174,10 @@ function buildJourneyAnswer(query, journeyResult, wantsExport) {
   };
 }
 
-function buildCompareAnswer(compareResult, product1Name, product2Name, wantsExport) {
+function buildCompareAnswer(compareResult, product1Name, product2Name, wantsExport, scopeLabel = '') {
   const p1 = compareResult.p1;
   const p2 = compareResult.p2;
-  const lines = [`🔄 **Product Comparison: ${p1?.name || product1Name} vs ${p2?.name || product2Name}**`, ''];
+  const lines = [`🔄 **Product Comparison: ${p1?.name || product1Name} vs ${p2?.name || product2Name}**${scopeLabel || ''}`, ''];
 
   for (const [label, p] of [['Product 1', compareResult.p1], ['Product 2', compareResult.p2]]) {
     if (!p) continue;
@@ -2546,15 +2584,16 @@ export async function tryInventoryGptDeterministicAnswer({
         render: "text",
       };
     }
-    const compareResult = await resolveInventoryGptCompare(intent.product1, intent.product2, authToken);
+    const compareResult = await resolveInventoryGptCompare(intent.product1, intent.product2, authToken, intent.warehouseScope);
     if (compareResult.error) {
       return {
         answer: `I could not compare these products. ${compareResult.error}. Please check the product names and try again.`,
         render: "text",
       };
     }
+    const scopeLabel = intent.warehouseScope ? ` (in **${intent.warehouseScope}** scope)` : '';
     return {
-      ...buildCompareAnswer(compareResult, intent.product1, intent.product2, intent.wantsExport),
+      ...buildCompareAnswer(compareResult, intent.product1, intent.product2, intent.wantsExport, scopeLabel),
       render: "text",
     };
   }

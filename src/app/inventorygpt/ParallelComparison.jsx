@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Package, BarChart3, DollarSign, MapPin, TrendingUp, TrendingDown, ArrowRight, Sparkles } from 'lucide-react'
+import { Package, BarChart3, DollarSign, MapPin, TrendingUp, TrendingDown, ArrowRight, Sparkles, PieChart } from 'lucide-react'
 
 const BRAND_PURPLE = '#7C3AED'
 
@@ -136,10 +136,11 @@ function ProductPanel({ product, side }) {
   )
 }
 
-export default function ParallelComparison({ data }) {
+export default function ParallelComparison({ data, onVisualize }) {
   const p1 = data?.product1
   const p2 = data?.product2
   const [syncedScroll, setSyncedScroll] = useState(false)
+  const [showChart, setShowChart] = useState(false)
   const leftRef = useRef(null)
   const rightRef = useRef(null)
   const isScrolling = useRef(false)
@@ -209,6 +210,48 @@ export default function ParallelComparison({ data }) {
         </div>
       </div>
 
+      {/* Chart Toggle */}
+      {price1 > 0 && (
+        <motion.div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowChart(!showChart)}
+            className="w-full flex items-center justify-between p-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-1.5">
+              <PieChart className="h-3.5 w-3.5 text-purple-500" />
+              {showChart ? 'Hide Chart' : 'Show Chart'}
+            </div>
+            <span className="text-slate-300">{showChart ? '▲' : '▼'}</span>
+          </button>
+          {showChart && (
+            <div className="px-4 pb-4">
+              <svg width="100%" height="180" viewBox="0 0 400 180" className="overflow-visible">
+                {/* Y axis label */}
+                <text x="20" y="20" fontSize="10" fill="#94A3B8" fontWeight="600">Stock</text>
+                {/* Stock bars */}
+                <rect x="80" y={135 - Math.min((p1.current_stock || 0), 120)} width="50" height={Math.min((p1.current_stock || 0), 120)} rx="4" fill="#3B82F6" opacity="0.85" />
+                <text x="105" y="148" fontSize="9" fill="#475569" textAnchor="middle">{p1.current_stock || 0}</text>
+                <text x="105" y="162" fontSize="8" fill="#94A3B8" textAnchor="middle" className="truncate" style={{maxWidth: 70}}>{p1.name.length > 12 ? p1.name.slice(0, 12) + '…' : p1.name}</text>
+                <rect x="170" y={135 - Math.min((p2.current_stock || 0), 120)} width="50" height={Math.min((p2.current_stock || 0), 120)} rx="4" fill="#7C3AED" opacity="0.85" />
+                <text x="195" y="148" fontSize="9" fill="#475569" textAnchor="middle">{p2.current_stock || 0}</text>
+                <text x="195" y="162" fontSize="8" fill="#94A3B8" textAnchor="middle">{p2.name.length > 12 ? p2.name.slice(0, 12) + '…' : p2.name}</text>
+                {/* Price bars */}
+                <text x="270" y="20" fontSize="10" fill="#94A3B8" fontWeight="600">Price</text>
+                <rect x="275" y={135 - Math.min(price1 / 10, 120)} width="50" height={Math.min(price1 / 10, 120)} rx="4" fill="#22C55E" opacity="0.85" />
+                <text x="300" y="148" fontSize="9" fill="#475569" textAnchor="middle">₹{price1}</text>
+                <rect x="340" y={135 - Math.min(price2 / 10, 120)} width="50" height={Math.min(price2 / 10, 120)} rx="4" fill="#EAB308" opacity="0.85" />
+                <text x="365" y="148" fontSize="9" fill="#475569" textAnchor="middle">₹{price2}</text>
+                {/* Legend */}
+                <rect x="80" y="170" width="8" height="8" rx="2" fill="#3B82F6" />
+                <text x="92" y="178" fontSize="8" fill="#64748B">{p1.name.length > 10 ? p1.name.slice(0, 10) + '…' : p1.name}</text>
+                <rect x="170" y="170" width="8" height="8" rx="2" fill="#7C3AED" />
+                <text x="182" y="178" fontSize="8" fill="#64748B">{p2.name.length > 10 ? p2.name.slice(0, 10) + '…' : p2.name}</text>
+              </svg>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Winner */}
       {(() => {
         const winners = []
@@ -224,9 +267,27 @@ export default function ParallelComparison({ data }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-              <span className="text-xs font-semibold text-purple-700">Quick Summary</span>
+            <div className="flex items-center justify-between gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                <span className="text-xs font-semibold text-purple-700">Quick Summary</span>
+              </div>
+              {onVisualize && (
+                <button
+                  onClick={() => onVisualize(
+                    [
+                      { metric: 'Stock', [p1.name]: p1.current_stock || 0, [p2.name]: p2.current_stock || 0 },
+                      { metric: 'Price', [p1.name]: price1, [p2.name]: price2 },
+                    ],
+                    ['metric', p1.name, p2.name],
+                    `${p1.name} vs ${p2.name}`
+                  )}
+                  className="text-xs px-2 py-1 rounded-md bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors"
+                >
+                  <BarChart3 className="h-3 w-3 inline mr-1" />
+                  Graph
+                </button>
+              )}
             </div>
             <ul className="space-y-0.5">
               {winners.map((w, i) => (
