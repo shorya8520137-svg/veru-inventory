@@ -635,7 +635,7 @@ function PerformancePanel({ entity, health, type, billing, onClose }) {
     : [
         { label: 'Total Revenue', value: `₹${(billing.totalRevenue || 0).toLocaleString('en-IN')}`, icon: DollarSign },
         { label: 'Total Bills', value: billing.totalBills || 0, icon: Receipt },
-        { label: 'Avg Bill Value', value: `₹${(billing.avgBillValue || 0).toFixed(0)}`, icon: BarChart3 },
+        { label: 'Avg Bill Value', value: `₹${Number(billing.avgBillValue || 0).toFixed(0)}`, icon: BarChart3 },
         { label: 'Low Stock Items', value: health.lowStockItems ?? entity?._inventory?.lowStockItems ?? 0, icon: AlertTriangle },
         { label: 'Out of Stock', value: health.outOfStockItems ?? entity?._inventory?.outOfStockItems ?? 0, icon: XCircle },
         { label: 'Inventory Value', value: `₹${(entity?._inventory?.inventoryValue || 0).toLocaleString('en-IN')}`, icon: Package },
