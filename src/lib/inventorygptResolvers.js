@@ -3,6 +3,8 @@ const API_BASE =
   process.env.API_BASE ||
   "https://api.giftgala.in";
 
+import pool from '@/lib/db';
+
 function authHeaders(token) {
   return token
     ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
@@ -1465,7 +1467,6 @@ export async function resolveInventoryGptLocations(token, type) {
 export async function enrichStoreEntities(entities) {
   if (!entities?.length) return entities;
   try {
-    const pool = (await import('@/lib/db')).default;
     const codes = entities.map(e => e.code).filter(Boolean);
     if (!codes.length) return entities;
 
