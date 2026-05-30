@@ -136,6 +136,8 @@ function ProductPanel({ product, side }) {
   )
 }
 
+const CHART_COLORS = ['#7C3AED', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#84CC16']
+
 function SingleProductView({ product, onVisualize }) {
   const [showChart, setShowChart] = useState(false)
   const locations = useMemo(() => {
@@ -148,8 +150,8 @@ function SingleProductView({ product, onVisualize }) {
 
   if (!product) return null
 
+  const totalStock = product.current_stock || 0
   const maxStock = Math.max(...locations.map(l => l.stock), 1)
-  const chartMax = Math.max(maxStock, 10)
 
   return (
     <motion.div className="space-y-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
@@ -173,7 +175,7 @@ function SingleProductView({ product, onVisualize }) {
 
         <div className="px-4 pb-3">
           <div className="grid grid-cols-3 gap-2">
-            <MetricCard icon={BarChart3} label="Total Stock" value={product.current_stock || 0} color="#3B82F6" />
+            <MetricCard icon={BarChart3} label="Total Stock" value={totalStock} color="#3B82F6" />
             <MetricCard icon={DollarSign} label="Price" value={product.price ? `₹${parseFloat(product.price).toLocaleString('en-IN')}` : '—'} color="#22C55E" />
             <MetricCard icon={MapPin} label="Locations" value={locations.length} color="#7C3AED" />
           </div>
@@ -183,14 +185,14 @@ function SingleProductView({ product, onVisualize }) {
           <div className="px-4 pb-3 space-y-2">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Stock by Location</h4>
             {locations.map((loc, i) => (
-              <StatBar key={i} label={loc.name} value={loc.stock} maxValue={maxStock} color="#7C3AED" />
+              <StatBar key={i} label={loc.name} value={loc.stock} maxValue={maxStock} color={CHART_COLORS[i % CHART_COLORS.length]} />
             ))}
           </div>
         )}
 
         <button
           onClick={() => setShowChart(!showChart)}
-          className="w-full flex items-center justify-between p-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors border-t border-slate-100"
+          className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors border-t border-slate-100"
         >
           <div className="flex items-center gap-1.5">
             <PieChart className="h-3.5 w-3.5 text-purple-500" />
@@ -199,16 +201,47 @@ function SingleProductView({ product, onVisualize }) {
           <span className="text-slate-300">{showChart ? '▲' : '▼'}</span>
         </button>
         {showChart && (
-          <div className="px-4 pb-4">
-            <svg width="100%" height={40 + locations.length * 30} viewBox={`0 0 400 ${40 + locations.length * 30}`} className="overflow-visible">
+          <div className="px-6 pb-5 pt-2">
+            <svg width="100%" height={20 + locations.length * 36} viewBox={`0 0 400 ${20 + locations.length * 36}`} className="overflow-visible">
+              <defs>
+                {locations.map((_, i) => (
+                  <linearGradient key={i} id={`barGrad${i}`} x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity="0.9" />
+                    <stop offset="100%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity="0.5" />
+                  </linearGradient>
+                ))}
+              </defs>
               {locations.map((loc, i) => {
-                const barH = Math.max(16, (loc.stock / chartMax) * 100)
+                const barW = Math.max(20, (loc.stock / maxStock) * 200)
+                const pct = totalStock > 0 ? ((loc.stock / totalStock) * 100).toFixed(1) : '0'
                 return (
-                  <g key={i}>
-                    <text x="120" y={22 + i * 30} fontSize="9" fill="#475569" textAnchor="end" dominantBaseline="middle">{loc.name.length > 14 ? loc.name.slice(0, 14) + '…' : loc.name}</text>
-                    <rect x="126" y={10 + i * 30} width={Math.min(barH * 2, 240)} height="16" rx="4" fill="#7C3AED" opacity="0.75" />
-                    <text x="132" y={18 + i * 30} fontSize="8" fill="white" fontWeight="600">{loc.stock}</text>
-                  </g>
+                  <motion.g
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.35, delay: i * 0.06 }}
+                  >
+                    <text x="0" y={18 + i * 36} fontSize="10" fill="#64748B" fontWeight="500" dominantBaseline="middle">
+                      {loc.name.length > 14 ? loc.name.slice(0, 14) + '…' : loc.name}
+                    </text>
+                    <rect x="4" y={8 + i * 36} width={barW} height="20" rx="6" fill={`url(#barGrad${i})`} />
+                    <rect x="4" y={8 + i * 36} width={barW} height="20" rx="6" fill="none" stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth="0.5" strokeOpacity="0.3" />
+                    <motion.rect
+                      x="4" y={8 + i * 36}
+                      width={barW} height="20" rx="6"
+                      fill="white"
+                      opacity="0.08"
+                      initial={{ width: 0 }}
+                      animate={{ width: barW }}
+                      transition={{ duration: 0.5, delay: 0.15 + i * 0.06 }}
+                    />
+                    <text x="10" y={18 + i * 36} fontSize="9" fill="white" fontWeight="700" dominantBaseline="middle">
+                      {loc.stock}
+                    </text>
+                    <text x={barW + 10} y={18 + i * 36} fontSize="9" fill="#94A3B8" dominantBaseline="middle">
+                      {pct}%
+                    </text>
+                  </motion.g>
                 )
               })}
             </svg>
@@ -223,9 +256,9 @@ function SingleProductView({ product, onVisualize }) {
                 ['Location', 'Stock'],
                 `${product.name} — Stock by Location`
               )}
-              className="text-xs px-2 py-1 rounded-md bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors"
+              className="text-xs px-3 py-1.5 rounded-md bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors font-medium"
             >
-              <BarChart3 className="h-3 w-3 inline mr-1" />
+              <BarChart3 className="h-3 w-3 inline mr-1.5" />
               Graph
             </button>
           </div>

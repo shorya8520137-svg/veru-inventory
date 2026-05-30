@@ -479,7 +479,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: wantsDetails ? "warehouse_details" : "warehouses", wantsExport };
   }
   if (
-    /how\s*(many|much|may).*store|total.*store|list.*store|show.*store|stores?\s*(i have|count|list)?$/.test(
+    /how\s*(many|much|may).*store|total.*store|list.*store|show.*store|^(?:all\s+)?(?:the\s+)?stores?\s*(?:i\s+(?:have|see?)|count|list)?$/.test(
       lower,
     )
   ) {
@@ -2619,20 +2619,16 @@ export async function tryInventoryGptDeterministicAnswer({
     }
     const locations = Array.isArray(p.stock_by_location) ? p.stock_by_location : [];
     const totalStock = locations.reduce((s, l) => s + (parseInt(l.stock) || 0), 0);
-    const lines = [
-      `📊 **Stock Comparison: ${p.name || intent.product1} across all locations**`,
-      '',
-      `**Total Stock:** ${totalStock} units across ${locations.length} locations`,
-      '',
-    ];
-    locations.forEach((loc, i) => {
-      const pct = totalStock > 0 ? Math.round((parseInt(loc.stock) / totalStock) * 100) : 0;
-      lines.push(`   ${i + 1}. **${loc.warehouse || loc.location || 'Unknown'}** — ${loc.stock} units (${pct}%)`);
-    });
-    lines.push('');
-    lines.push('Want to compare this product with another? Just say **compare with [product name]**');
+    const topLoc = locations.length > 0 ? locations.reduce((a, b) => (parseInt(a.stock) > parseInt(b.stock) ? a : b)) : null;
+    const answerParts = [`**${p.name}** is stocked across **${locations.length} locations** with **${totalStock} units** total.`];
+    if (topLoc) {
+      const topPct = Math.round((parseInt(topLoc.stock) / totalStock) * 100);
+      answerParts.push(`${topLoc.warehouse || topLoc.location} holds the most — **${topLoc.stock} units (${topPct}% of total)**.`);
+    }
+    if (locations.length > 1) {
+      answerParts.push(`The full breakdown is in the card below. Want to see how it compares against another product?`);
     return {
-      answer: lines.join('\n'),
+      answer: answerParts.join(' '),
       render: 'text',
       extraData: {
         type: 'comparison',
