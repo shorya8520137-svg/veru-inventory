@@ -124,6 +124,7 @@ export default function BillHistoryTab() {
                             <th style={{ padding:'12px 24px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>INVOICE #</th>
                             <th style={{ padding:'12px 16px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>DATE</th>
                             <th style={{ padding:'12px 16px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>CUSTOMER</th>
+                            <th style={{ padding:'12px 16px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>STORE</th>
                             <th style={{ padding:'12px 16px', textAlign:'center', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>ITEMS</th>
                             <th style={{ padding:'12px 16px', textAlign:'right', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>AMOUNT</th>
                             <th style={{ padding:'12px 16px', textAlign:'center', fontSize:11, fontWeight:700, color:'#6B7280', letterSpacing:'0.05em', textTransform:'uppercase' }}>STATUS</th>
@@ -133,11 +134,11 @@ export default function BillHistoryTab() {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="7" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>Loading...</td>
+                                <td colSpan="8" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>Loading...</td>
                             </tr>
                         ) : bills.length === 0 ? (
                             <tr>
-                                <td colSpan="7" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>
+                                <td colSpan="8" style={{ padding:48, textAlign:'center', color:'#9CA3AF' }}>
                                     <Package size={48} style={{ margin:'0 auto 12px', opacity:0.3 }} />
                                     <div>No bills found</div>
                                 </td>
@@ -160,6 +161,9 @@ export default function BillHistoryTab() {
                                         <td style={{ padding:'14px 16px' }}>
                                             <div style={{ fontSize:13, fontWeight:600, color:'#111827' }}>{bill.customer_name}</div>
                                             <div style={{ fontSize:11, color:'#9CA3AF' }}>{bill.customer_phone}</div>
+                                        </td>
+                                        <td style={{ padding:'14px 16px' }}>
+                                            <span style={{ fontSize:13, fontWeight:600, color: bill.store_code ? '#059669' : '#9CA3AF' }}>{bill.store_code || '—'}</span>
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'center' }}>
                                             <span style={{ fontSize:14, fontWeight:700, color:'#6B7280' }}>{bill.total_items || 0}</span>
@@ -236,6 +240,13 @@ export default function BillHistoryTab() {
                             <div style={{ fontSize:12, color:'#6B7280', marginBottom:4 }}>Date</div>
                             <div style={{ fontSize:14, fontWeight:600, color:'#111827' }}>{formatDate(selectedBill.created_at)}</div>
                         </div>
+
+                        {selectedBill.store_code && (
+                            <div style={{ marginBottom:20 }}>
+                                <div style={{ fontSize:12, color:'#6B7280', marginBottom:4 }}>Store</div>
+                                <div style={{ fontSize:14, fontWeight:600, color:'#111827' }}>{selectedBill.store_code}</div>
+                            </div>
+                        )}
 
                         <div style={{ marginBottom:20 }}>
                             <div style={{ fontSize:12, color:'#6B7280', marginBottom:8 }}>Items</div>
