@@ -2595,8 +2595,9 @@ export async function tryInventoryGptDeterministicAnswer({
     }
     const compareResult = await resolveInventoryGptCompare(intent.product1, intent.product2, authToken, intent.warehouseScope);
     if (compareResult.error) {
+      const hint = /"(.+?)"/.test(intent.product2) ? '' : ` Try **compare ${intent.product1} and [another product]**?`;
       return {
-        answer: `I could not compare these products. ${compareResult.error}. Please check the product names and try again.`,
+        answer: `Had trouble comparing those. ${compareResult.error}${hint}`,
         render: "text",
       };
     }
@@ -2612,8 +2613,12 @@ export async function tryInventoryGptDeterministicAnswer({
     const result = await resolveInventoryGptCompare(intent.product1, intent.product1, authToken);
     const p = result.p1;
     if (!p) {
+      const cleaned = intent.product1.replace(/^(?:the|a|an|this|that)\s+/i, '').trim();
+      const maybeTwo = cleaned.split(/\s+/).length > 3;
       return {
-        answer: `Could not find product "${intent.product1}". Please check the name and try again.`,
+        answer: maybeTwo
+          ? `Couldn't find "${cleaned}" — looks like you might be naming two products without *and* between them. Try **compare amul butter and 3M Sticky Notes to all warehouse** or just search one product at a time.`
+          : `I searched for "${cleaned}" but no luck. Double-check the spelling?`,
         render: "text",
       };
     }
