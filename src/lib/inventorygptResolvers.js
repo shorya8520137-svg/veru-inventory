@@ -2627,6 +2627,7 @@ export async function tryInventoryGptDeterministicAnswer({
     }
     if (locations.length > 1) {
       answerParts.push(`The full breakdown is in the card below. Want to see how it compares against another product?`);
+    }
     return {
       answer: answerParts.join(' '),
       render: 'text',
