@@ -2298,6 +2298,7 @@ export async function tryInventoryGptDeterministicAnswer({
         render: "text",
         extraData: {
           type: "warehouse_cards",
+          locationType: isWarehouse ? "warehouses" : "stores",
           warehouses: rows.map(r => ({
             code: r.code, name: r.name, city: r.city, state: r.state,
             address: r.address, phone: r.phone, email: r.email,
@@ -2370,6 +2371,7 @@ export async function tryInventoryGptDeterministicAnswer({
             render: "text",
             extraData: {
               type: "warehouse_cards",
+              locationType: isWarehouse ? "warehouses" : "stores",
               warehouses: rows.map(r => ({
                 code: r.code,
                 name: r.name,

@@ -299,7 +299,7 @@ function CategoryGrid({ categories, onCategoryClick }) {
 }
 
 // ==================== WAREHOUSE GRID ====================
-function WarehouseGrid({ warehouses, onWarehouseSelect, onStockAnalysis }) {
+function WarehouseGrid({ warehouses, locationType = 'warehouses', onWarehouseSelect, onStockAnalysis }) {
   if (!Array.isArray(warehouses) || warehouses.length === 0) return null;
 
   return (
@@ -311,7 +311,8 @@ function WarehouseGrid({ warehouses, onWarehouseSelect, onStockAnalysis }) {
       {warehouses.map((wh, i) => (
         <WarehouseIntelligenceCard
           key={`${wh.code}-${i}`}
-          warehouse={wh}
+          entity={wh}
+          type={locationType}
           onViewDetails={() => onWarehouseSelect?.(wh.name || wh.code)}
           onStockAnalysis={(w) => onStockAnalysis?.(w)}
         />
@@ -1207,6 +1208,7 @@ function AssistantMessage({
   const cleanContent = fullContent.replace(/\[READ_MORE:\d+:(category|price|warehouse):[^\]]+\]/g, "").trim();
 
   // Check for warehouse prompt extra data
+  const cardLocationType = message.extraData?.locationType || (message.extraData?.isWarehouse !== false ? "warehouses" : "stores");
   const showWarehouseGrid = (message.extraData?.type === "warehouse_prompt" || message.extraData?.type === "warehouse_cards") && Array.isArray(message.extraData?.warehouses) && !isStreaming;
 
   // Check for table preview (interactive data table)
@@ -1271,12 +1273,14 @@ function AssistantMessage({
             </div>
             <WarehouseGrid
               warehouses={message.extraData.warehouses}
+              locationType={cardLocationType}
               onWarehouseSelect={onWarehouseSelect}
-              onStockAnalysis={(w) => setStockAnalysisWh(w)}
+              onStockAnalysis={(w) => setStockAnalysisWh({ entity: w, type: cardLocationType })}
             />
             {stockAnalysisWh && (
               <StockAnalysisPanel
-                warehouse={stockAnalysisWh}
+                entity={stockAnalysisWh.entity}
+                type={stockAnalysisWh.type}
                 onClose={() => setStockAnalysisWh(null)}
               />
             )}
