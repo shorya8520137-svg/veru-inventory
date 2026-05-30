@@ -729,8 +729,12 @@ export async function resolveInventoryGptCompare(
   warehouseScope = null,
 ) {
   if (!product1 || !product2) return { error: "Need two product names" };
+  // Strip filler words from product names for better search matching
+  const clean = (n) => n.replace(/^(?:the|a|an|this|that)\s+/i, '').trim();
+  const p1clean = clean(product1);
+  const p2clean = clean(product2);
   const result = await apiGet(
-    `/api/inventory/compare-products?product1=${encodeURIComponent(product1)}&product2=${encodeURIComponent(product2)}`,
+    `/api/inventory/compare-products?product1=${encodeURIComponent(p1clean || product1)}&product2=${encodeURIComponent(p2clean || product2)}`,
     token,
   );
   if (result.error) return { error: result.error };
