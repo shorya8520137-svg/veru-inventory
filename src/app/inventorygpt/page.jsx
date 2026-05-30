@@ -37,6 +37,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import MarkdownBody from "./MarkdownBody";
 import ParallelComparison from "./ParallelComparison";
+import { WarehouseIntelligenceCard, StockAnalysisPanel } from "./WarehouseIntelligence";
 import * as XLSX from "xlsx";
 import {
   BarChart,
@@ -298,7 +299,7 @@ function CategoryGrid({ categories, onCategoryClick }) {
 }
 
 // ==================== WAREHOUSE GRID ====================
-function WarehouseGrid({ warehouses, onWarehouseSelect }) {
+function WarehouseGrid({ warehouses, onWarehouseSelect, onStockAnalysis }) {
   if (!Array.isArray(warehouses) || warehouses.length === 0) return null;
 
   return (
@@ -307,40 +308,14 @@ function WarehouseGrid({ warehouses, onWarehouseSelect }) {
       animate={{ opacity: 1, y: 0 }}
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
     >
-      {warehouses.map((wh, i) => {
-        const place = [wh.city, wh.state].filter(Boolean).join(", ");
-        return (
-          <motion.div
-            key={`${wh.code}-${i}`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06, duration: 0.35 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onWarehouseSelect?.(wh.name || wh.code)}
-            className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-100/50"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-colors group-hover:bg-emerald-200">
-                <Package className="h-6 w-6" />
-              </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-semibold text-slate-600">
-                {wh.code}
-              </span>
-            </div>
-            <h3 className="mt-3 text-base font-semibold capitalize text-slate-900">
-              {wh.name}
-            </h3>
-            {place && (
-              <p className="mt-1 text-sm text-slate-500">{place}</p>
-            )}
-            <div className="mt-3 flex items-center gap-1.5 text-sm font-medium text-emerald-600 transition-colors group-hover:text-emerald-700">
-              <span>View Stock</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </div>
-          </motion.div>
-        );
-      })}
+      {warehouses.map((wh, i) => (
+        <WarehouseIntelligenceCard
+          key={`${wh.code}-${i}`}
+          warehouse={wh}
+          onViewDetails={() => onWarehouseSelect?.(wh.name || wh.code)}
+          onStockAnalysis={(w) => onStockAnalysis?.(w)}
+        />
+      ))}
     </motion.div>
   );
 }
@@ -1174,6 +1149,7 @@ function AssistantMessage({
   const [helpful, setHelpful] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [graphData, setGraphData] = useState(null);
+  const [stockAnalysisWh, setStockAnalysisWh] = useState(null);
 
   const fullContent = String(message.content ?? "");
   const isLong = fullContent.length > READ_MORE_CHAR_LIMIT && !isStreaming;
@@ -1296,7 +1272,14 @@ function AssistantMessage({
             <WarehouseGrid
               warehouses={message.extraData.warehouses}
               onWarehouseSelect={onWarehouseSelect}
+              onStockAnalysis={(w) => setStockAnalysisWh(w)}
             />
+            {stockAnalysisWh && (
+              <StockAnalysisPanel
+                warehouse={stockAnalysisWh}
+                onClose={() => setStockAnalysisWh(null)}
+              />
+            )}
           </>
         ) : showCategoryGrid ? (
           <CategoryGrid
