@@ -531,6 +531,14 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     if (allWarehouses) {
       return { type: "compare_all", product1: p1, wantsExport, warehouseScope: null };
     }
+    // Also handle "to all warehouse/store" suffix in p2 (e.g. "compare X and Y to all warehouse")
+    // p2 = "3M Sticky Notes to all warehouse and store" → strip " to all..." → p2 = "3M Sticky Notes"
+    const toAllSuffix = p2.match(/^(.+?)\s+to\s+all\s+(?:the\s+)?(?:warehouse|warehouses|store|stores)(?:\s+and\s+(?:store|stores|warehouse|warehouses))?$/i);
+    if (toAllSuffix) {
+      p2 = toAllSuffix[1].trim();
+      // Both p1 and p2 are now clean product names — do a regular compare across all locations
+      return { type: "compare", product1: p1, product2: p2, warehouseScope: null, wantsExport };
+    }
     // Extract warehouse/store scope from product2: "product2 warehouse_name warehouse"
     let warehouseScope = null;
     const whSuffix = p2.match(/^(.+?)\s+warehouse$/i);
@@ -2614,10 +2622,27 @@ export async function tryInventoryGptDeterministicAnswer({
     const p = result.p1;
     if (!p) {
       const cleaned = intent.product1.replace(/^(?:the|a|an|this|that)\s+/i, '').trim();
-      const maybeTwo = cleaned.split(/\s+/).length > 3;
+      const words = cleaned.split(/\s+/);
+      // Try splitting into two products at each word boundary (2+ words per side)
+      let splitResult = null;
+      for (let i = 2; i < words.length - 1; i++) {
+        const left = words.slice(0, i).join(' ');
+        const right = words.slice(i).join(' ');
+        if (left.length < 2 || right.length < 2) continue;
+        splitResult = await resolveInventoryGptCompare(left, right, authToken);
+        if (splitResult.p1 && splitResult.p2 && !splitResult.error) break;
+        splitResult = null;
+      }
+      if (splitResult && splitResult.p1 && splitResult.p2) {
+        return {
+          answer: `Looks like you meant two products. Here's **${splitResult.p1.name}** vs **${splitResult.p2.name}** across all locations:`,
+          render: 'text',
+          extraData: { type: 'comparison', product1: splitResult.p1, product2: splitResult.p2 },
+        };
+      }
       return {
-        answer: maybeTwo
-          ? `Couldn't find "${cleaned}" — looks like you might be naming two products without *and* between them. Try **compare amul butter and 3M Sticky Notes to all warehouse** or just search one product at a time.`
+        answer: words.length > 3
+          ? `Couldn't find "${cleaned}" — if you meant two products, add **and** between them like **compare amul butter and 3M Sticky Notes to all warehouse**.`
           : `I searched for "${cleaned}" but no luck. Double-check the spelling?`,
         render: "text",
       };
