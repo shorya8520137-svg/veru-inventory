@@ -559,7 +559,7 @@ router.get('/history', authenticateToken, (req, res) => {
                 let joinClause = '';
                 if (includeStoreCode) {
                     selectCols.splice(14, 0, 'bills.store_code', 's.store_name as store_name');
-                    joinClause = ' LEFT JOIN stores s ON bills.store_code = s.store_code';
+                    joinClause = ' LEFT JOIN stores s ON bills.store_code = s.store_code COLLATE utf8mb4_unicode_ci';
                 }
                 const sql = `SELECT ${selectCols.join(', ')} FROM bills${joinClause} ${whereClause} ORDER BY bills.created_at DESC LIMIT ? OFFSET ?`;
                 db.query(sql, [...queryParams, parseInt(limit), offset], (err, results) => {
