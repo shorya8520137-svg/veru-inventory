@@ -335,12 +335,15 @@ router.post('/fix-product-names', authenticateToken, (req, res) => {
 // POST /api/billing/generate - Generate invoice
 router.post('/generate', authenticateToken, (req, res) => {
     const {
-        bill_type, customer, gst_details, products,
+        store_code, bill_type, customer, gst_details, products,
         payment, discount, shipping, totals
     } = req.body;
 
     if (!customer?.name || !customer?.phone || !products || products.length === 0) {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    if (!store_code) {
+        return res.status(400).json({ success: false, message: 'Store code is required' });
     }
 
     const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -363,8 +366,8 @@ router.post('/generate', authenticateToken, (req, res) => {
                     customer_email, billing_address, shipping_address,
                     gstin, business_name, place_of_supply,
                     subtotal, discount, shipping, gst_amount, grand_total,
-                    payment_mode, payment_status, items, total_items, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    payment_mode, payment_status, items, total_items, store_code, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             `;
 
             conn.query(insertBillSql, [
@@ -376,7 +379,8 @@ router.post('/generate', authenticateToken, (req, res) => {
                 totals.subtotal, discount || 0, shipping || 0,
                 totals.gstAmount, totals.grandTotal,
                 payment.mode, payment.status,
-                JSON.stringify(products), products.length
+                JSON.stringify(products), products.length,
+                store_code
             ], (billErr, billResult) => {
                 if (billErr) {
                     return conn.rollback(() => {
@@ -390,8 +394,8 @@ router.post('/generate', authenticateToken, (req, res) => {
 
                 products.forEach((product) => {
                     conn.query(
-                        `SELECT stock FROM store_inventory WHERE barcode = ?`,
-                        [product.barcode],
+                        `SELECT stock FROM store_inventory WHERE barcode = ? AND store_code = ?`,
+                        [product.barcode, store_code],
                         (stockErr, stockRows) => {
                             if (hasError) return;
 
@@ -401,7 +405,7 @@ router.post('/generate', authenticateToken, (req, res) => {
                                     conn.release();
                                     res.status(400).json({
                                         success: false,
-                                        message: `Product ${product.product_name} not found in store inventory`
+                                        message: `Product ${product.product_name} not found in store ${store_code} inventory`
                                     });
                                 });
                             }
@@ -533,6 +537,7 @@ router.get('/history', authenticateToken, (req, res) => {
                     payment_status,
                     items,
                     total_items,
+                    store_code,
                     created_at
                 FROM bills 
                 ${whereClause}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Trash2, User, Building2, CreditCard, Wallet, Banknote, Smartphone, Package, Barcode, IndianRupee } from "lucide-react";
+import { Search, Plus, Trash2, User, Building2, CreditCard, Wallet, Banknote, Smartphone, Package, Barcode, IndianRupee, Store } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE; // Use env var for Express API
 
@@ -33,6 +33,27 @@ export default function BillingTab() {
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
+
+    const [stores, setStores] = useState([]);
+    const [selectedStore, setSelectedStore] = useState("");
+    const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_BASE}/api/warehouse-management/stores`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                if (json.success && Array.isArray(json.stores)) {
+                    setStores(json.stores);
+                }
+            } catch (e) {
+                console.error('Failed to fetch stores:', e);
+            }
+        })();
+    }, []);
 
     // Country codes list
     const countryCodes = [
@@ -182,6 +203,11 @@ export default function BillingTab() {
 
     // Generate Invoice
     const generateInvoice = async () => {
+        if (!selectedStore) {
+            setMessage("Please select a store");
+            return;
+        }
+
         if (!customerName || !customerPhone) {
             setMessage("Please enter customer name and phone");
             return;
@@ -204,6 +230,7 @@ export default function BillingTab() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
+                    store_code: selectedStore,
                     bill_type: billType, // B2B or B2C
                     customer: {
                         name: customerName,
@@ -273,6 +300,64 @@ export default function BillingTab() {
             `}</style>
 
             <div style={{ width:'100%' }}>
+                {/* Store Selector */}
+                <div style={{ background:'#fff', padding:24, marginBottom:0, border:'none', borderBottom:'1px solid #E5E7EB' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+                        <Store size={20} color="#1E40AF" />
+                        <h2 style={{ fontSize:18, fontWeight:700, color:'#111827', margin:0 }}>Select Store</h2>
+                        {!selectedStore && <span style={{ fontSize:12, color:'#DC2626', fontWeight:600 }}>* Required</span>}
+                    </div>
+                    <div style={{ position:'relative' }}>
+                        <button
+                            type="button"
+                            onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
+                            style={{
+                                width:'100%', padding:'12px 16px', borderRadius:8,
+                                border: selectedStore ? '2px solid #059669' : '2px solid #DC2626',
+                                background:'#F9FAFB', fontSize:14, fontWeight:600,
+                                color: selectedStore ? '#111827' : '#9CA3AF',
+                                cursor:'pointer', textAlign:'left',
+                                display:'flex', alignItems:'center', justifyContent:'space-between'
+                            }}>
+                            <span>{selectedStore ? stores.find(s => s.store_code === selectedStore)?.store_name || selectedStore : '— Choose a store —'}</span>
+                            <span style={{ fontSize:10, color:'#6B7280' }}>{storeDropdownOpen ? '▲' : '▼'}</span>
+                        </button>
+
+                        {storeDropdownOpen && (
+                            <div style={{
+                                position:'absolute', top:'100%', left:0, right:0, marginTop:4,
+                                background:'#fff', border:'1px solid #E5E7EB', borderRadius:8,
+                                boxShadow:'0 8px 24px rgba(0,0,0,0.12)', maxHeight:300, overflowY:'auto', zIndex:200
+                            }}>
+                                {stores.length === 0 ? (
+                                    <div style={{ padding:'16px', textAlign:'center', color:'#9CA3AF', fontSize:13 }}>No stores available</div>
+                                ) : (
+                                    stores.map(store => (
+                                        <div
+                                            key={store.store_code}
+                                            onClick={() => { setSelectedStore(store.store_code); setStoreDropdownOpen(false); }}
+                                            style={{
+                                                padding:'12px 16px', cursor:'pointer',
+                                                borderBottom:'1px solid #F3F4F6',
+                                                display:'flex', alignItems:'center', gap:12,
+                                                background: selectedStore === store.store_code ? '#F0FDF4' : 'transparent'
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.background='#F9FAFB'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background= selectedStore === store.store_code ? '#F0FDF4' : 'transparent'; }}>
+                                            <Store size={18} color="#059669" />
+                                            <div style={{ flex:1 }}>
+                                                <div style={{ fontSize:14, fontWeight:600, color:'#111827' }}>{store.store_name}</div>
+                                                <div style={{ fontSize:12, color:'#6B7280' }}>{store.store_code} · {store.city}{store.state ? `, ${store.state}` : ''}</div>
+                                            </div>
+                                            {selectedStore === store.store_code && <span style={{ fontSize:16 }}>✓</span>}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Customer Details */}
                 <div style={{ background:'#fff', padding:24, marginBottom:0, border:'none', borderBottom:'1px solid #E5E7EB' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
