@@ -295,7 +295,7 @@ export function WarehouseIntelligenceCard({ entity, type = 'warehouses', onViewD
       setEnriched(null)
       return
     }
-    fetch(`/api/inventorygpt/store-intelligence?code=${entity.code}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}/api/inventorygpt/store-intelligence?code=${entity.code}`)
       .then(r => r.json())
       .then(data => {
         if (data.success) setEnriched(data)
