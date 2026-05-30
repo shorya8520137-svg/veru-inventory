@@ -371,7 +371,7 @@ router.post('/generate', authenticateToken, (req, res) => {
                     'customer_email', 'billing_address', 'shipping_address',
                     'gstin', 'business_name', 'place_of_supply',
                     'subtotal', 'discount', 'shipping', 'gst_amount', 'grand_total',
-                    'payment_mode', 'payment_status', 'items', 'total_items', 'created_at'
+                    'payment_mode', 'payment_status', 'items', 'total_items'
                 ];
                 const vals = [
                     invoiceNumber, bill_type || 'B2C',
@@ -385,11 +385,12 @@ router.post('/generate', authenticateToken, (req, res) => {
                     JSON.stringify(products), products.length
                 ];
                 if (useStoreCode) {
-                    cols.splice(19, 0, 'store_code');
-                    vals.splice(19, 0, store_code);
+                    cols.splice(18, 0, 'store_code');
+                    vals.splice(18, 0, store_code);
                 }
-                const sql = `INSERT INTO bills (${cols.join(', ')}) VALUES (${vals.map(() => '?').join(', ')})`;
-                console.log('[DEBUG] insertBill SQL:', sql.replace(/\n/g, ' '), 'useStoreCode:', useStoreCode);
+                const placeholders = vals.map(() => '?').join(', ');
+                const sql = `INSERT INTO bills (${cols.join(', ')}, created_at) VALUES (${placeholders}, NOW())`;
+                console.log('[DEBUG] insertBill SQL:', sql.replace(/\n/g, ' '), 'useStoreCode:', useStoreCode, 'vals count:', vals.length);
                 conn.query(sql, vals, afterInsertBill);
             }
 
