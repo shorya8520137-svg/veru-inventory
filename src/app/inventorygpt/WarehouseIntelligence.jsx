@@ -237,7 +237,7 @@ function CardBack({ entity, type, onFlipBack }) {
             <StatBox label="Total Stock" icon={Package} value={entity._inventory?.totalStock ?? '—'} />
             <StatBox label="Total Bills" icon={Receipt} value={entity._billing?.totalBills ?? '—'} />
             <StatBox label="Total Revenue" icon={DollarSign} value={entity._billing ? `₹${(entity._billing.totalRevenue ?? 0).toLocaleString('en-IN')}` : '—'} />
-            <StatBox label="Avg Bill Value" icon={TrendingUp} value={entity._billing ? `₹${(entity._billing.avgBillValue ?? 0).toFixed(0)}` : '—'} />
+            <StatBox label="Avg Bill Value" icon={TrendingUp} value={entity._billing ? `₹${Number(entity._billing.avgBillValue ?? 0).toFixed(0)}` : '—'} />
             <StatBox label="Low Stock Items" icon={AlertTriangle} value={entity._inventory?.lowStockItems ?? '—'} />
             <StatBox label="Out of Stock" icon={XCircle} value={entity._inventory?.outOfStockItems ?? '—'} />
             <StatBox label="Health Score" icon={Activity} value={entity._health ? `${h.score ?? 0}/100` : '—'} />
