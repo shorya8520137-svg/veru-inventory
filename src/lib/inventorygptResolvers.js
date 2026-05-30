@@ -2298,7 +2298,6 @@ export async function tryInventoryGptDeterministicAnswer({
         address: r.address, phone: r.phone, email: r.email,
         manager_name: r.manager_name, capacity: r.capacity,
       }));
-      if (!isWarehouse)
       return {
         answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in card view:\n\n**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found.`,
         render: "text",
@@ -2379,7 +2378,6 @@ export async function tryInventoryGptDeterministicAnswer({
             manager_name: r.manager_name,
             capacity: r.capacity,
           }));
-          if (!isWarehouse)
           return {
             answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in card view:\n\n**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found.`,
             render: "text",
