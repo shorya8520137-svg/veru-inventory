@@ -360,29 +360,39 @@ router.post('/generate', authenticateToken, (req, res) => {
                 return res.status(500).json({ success: false, message: 'Transaction failed' });
             }
 
-            const insertBillSql = `
-                INSERT INTO bills (
-                    invoice_number, bill_type, customer_name, customer_phone,
-                    customer_email, billing_address, shipping_address,
-                    gstin, business_name, place_of_supply,
-                    subtotal, discount, shipping, gst_amount, grand_total,
-                    payment_mode, payment_status, items, total_items, store_code, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            `;
+            function insertBill(useStoreCode) {
+                const cols = [
+                    'invoice_number', 'bill_type', 'customer_name', 'customer_phone',
+                    'customer_email', 'billing_address', 'shipping_address',
+                    'gstin', 'business_name', 'place_of_supply',
+                    'subtotal', 'discount', 'shipping', 'gst_amount', 'grand_total',
+                    'payment_mode', 'payment_status', 'items', 'total_items', 'created_at'
+                ];
+                const vals = [
+                    invoiceNumber, bill_type || 'B2C',
+                    customer.name, customer.phone, customer.email || null,
+                    customer.billing_address || null, customer.shipping_address || null,
+                    gst_details?.gstin || null, gst_details?.business_name || null,
+                    gst_details?.place_of_supply || null,
+                    totals.subtotal, discount || 0, shipping || 0,
+                    totals.gstAmount, totals.grandTotal,
+                    payment.mode, payment.status,
+                    JSON.stringify(products), products.length
+                ];
+                if (useStoreCode) {
+                    cols.splice(19, 0, 'store_code');
+                    vals.splice(19, 0, store_code);
+                }
+                const sql = `INSERT INTO bills (${cols.join(', ')}) VALUES (${vals.map(() => '?').join(', ')})`;
+                conn.query(sql, vals, afterInsertBill);
+            }
 
-            conn.query(insertBillSql, [
-                invoiceNumber, bill_type || 'B2C',
-                customer.name, customer.phone, customer.email || null,
-                customer.billing_address || null, customer.shipping_address || null,
-                gst_details?.gstin || null, gst_details?.business_name || null,
-                gst_details?.place_of_supply || null,
-                totals.subtotal, discount || 0, shipping || 0,
-                totals.gstAmount, totals.grandTotal,
-                payment.mode, payment.status,
-                JSON.stringify(products), products.length,
-                store_code
-            ], (billErr, billResult) => {
+            function afterInsertBill(billErr, billResult) {
                 if (billErr) {
+                    // If store_code column missing, retry without it
+                    if (billErr.message && billErr.message.includes("Unknown column 'store_code'")) {
+                        return insertBill(false);
+                    }
                     return conn.rollback(() => {
                         conn.release();
                         res.status(500).json({ success: false, message: 'Failed to create bill', error: billErr.message });
@@ -520,49 +530,38 @@ router.get('/history', authenticateToken, (req, res) => {
 
             const total = countResult[0].total;
 
-            // Get bills
-            const dataSql = `
-                SELECT 
-                    id,
-                    invoice_number,
-                    customer_name,
-                    customer_phone,
-                    customer_email,
-                    subtotal,
-                    discount,
-                    shipping,
-                    gst_amount,
-                    grand_total,
-                    payment_mode,
-                    payment_status,
-                    items,
-                    total_items,
-                    store_code,
-                    created_at
-                FROM bills 
-                ${whereClause}
-                ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
-            `;
+            function fetchBills(includeStoreCode) {
+                const selectCols = [
+                    'id', 'invoice_number', 'customer_name', 'customer_phone',
+                    'customer_email', 'subtotal', 'discount', 'shipping',
+                    'gst_amount', 'grand_total', 'payment_mode', 'payment_status',
+                    'items', 'total_items', 'created_at'
+                ];
+                if (includeStoreCode) selectCols.splice(14, 0, 'store_code');
+                const sql = `SELECT ${selectCols.join(', ')} FROM bills ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+                db.query(sql, [...queryParams, parseInt(limit), offset], (err, results) => {
+                    if (err) {
+                        if (err.message && err.message.includes("Unknown column 'store_code'") && includeStoreCode) {
+                            return fetchBills(false);
+                        }
+                        console.error('Error fetching bills:', err);
+                        return res.status(500).json({
+                            success: false,
+                            message: 'Failed to fetch bills',
+                            error: err.message
+                        });
+                    }
 
-            db.query(dataSql, [...queryParams, parseInt(limit), offset], (err, results) => {
-                if (err) {
-                    console.error('Error fetching bills:', err);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Failed to fetch bills',
-                        error: err.message
+                    res.json({
+                        success: true,
+                        data: results,
+                        total,
+                        page: parseInt(page),
+                        limit: parseInt(limit)
                     });
-                }
-
-                res.json({
-                    success: true,
-                    data: results,
-                    total,
-                    page: parseInt(page),
-                    limit: parseInt(limit)
                 });
-            });
+            }
+            fetchBills(true);
         });
 
     } catch (error) {
