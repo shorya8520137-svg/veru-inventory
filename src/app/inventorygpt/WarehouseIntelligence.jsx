@@ -288,6 +288,24 @@ function CardBack({ entity, type, onFlipBack }) {
 // ==================== MAIN FLIP CARD ====================
 export function WarehouseIntelligenceCard({ entity, type = 'warehouses', onViewDetails, onStockAnalysis }) {
   const [flipped, setFlipped] = useState(false)
+  const [enriched, setEnriched] = useState(null)
+
+  useEffect(() => {
+    if (type !== 'stores' || entity._billing) {
+      setEnriched(null)
+      return
+    }
+    fetch(`/api/inventorygpt/store-intelligence?code=${entity.code}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setEnriched(data)
+      })
+      .catch(() => {})
+  }, [entity.code, type, entity._billing])
+
+  const activeEntity = enriched
+    ? { ...entity, _inventory: enriched.inventory, _billing: enriched.billing, _health: { score: enriched.performance?.score ?? 0, status: enriched.performance?.status || 'Good' }, _ai_summary: enriched.aiSummary || '' }
+    : entity
 
   return (
     <motion.div
@@ -306,7 +324,7 @@ export function WarehouseIntelligenceCard({ entity, type = 'warehouses', onViewD
               className="absolute inset-0"
             >
               <CardFront
-                entity={entity}
+                entity={activeEntity}
                 type={type}
                 onViewDetails={() => setFlipped(true)}
                 onStockAnalysis={() => onStockAnalysis?.(entity)}
@@ -321,7 +339,7 @@ export function WarehouseIntelligenceCard({ entity, type = 'warehouses', onViewD
               transition={{ duration: 0.25 }}
               className="absolute inset-0 overflow-y-auto"
             >
-              <CardBack entity={entity} type={type} onFlipBack={() => setFlipped(false)} />
+              <CardBack entity={activeEntity} type={type} onFlipBack={() => setFlipped(false)} />
             </motion.div>
           )}
         </AnimatePresence>
