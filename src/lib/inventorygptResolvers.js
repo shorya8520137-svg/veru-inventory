@@ -184,7 +184,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Map common Hindi words and misspellings to English equivalents.
   // Use word boundaries to avoid mangling English words.
   const NORM_MAP = [
-    [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|godaam|gudam|godaun)\b/gi, 'warehouse'],
+    [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|werhouse|weahouse|godaam|gudam|godaun)\b/gi, 'warehouse'],
     [/\bstores?\b/gi, 'store'],
     [/\b(dukaan|dukan|dookan)\b/gi, 'store'],
     [/\bmujhe\b|\bmujha\b|\bmuja\b|\bmujhko\b|\bmere\b/gi, 'me'],
@@ -526,6 +526,11 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   if (compareMatch) {
     let p1 = compareMatch[1].trim();
     let p2 = compareMatch[2].trim();
+    // Check if requesting cross-location comparison first (before warehouse extraction)
+    const allWarehouses = /^all\s+(?:the\s+)?(?:warehouse|warehouses|store|stores)(?:\s+and\s+(?:store|stores|warehouse|warehouses))?$/i.test(p2);
+    if (allWarehouses) {
+      return { type: "compare_all", product1: p1, wantsExport, warehouseScope: null };
+    }
     // Extract warehouse/store scope from product2: "product2 warehouse_name warehouse"
     let warehouseScope = null;
     const whSuffix = p2.match(/^(.+?)\s+warehouse$/i);
@@ -2599,6 +2604,41 @@ export async function tryInventoryGptDeterministicAnswer({
     return {
       ...buildCompareAnswer(compareResult, intent.product1, intent.product2, intent.wantsExport, scopeLabel),
       render: "text",
+    };
+  }
+
+  // Compare product across all warehouses/stores: "compare X to all the warehouse"
+  if (intent.type === "compare_all") {
+    const result = await resolveInventoryGptCompare(intent.product1, intent.product1, authToken);
+    const p = result.p1;
+    if (!p) {
+      return {
+        answer: `Could not find product "${intent.product1}". Please check the name and try again.`,
+        render: "text",
+      };
+    }
+    const locations = Array.isArray(p.stock_by_location) ? p.stock_by_location : [];
+    const totalStock = locations.reduce((s, l) => s + (parseInt(l.stock) || 0), 0);
+    const lines = [
+      `📊 **Stock Comparison: ${p.name || intent.product1} across all locations**`,
+      '',
+      `**Total Stock:** ${totalStock} units across ${locations.length} locations`,
+      '',
+    ];
+    locations.forEach((loc, i) => {
+      const pct = totalStock > 0 ? Math.round((parseInt(loc.stock) / totalStock) * 100) : 0;
+      lines.push(`   ${i + 1}. **${loc.warehouse || loc.location || 'Unknown'}** — ${loc.stock} units (${pct}%)`);
+    });
+    lines.push('');
+    lines.push('Want to compare this product with another? Just say **compare with [product name]**');
+    return {
+      answer: lines.join('\n'),
+      render: 'text',
+      extraData: {
+        type: 'comparison',
+        product1: { ...p, name: `${p.name} (All Locations)`, price: p.price, barcode: p.barcode, current_stock: totalStock, stock_by_location: locations, movements: [] },
+        product2: { ...p, name: `${p.name} (All Locations)`, price: p.price, barcode: p.barcode, current_stock: totalStock, stock_by_location: locations, movements: [] },
+      },
     };
   }
 
