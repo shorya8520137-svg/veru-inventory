@@ -2636,6 +2636,7 @@ export async function tryInventoryGptDeterministicAnswer({
       render: 'text',
       extraData: {
         type: 'comparison',
+        singleProduct: true,
         product1: { ...p, name: `${p.name} (All Locations)`, price: p.price, barcode: p.barcode, current_stock: totalStock, stock_by_location: locations, movements: [] },
         product2: { ...p, name: `${p.name} (All Locations)`, price: p.price, barcode: p.barcode, current_stock: totalStock, stock_by_location: locations, movements: [] },
       },

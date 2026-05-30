@@ -136,6 +136,105 @@ function ProductPanel({ product, side }) {
   )
 }
 
+function SingleProductView({ product, onVisualize }) {
+  const [showChart, setShowChart] = useState(false)
+  const locations = useMemo(() => {
+    if (!product?.stock_by_location?.length) return []
+    return product.stock_by_location.map(l => ({
+      name: l.warehouse || l.location || 'Unknown',
+      stock: parseInt(l.stock) || 0,
+    }))
+  }, [product])
+
+  if (!product) return null
+
+  const maxStock = Math.max(...locations.map(l => l.stock), 1)
+  const chartMax = Math.max(maxStock, 10)
+
+  return (
+    <motion.div className="space-y-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-purple-500" />
+          <h2 className="text-sm font-semibold text-slate-800">Stock Across All Locations</h2>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 p-4 pb-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50">
+            <Package className="h-4 w-4 text-purple-500" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-slate-800 truncate">{product.name}</h3>
+            <span className="text-[11px] text-slate-400">{product.barcode || ''}</span>
+          </div>
+        </div>
+
+        <div className="px-4 pb-3">
+          <div className="grid grid-cols-3 gap-2">
+            <MetricCard icon={BarChart3} label="Total Stock" value={product.current_stock || 0} color="#3B82F6" />
+            <MetricCard icon={DollarSign} label="Price" value={product.price ? `₹${parseFloat(product.price).toLocaleString('en-IN')}` : '—'} color="#22C55E" />
+            <MetricCard icon={MapPin} label="Locations" value={locations.length} color="#7C3AED" />
+          </div>
+        </div>
+
+        {locations.length > 0 && (
+          <div className="px-4 pb-3 space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Stock by Location</h4>
+            {locations.map((loc, i) => (
+              <StatBar key={i} label={loc.name} value={loc.stock} maxValue={maxStock} color="#7C3AED" />
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => setShowChart(!showChart)}
+          className="w-full flex items-center justify-between p-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors border-t border-slate-100"
+        >
+          <div className="flex items-center gap-1.5">
+            <PieChart className="h-3.5 w-3.5 text-purple-500" />
+            {showChart ? 'Hide Chart' : 'Show Chart'}
+          </div>
+          <span className="text-slate-300">{showChart ? '▲' : '▼'}</span>
+        </button>
+        {showChart && (
+          <div className="px-4 pb-4">
+            <svg width="100%" height={40 + locations.length * 30} viewBox={`0 0 400 ${40 + locations.length * 30}`} className="overflow-visible">
+              {locations.map((loc, i) => {
+                const barH = Math.max(16, (loc.stock / chartMax) * 100)
+                return (
+                  <g key={i}>
+                    <text x="120" y={22 + i * 30} fontSize="9" fill="#475569" textAnchor="end" dominantBaseline="middle">{loc.name.length > 14 ? loc.name.slice(0, 14) + '…' : loc.name}</text>
+                    <rect x="126" y={10 + i * 30} width={Math.min(barH * 2, 240)} height="16" rx="4" fill="#7C3AED" opacity="0.75" />
+                    <text x="132" y={18 + i * 30} fontSize="8" fill="white" fontWeight="600">{loc.stock}</text>
+                  </g>
+                )
+              })}
+            </svg>
+          </div>
+        )}
+
+        {onVisualize && (
+          <div className="px-4 pb-4">
+            <button
+              onClick={() => onVisualize(
+                locations.map(l => ({ Location: l.name, Stock: l.stock })),
+                ['Location', 'Stock'],
+                `${product.name} — Stock by Location`
+              )}
+              className="text-xs px-2 py-1 rounded-md bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors"
+            >
+              <BarChart3 className="h-3 w-3 inline mr-1" />
+              Graph
+            </button>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
 export default function ParallelComparison({ data, onVisualize }) {
   const p1 = data?.product1
   const p2 = data?.product2
@@ -151,6 +250,10 @@ export default function ParallelComparison({ data, onVisualize }) {
     if (target?.current) target.current.scrollTop = source.current.scrollTop
     requestAnimationFrame(() => { isScrolling.current = false })
   }, [syncedScroll])
+
+  if (data?.singleProduct) {
+    return <SingleProductView product={p1} onVisualize={onVisualize} />
+  }
 
   if (!p1 || !p2) {
     return (
