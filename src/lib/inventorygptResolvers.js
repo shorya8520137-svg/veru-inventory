@@ -165,6 +165,7 @@ export function extractActiveContext(conversationHistory = []) {
 }
 
 export function isUserFrustrated(text) {
+  const lower = String(text || "").toLowerCase();
   // Detect frustration, anger, impatience, or swearing
   return /abuse|bc|bhenchod|behenchod|bhosdike|bhosda|madarchod|maderchod|chutiya|chut|laud?a|lavde?|gaand|gandu|randi|bitch|fuck|shit|asshole|damn|wtf|stfu|screw|stupid|idiot|dumb|useless|worst|hate|angry|annoy|irritat|frustrat/i.test(lower) ||
     /(?:why|kyu|kyun|kyo)\s+(?:are|is)\s+(?:you|it)\s+(?:asking|ask|question)/i.test(lower) ||
