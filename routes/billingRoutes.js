@@ -476,7 +476,9 @@ router.post('/generate', authenticateToken, (req, res) => {
                         }
                     );
                 });
-            });
+            }
+
+            insertBill(true);
         });
     });
 });
