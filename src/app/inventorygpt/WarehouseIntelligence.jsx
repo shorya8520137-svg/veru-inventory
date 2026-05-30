@@ -127,13 +127,13 @@ function CardFront({ entity, type, onViewDetails, onStockAnalysis }) {
         ) : (
           <>
             <StatBox label="Revenue" icon={DollarSign} color="text-violet-600"
-              value={`₹${(entity._billing?.totalRevenue ?? 0).toLocaleString('en-IN')}`} />
+              value={entity._billing ? `₹${(entity._billing.totalRevenue ?? 0).toLocaleString('en-IN')}` : '—'} />
             <StatBox label="Total Bills" icon={Receipt} color="text-blue-600"
-              value={entity._billing?.totalBills ?? 0} />
+              value={entity._billing?.totalBills ?? '—'} />
             <StatBox label="Inventory Items" icon={Package} color="text-amber-600"
-              value={entity._inventory?.totalItems ?? 0} />
+              value={entity._inventory?.totalItems ?? '—'} />
             <StatBox label="Health Score" icon={Activity} color={healthScore >= 80 ? 'text-emerald-600' : healthScore >= 60 ? 'text-amber-600' : 'text-red-600'}
-              value={`${healthScore}/100`} />
+              value={entity._health ? `${healthScore}/100` : '—'} />
           </>
         )}
       </div>
@@ -233,14 +233,14 @@ function CardBack({ entity, type, onFlipBack }) {
           </>
         ) : (
           <>
-            <StatBox label="Total Products" icon={Layers} value={entity._inventory?.totalItems ?? 0} />
-            <StatBox label="Total Stock" icon={Package} value={entity._inventory?.totalStock ?? 0} />
-            <StatBox label="Total Bills" icon={Receipt} value={entity._billing?.totalBills ?? 0} />
-            <StatBox label="Total Revenue" icon={DollarSign} value={`₹${(entity._billing?.totalRevenue ?? 0).toLocaleString('en-IN')}`} />
-            <StatBox label="Avg Bill Value" icon={TrendingUp} value={`₹${(entity._billing?.avgBillValue ?? 0).toFixed(0)}`} />
-            <StatBox label="Low Stock Items" icon={AlertTriangle} value={entity._inventory?.lowStockItems ?? 0} />
-            <StatBox label="Out of Stock" icon={XCircle} value={entity._inventory?.outOfStockItems ?? 0} />
-            <StatBox label="Health Score" icon={Activity} value={`${h.score ?? 0}/100`} />
+            <StatBox label="Total Products" icon={Layers} value={entity._inventory?.totalItems ?? '—'} />
+            <StatBox label="Total Stock" icon={Package} value={entity._inventory?.totalStock ?? '—'} />
+            <StatBox label="Total Bills" icon={Receipt} value={entity._billing?.totalBills ?? '—'} />
+            <StatBox label="Total Revenue" icon={DollarSign} value={entity._billing ? `₹${(entity._billing.totalRevenue ?? 0).toLocaleString('en-IN')}` : '—'} />
+            <StatBox label="Avg Bill Value" icon={TrendingUp} value={entity._billing ? `₹${(entity._billing.avgBillValue ?? 0).toFixed(0)}` : '—'} />
+            <StatBox label="Low Stock Items" icon={AlertTriangle} value={entity._inventory?.lowStockItems ?? '—'} />
+            <StatBox label="Out of Stock" icon={XCircle} value={entity._inventory?.outOfStockItems ?? '—'} />
+            <StatBox label="Health Score" icon={Activity} value={entity._health ? `${h.score ?? 0}/100` : '—'} />
           </>
         )}
       </div>

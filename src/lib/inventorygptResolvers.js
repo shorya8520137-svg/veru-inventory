@@ -1462,6 +1462,80 @@ export async function resolveInventoryGptLocations(token, type) {
   return { rows: merged, error: merged.length ? null : lastError };
 }
 
+export async function enrichStoreEntities(entities) {
+  if (!entities?.length) return entities;
+  try {
+    const pool = (await import('@/lib/db')).default;
+    const codes = entities.map(e => e.code).filter(Boolean);
+    if (!codes.length) return entities;
+
+    // Batch inventory stats for all stores
+    const [inventoryRows] = await pool.query(
+      `SELECT store_code,
+              COUNT(*) as totalItems,
+              COALESCE(SUM(stock),0) as totalStock,
+              COALESCE(SUM(stock*price),0) as totalValue,
+              SUM(CASE WHEN stock>0 AND stock<=10 THEN 1 ELSE 0 END) as lowStockItems,
+              SUM(CASE WHEN stock=0 THEN 1 ELSE 0 END) as outOfStockItems
+       FROM store_inventory WHERE store_code IN (?) GROUP BY store_code`,
+      [codes]
+    );
+    const invMap = {};
+    for (const r of inventoryRows) invMap[r.store_code] = r;
+
+    // Batch billing stats
+    const [billingRows] = await pool.query(
+      `SELECT store_code,
+              COUNT(*) as totalBills,
+              COALESCE(SUM(grand_total),0) as totalRevenue,
+              COALESCE(AVG(grand_total),0) as avgBillValue,
+              MAX(created_at) as lastBillDate
+       FROM bills WHERE store_code IN (?) GROUP BY store_code`,
+      [codes]
+    );
+    const billMap = {};
+    for (const r of billingRows) billMap[r.store_code] = r;
+
+    // Enrich each entity
+    for (const e of entities) {
+      const inv = invMap[e.code] || {};
+      const bills = billMap[e.code] || {};
+      e._inventory = {
+        totalItems: inv.totalItems ?? 0,
+        totalStock: inv.totalStock ?? 0,
+        totalValue: inv.totalValue ?? 0,
+        lowStockItems: inv.lowStockItems ?? 0,
+        outOfStockItems: inv.outOfStockItems ?? 0,
+      };
+      e._billing = {
+        totalBills: bills.totalBills ?? 0,
+        totalRevenue: bills.totalRevenue ?? 0,
+        avgBillValue: bills.avgBillValue ?? 0,
+        lastBillDate: bills.lastBillDate ?? null,
+      };
+      // Simple health score based on stock + revenue
+      const stockScore = inv.totalItems > 0
+        ? Math.round((1 - ((inv.outOfStockItems||0) + (inv.lowStockItems||0)*0.5) / inv.totalItems) * 40) : 0;
+      const revenueScore = bills.totalRevenue > 0
+        ? Math.min(30, Math.round(Math.log10(bills.totalRevenue) * 6)) : 0;
+      const activityScore = bills.totalBills > 0
+        ? Math.min(20, Math.round((bills.totalBills / 30) * 20)) : 0;
+      const recencyScore = bills.lastBillDate
+        ? Math.min(10, Math.round((1 - Math.min(1, (Date.now() - new Date(bills.lastBillDate).getTime()) / (90 * 86400000))) * 10)) : 0;
+      const score = Math.min(100, stockScore + revenueScore + activityScore + recencyScore);
+      e._health = {
+        score,
+        status: score >= 70 ? 'Healthy' : score >= 40 ? 'Needs Attention' : 'Critical',
+        total_stock: inv.totalStock ?? 0,
+        total_skus: inv.totalItems ?? 0,
+      };
+    }
+  } catch (err) {
+    console.error('[enrichStoreEntities] error:', err);
+  }
+  return entities;
+}
+
 function extractLastLocationContext(history) {
   if (!Array.isArray(history)) return null;
   for (const message of [...history].reverse()) {
@@ -2293,17 +2367,19 @@ export async function tryInventoryGptDeterministicAnswer({
     const pref = q.toLowerCase().trim();
 
     if (/^cards?$/.test(pref)) {
+      const cardEntities = rows.map(r => ({
+        code: r.code, name: r.name, city: r.city, state: r.state,
+        address: r.address, phone: r.phone, email: r.email,
+        manager_name: r.manager_name, capacity: r.capacity,
+      }));
+      if (!isWarehouse) await enrichStoreEntities(cardEntities);
       return {
         answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in card view:\n\n**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found.`,
         render: "text",
         extraData: {
           type: "warehouse_cards",
           locationType: isWarehouse ? "warehouses" : "stores",
-          warehouses: rows.map(r => ({
-            code: r.code, name: r.name, city: r.city, state: r.state,
-            address: r.address, phone: r.phone, email: r.email,
-            manager_name: r.manager_name, capacity: r.capacity,
-          })),
+          warehouses: cardEntities,
         },
       };
     }
@@ -2366,23 +2442,25 @@ export async function tryInventoryGptDeterministicAnswer({
 
       if ((justCards || justTable || justChat) && wasAskedPreference) {
         if (justCards) {
+          const cardEntities = rows.map(r => ({
+            code: r.code,
+            name: r.name,
+            city: r.city,
+            state: r.state,
+            address: r.address,
+            phone: r.phone,
+            email: r.email,
+            manager_name: r.manager_name,
+            capacity: r.capacity,
+          }));
+          if (!isWarehouse) await enrichStoreEntities(cardEntities);
           return {
             answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in card view:\n\n**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found.`,
             render: "text",
             extraData: {
               type: "warehouse_cards",
               locationType: isWarehouse ? "warehouses" : "stores",
-              warehouses: rows.map(r => ({
-                code: r.code,
-                name: r.name,
-                city: r.city,
-                state: r.state,
-                address: r.address,
-                phone: r.phone,
-                email: r.email,
-                manager_name: r.manager_name,
-                capacity: r.capacity,
-              })),
+              warehouses: cardEntities,
             },
           };
         }

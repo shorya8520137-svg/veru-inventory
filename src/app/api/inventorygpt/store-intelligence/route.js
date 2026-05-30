@@ -53,24 +53,24 @@ export async function GET(req) {
 
     // 3) Billing history (sales from the store)
     const [billingStats] = await conn.query(
-      `SELECT COUNT(*) as totalBills, COALESCE(SUM(total_amount),0) as totalRevenue,
-              COALESCE(AVG(total_amount),0) as avgBillValue,
-              MAX(bill_date) as lastBillDate
+      `SELECT COUNT(*) as totalBills, COALESCE(SUM(grand_total),0) as totalRevenue,
+              COALESCE(AVG(grand_total),0) as avgBillValue,
+              MAX(created_at) as lastBillDate
        FROM bills WHERE store_code = ?`,
       [code]
     )
     const bs = billingStats[0]
 
     const [recentBills] = await conn.query(
-      `SELECT id, bill_number, bill_date, total_amount, payment_mode, customer_name
-       FROM bills WHERE store_code = ? ORDER BY bill_date DESC LIMIT 10`,
+      `SELECT id, invoice_number as bill_number, created_at as bill_date, grand_total as total_amount, payment_mode, customer_name
+       FROM bills WHERE store_code = ? ORDER BY created_at DESC LIMIT 10`,
       [code]
     )
 
     const [dailySales7] = await conn.query(
-      `SELECT DATE(bill_date) as date, COUNT(*) as bills, SUM(total_amount) as revenue
-       FROM bills WHERE store_code = ? AND bill_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-       GROUP BY DATE(bill_date) ORDER BY date`,
+      `SELECT DATE(created_at) as date, COUNT(*) as bills, SUM(grand_total) as revenue
+       FROM bills WHERE store_code = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+       GROUP BY DATE(created_at) ORDER BY date`,
       [code]
     )
 
