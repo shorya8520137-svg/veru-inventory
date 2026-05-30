@@ -164,9 +164,40 @@ export function extractActiveContext(conversationHistory = []) {
   return context;
 }
 
+export function isUserFrustrated(text) {
+  // Detect frustration, anger, impatience, or swearing
+  return /abuse|bc|bhenchod|behenchod|bhosdike|bhosda|madarchod|maderchod|chutiya|chut|laud?a|lavde?|gaand|gandu|randi|bitch|fuck|shit|asshole|damn|wtf|stfu|screw|stupid|idiot|dumb|useless|worst|hate|angry|annoy|irritat|frustrat/i.test(lower) ||
+    /(?:why|kyu|kyun|kyo)\s+(?:are|is)\s+(?:you|it)\s+(?:asking|ask|question)/i.test(lower) ||
+    /just\s+(?:show|give|tell|do|answer)/i.test(lower) ||
+    /(?:stop|enough|basta|chup|chup kar|shut)/i.test(lower) ||
+    /(?:already|pehle|pahle|phele)\s+(?:said|told|asked|bata|batai?a|bol)/i.test(lower) ||
+    /(?:bar bar|barbar|again and again|baar baar)/i.test(lower) ||
+    /(?:direct|seedha|sidha|seda)\s+(?:answer|jawab|bata|dikha|show)/i.test(lower);
+}
+
 export function detectInventoryGptIntent(question, conversationHistory = []) {
   const raw = String(question || "").trim();
-  const lower = raw.toLowerCase();
+  let lower = raw.toLowerCase();
+
+  // ── Fuzzy normalization ──────────────────────────────────────────
+  // Map common Hindi words and misspellings to English equivalents.
+  // Use word boundaries to avoid mangling English words.
+  const NORM_MAP = [
+    [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|godaam|gudam|godaun)\b/gi, 'warehouse'],
+    [/\bstores?\b/gi, 'store'],
+    [/\b(dukaan|dukan|dookan)\b/gi, 'store'],
+    [/\bmujhe\b|\bmujha\b|\bmuja\b|\bmujhko\b|\bmere\b/gi, 'me'],
+    [/\b(sabhi|sab|tamam|tamaam|poora|pura|saare|saara|saari)\b/gi, 'all'],
+    [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo)\b/gi, 'show'],
+    [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
+    [/\b(vistar|jaankari|jankari|sampurna|poori)\b/gi, 'details'],
+  ];
+  for (const [pattern, replacement] of NORM_MAP) {
+    lower = lower.replace(pattern, replacement);
+  }
+  // Clean up extra spaces from removals
+  lower = lower.replace(/\s+/g, ' ').trim();
+
   const wantsExport = /excel|spreadsheet|csv|export|download|sheet|table/.test(
     lower,
   );
@@ -433,14 +464,16 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     ) ||
     (/show\s+(?:me\s+)?(?:all\s+)?(?:the\s+)?(?:warehouse|warehouses|wearhouse|wearhouses|warhorse|warhorses)(?:\s+with\s+(?:complete\s+)?details)?\s*$/.test(lower) && !/stock|inventory|quantity|product/.test(lower))
   ) {
-    return { type: "warehouses", wantsExport };
+    const wantsDetails = /details|complete.*detail/.test(lower);
+    return { type: wantsDetails ? "warehouse_details" : "warehouses", wantsExport };
   }
   if (
     /how\s*(many|much|may).*store|total.*store|list.*store|show.*store|stores?\s*(i have|count|list)?$/.test(
       lower,
     )
   ) {
-    return { type: "stores", wantsExport };
+    const wantsDetails = /details|complete.*detail/.test(lower);
+    return { type: wantsDetails ? "store_details" : "stores", wantsExport };
   }
   if (/store inventory|inventory.*store|stores inventory/.test(lower))
     return { type: "store_inventory", wantsExport };
@@ -489,6 +522,16 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   }
   if (/sku|barcode|product|item|name|what about this/.test(lower))
     return { type: "product", field: "summary", wantsExport };
+
+  // Catch-all: any query mentioning warehouse/store with action words
+  // Handles Hindi word order and loose spelling variations
+  if (/\bwarehouse\b/.test(lower) && /\b(show|list|all|total|count|detail|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
+    return { type: "warehouses", wantsExport };
+  }
+  if (/\bstore\b/.test(lower) && /\b(show|list|all|total|count|detail|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
+    return { type: "stores", wantsExport };
+  }
+
   if (wantsExport) return { type: "export_help", wantsExport };
   return null;
 }
@@ -1381,7 +1424,6 @@ export async function resolveInventoryGptLocations(token, type) {
       ? [
           "/api/warehouse-management/warehouses",
           "/api/products/warehouses",
-          "/api/dispatch/warehouses",
         ]
       : ["/api/warehouse-management/stores", "/api/products/stores"];
 
@@ -1722,9 +1764,9 @@ function buildLocationDetailAnswer(location, type, wantsExport) {
   };
 }
 
-function buildLocationsAnswer(locationsResult, type, wantsExport) {
+function buildLocationsAnswer(locationsResult, type, wantsExport, detailed) {
   const rows = locationsResult.rows || [];
-  const isWarehouse = type === "warehouses";
+  const isWarehouse = type === "warehouses" || type === "warehouse_details";
   const lines = [
     isWarehouse ? "🏬 **Warehouse Network**" : "🏪 **Store Network**",
     "",
@@ -1739,12 +1781,26 @@ function buildLocationsAnswer(locationsResult, type, wantsExport) {
     );
   } else {
     rows.slice(0, 30).forEach((loc, index) => {
-      const place = [loc.location, loc.city, loc.state]
-        .filter(Boolean)
-        .join(", ");
-      lines.push(
-        `${index + 1}. **${loc.name}**${loc.code ? ` · \`${loc.code}\`` : ""}${place ? ` · ${place}` : ""}`,
-      );
+      if (detailed) {
+        lines.push(`**${index + 1}. ${loc.name}**${loc.code ? ` (\`${loc.code}\`)` : ""}`);
+        if (loc.location) lines.push(`   📍 **Location:** ${loc.location}`);
+        if (loc.address) lines.push(`   🏠 **Address:** ${loc.address}`);
+        if (loc.city || loc.state || loc.country || loc.pincode) {
+          lines.push(`   🗺️ **Area:** ${[loc.city, loc.state, loc.country, loc.pincode].filter(Boolean).join(", ")}`);
+        }
+        if (loc.phone) lines.push(`   ☎️ **Phone:** ${loc.phone}`);
+        if (loc.email) lines.push(`   ✉️ **Email:** ${loc.email}`);
+        if (loc.manager_name) lines.push(`   👤 **Manager:** ${loc.manager_name}`);
+        if (loc.capacity) lines.push(`   📦 **Capacity:** ${loc.capacity}`);
+        lines.push("");
+      } else {
+        const place = [loc.location, loc.city, loc.state]
+          .filter(Boolean)
+          .join(", ");
+        lines.push(
+          `${index + 1}. **${loc.name}**${loc.code ? ` · \`${loc.code}\`` : ""}${place ? ` · ${place}` : ""}`,
+        );
+      }
     });
   }
   return {
@@ -2230,13 +2286,113 @@ export async function tryInventoryGptDeterministicAnswer({
     };
   }
 
-  if (intent.type === "warehouses" || intent.type === "stores") {
+  if (intent.type === "warehouses" || intent.type === "stores" || intent.type === "warehouse_details" || intent.type === "store_details") {
+    const bareType = intent.type === "warehouse_details" ? "warehouses" : intent.type === "store_details" ? "stores" : intent.type;
     const locations = await resolveInventoryGptLocations(
       authToken,
-      intent.type,
+      bareType,
     );
+    const detailed = intent.type === "warehouse_details" || intent.type === "store_details";
+    const rows = locations.rows || [];
+    const isWarehouse = bareType === "warehouses";
+
+    // If details requested, handle display preference flow
+    if (detailed && rows.length > 0) {
+      // Check if user is responding with a display preference
+      const justCards = /^card[s]?\s*$|^card\s+(?:main|me|m)?\s*(?:dikhao|show|dekhna)?\s*$/i.test(q);
+      const justTable = /^table\s*$|^table\s+(?:main|me|m)?\s*(?:dikhao|show|dekhna)?\s*$/i.test(q);
+      const justChat = /^(?:chat|text)\s*$|^(?:chat|text)\s+(?:main|me|m)?\s*(?:dikhao|show|dekhna)?\s*$/i.test(q);
+
+      // Check if this is a preference response by looking at history
+      const lastAssistantMsg = [...(conversationHistory || [])].reverse().find(m => m?.role === "assistant");
+      const wasAskedPreference = lastAssistantMsg?.content && /how.*(?:see|view|like|c.*rds|table|chat)/i.test(lastAssistantMsg.content);
+
+      if ((justCards || justTable || justChat) && wasAskedPreference) {
+        if (justCards) {
+          return {
+            answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in card view:\n\n**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found.`,
+            render: "text",
+            extraData: {
+              type: "warehouse_cards",
+              warehouses: rows.map(r => ({
+                code: r.code,
+                name: r.name,
+                city: r.city,
+                state: r.state,
+                address: r.address,
+                phone: r.phone,
+                email: r.email,
+                manager_name: r.manager_name,
+                capacity: r.capacity,
+              })),
+            },
+          };
+        }
+        if (justTable) {
+          const cols = ["name", "code", "address", "city", "state", "phone", "email", "manager_name", "capacity"];
+          return {
+            answer: `📊 Here are all the ${isWarehouse ? "warehouses" : "stores"} in table view:`,
+            render: "text",
+            extraData: {
+              type: "table_preview",
+              title: isWarehouse ? "Warehouse Details" : "Store Details",
+              columns: cols,
+              rows: rows.map(r => cols.map(c => r[c] || "")),
+              total: rows.length,
+            },
+          };
+        }
+        // Chat/text preference — just return detailed text
+        return {
+          ...buildLocationsAnswer(locations, intent.type, intent.wantsExport, true),
+          render: "text",
+        };
+      }
+
+      // Not a preference response — check frustration
+      // If frustrated or user didn't ask for details explicitly, show direct
+      if (isUserFrustrated(q) || !/details|complete|vistar|jaankari|full|sampurna/i.test(q)) {
+        return {
+          ...buildLocationsAnswer(locations, intent.type, intent.wantsExport, true),
+          render: "text",
+        };
+      }
+
+      // Ask user for display preference
+      const answerLines = [
+        isWarehouse ? "🏬 **Warehouse Details**" : "🏪 **Store Details**",
+        "",
+        `**${rows.length}** ${isWarehouse ? "warehouses" : "stores"} found. How would you like to view them?`,
+        "",
+        "📇 **Cards** — Visual cards with key info",
+        "📋 **Table** — Tabular view with all fields",
+        "💬 **Chat** — Simple text response",
+        "",
+        "Reply with **cards**, **table**, or **chat**.",
+      ];
+      return {
+        answer: answerLines.join("\n"),
+        render: "text",
+        extraData: {
+          type: "display_preference",
+          locations: rows.map(r => ({
+            code: r.code,
+            name: r.name,
+            city: r.city,
+            state: r.state,
+            address: r.address,
+            phone: r.phone,
+            email: r.email,
+            manager_name: r.manager_name,
+            capacity: r.capacity,
+          })),
+          isWarehouse,
+        },
+      };
+    }
+
     return {
-      ...buildLocationsAnswer(locations, intent.type, intent.wantsExport),
+      ...buildLocationsAnswer(locations, intent.type, intent.wantsExport, detailed),
       render: "text",
     };
   }

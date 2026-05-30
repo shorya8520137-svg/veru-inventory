@@ -9,11 +9,14 @@ import {
   Repeat, LayoutGrid, ShoppingCart, BarChart2, Truck,
   Headphones, BrainCircuit, Star, Receipt, MessageSquare, Globe,
   Zap, TrendingUp, Layers, Users, Sparkles, Cpu,
-  Warehouse, Route, MapPin, Activity, Radio
+  Route, MapPin, Activity, Radio,
+   RefreshCw
 } from "lucide-react";
+import Image from "next/image";
 
 const BrainNetwork = dynamic(() => import('@/app/components/BrainNetwork'), { ssr: false })
-const Truck3D = dynamic(() => import('@/app/components/Truck3D'), { ssr: false })
+const Pricing = dynamic(() => import('@/app/components/Pricing'), { ssr: false })
+
 
 const iconMap = {
   sync_alt: Repeat, grid_view: LayoutGrid, shopping_cart: ShoppingCart,
@@ -25,11 +28,18 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const heroRef = useRef(null);
   const brainRef = useRef(null);
+  const servicesRef = useRef(null);
+  const metricsRef = useRef(null);
 
   const { scrollYProgress } = useScroll();
-  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.92]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const brainY = useTransform(scrollYProgress, [0, 0.5], [0, -120]);
+  const servicesY = useTransform(scrollYProgress, [0.2, 0.5], [80, 0]);
+  const metricsScale = useTransform(scrollYProgress, [0.15, 0.3], [0.9, 1]);
+  const bgParallax = useTransform(scrollYProgress, [0, 1], [0, -80]);
+  const orbLeftY = useTransform(scrollYProgress, [0, 1], [0, -100]);
+  const orbRightY = useTransform(scrollYProgress, [0, 1], [0, -140]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -40,9 +50,9 @@ export default function Home() {
   const services = [
     { icon: "sync_alt", title: "Advanced Stock Transfer", text: "W2W, W2S, S2S, and S2W transfers with source/destination control and automated AWB tracking." },
     { icon: "grid_view", title: "Website Product Catalog", text: "Centralized product administration with SKU management, categories, and AI-powered SEO descriptions." },
-    { icon: "shopping_cart", title: "Marketplace Integrations", text: "Operational connectors for Amazon and Flipkart workflows, syncing orders and stock in real-time." },
+    { icon: "shopping_cart", title: "Flipkart & Amazon Integration", text: "Connect Flipkart and Amazon directly — no multiple dashboards. Manage all orders, inventory, and fulfillment from Insora.in in one place." },
     { icon: "analytics", title: "User And Order Tracking", text: "Granular visibility into order lifecycles and customer behavior with predictive delivery timelines." },
-    { icon: "local_shipping", title: "Delivery And Shiprocket", text: "Deep integration with logistics partners to automate manifest generation and delivery status updates." },
+    { icon: "local_shipping", title: "Delivery & ShipRocket", text: "ShipRocket-powered logistics — automated manifest generation, real-time tracking, and delivery status sync from a single dashboard." },
     { icon: "support_agent", title: "Multilingual Chat Support", text: "AI-driven support system capable of handling complex queries in multiple regional languages." },
     { icon: "neurology", title: "InventoryGPT AI", text: "The core intelligence engine predicting demand signals and optimizing stock distribution levels." },
     { icon: "rate_review", title: "Review Management", text: "Aggregate and analyze customer feedback across all channels to identify operational blind spots." },
@@ -58,26 +68,31 @@ export default function Home() {
   const fadeInUp = {
     initial: { opacity: 0, y: 40 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
   };
 
   const staggerContainer = {
-    animate: { transition: { staggerChildren: 0.1 } }
+    animate: { transition: { staggerChildren: 0.06 } }
   };
 
   const staggerItem = {
-    initial: { opacity: 0, y: 30 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+    initial: { opacity: 0, y: 24 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
 
   return (
     <main className="min-h-screen bg-white text-slate-800 font-sans overflow-x-hidden">
       <style jsx global>{`
+        html { scroll-behavior: smooth; }
         @keyframes float {
           0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0; }
           10% { opacity: 1; }
           90% { opacity: 1; }
           50% { transform: translateY(-80px) translateX(30px); }
+        }
+        @keyframes parallaxDrift {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-40px); }
         }
         .parallax {
           background-attachment: fixed;
@@ -164,9 +179,14 @@ export default function Home() {
           })}
         </div>
 
-        {/* Gradient orbs */}
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+        {/* Gradient orbs with parallax */}
+        <motion.div style={{ y: orbLeftY }} className="absolute top-1/4 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+        <motion.div style={{ y: orbRightY }} className="absolute bottom-1/4 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+
+        {/* InventoryGPT AI Orchestration Network */}
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <BrainNetwork />
+        </div>
 
         <motion.div style={{ scale: heroScale, opacity: heroOpacity }} className="relative z-10 w-full px-6 md:px-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -206,20 +226,12 @@ export default function Home() {
                 ))}
               </motion.div>
             </motion.div>
-
-            {/* Right - 3D Brain Network */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }} className="relative flex items-center justify-center"
-            >
-              <BrainNetwork />
-            </motion.div>
           </div>
         </motion.div>
       </section>
 
       {/* METRICS */}
-      <section className="bg-white border-y border-slate-200">
+      <motion.section style={{ scale: metricsScale }} className="bg-white border-y border-slate-200">
         <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-slate-200 max-w-6xl mx-auto">
           {[
             { value: "12+", label: "PRODUCT MODULES" },
@@ -236,10 +248,11 @@ export default function Home() {
             </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* SERVICES */}
-      <section className="py-32 px-6 md:px-20 bg-slate-50" id="services">
+      <section className="py-32 px-6 md:px-20 bg-slate-50 relative overflow-hidden" id="services">
+        <motion.div style={{ y: servicesY }} className="absolute top-20 left-1/4 w-64 h-64 bg-emerald-400/5 rounded-full blur-3xl" />
         <motion.div className="max-w-6xl mx-auto" {...fadeInUp}>
           <div className="mb-16">
             <span className="text-xs font-bold tracking-widest text-emerald-600 mb-4 block uppercase">Product Services</span>
@@ -274,188 +287,296 @@ export default function Home() {
       </section>
 
       {/* LOGISTICS TREE - EventGPT */}
+      <Pricing />
+
       <section className="relative py-32 px-6 md:px-20 overflow-hidden bg-white" id="logistics">
         <div className="max-w-6xl mx-auto">
-          <motion.div className="text-center mb-20" {...fadeInUp}>
+          <motion.div className="text-center mb-16" {...fadeInUp}>
             <span className="text-xs font-bold tracking-widest text-emerald-600 mb-4 block uppercase">Logistics Intelligence</span>
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight">
-              EventGPT for <span className="text-emerald-600">Logistics</span>
+              InventoryGPT <span className="text-emerald-600">Logistics Mesh</span>
             </h2>
             <p className="text-slate-500 max-w-2xl mx-auto text-lg">
-              Real-time logistics orchestration with event-driven AI — from warehouse dispatch to last-mile delivery.
+              A self-optimizing logistics network powered by neural event processing — from warehouse to last mile, with ShipRocket-powered delivery sync.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
-            {/* 3D Truck */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              className="relative bg-slate-50 rounded-2xl border border-slate-200 p-8 min-h-[350px]"
-            >
-              <Truck3D />
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <Radio size={12} className="text-emerald-500" />
-                LIVE 3D TRACKING
-              </div>
-            </motion.div>
+          {/* Data Pipeline Infographic */}
+          <div className="relative mb-24">
+            {/* Pipeline track */}
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-200 via-emerald-400 to-emerald-200 -translate-y-1/2 hidden lg:block" />
 
-            {/* EventGPT Info */}
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">Event-Driven Logistics AI</h3>
-              <p className="text-slate-500 mb-8 leading-relaxed">
-                EventGPT processes every logistics event in real-time — dispatch confirmation, pickup scan, in-transit updates, delivery attempts, and proof of delivery — and makes intelligent routing decisions automatically.
-              </p>
-              <div className="space-y-4">
-                {[
-                  { icon: Route, label: "Real-time route optimization based on traffic and priority" },
-                  { icon: Activity, label: "Event stream processing for 20+ logistics event types" },
-                  { icon: MapPin, label: "Geo-fencing alerts and automated ETA updates" },
-                  { icon: Users, label: "Driver assignment with AI workload balancing" }
-                ].map((item, i) => (
-                  <motion.div key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4 + i * 0.1 }}
-                    className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                      <item.icon size={18} className="text-emerald-600" />
-                    </div>
-                    <span className="text-sm text-slate-600 pt-1">{item.label}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Tree Structure Infographic */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h3 className="text-2xl font-bold text-slate-900 text-center mb-12">Logistics Operations Tree</h3>
-            <div className="relative">
-              {/* Vertical trunk line */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-400 to-emerald-200 -translate-x-1/2 hidden lg:block" />
-
-              <div className="space-y-24 relative">
-                {/* Level 1: Warehouse */}
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12 justify-center"
-                >
-                  <div className="bg-white border-2 border-emerald-500 rounded-2xl p-6 shadow-lg text-center w-64 order-2 lg:order-1">
-                    <Warehouse size={32} className="text-emerald-600 mx-auto mb-3" />
-                    <h4 className="font-bold text-slate-900">Warehouse Dispatch</h4>
-                    <p className="text-xs text-slate-500 mt-1">Pick, pack, and dispatch</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start relative">
+              {/* Stage 1: Data Sources */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="text-center"
+              >
+                <div className="relative inline-block mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center mx-auto">
+                    <Radio size={28} className="text-white" />
                   </div>
                   <motion.div
-                    animate={{ y: [0, -8, 0] }}
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.1, 0.4] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="w-8 h-8 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30 flex items-center justify-center order-1 lg:order-2 z-10"
-                  >
-                    <Truck size={14} className="text-white" />
-                  </motion.div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center w-56 order-3">
-                    <span className="text-xs font-semibold text-emerald-600">EventGPT triggers</span>
-                    <p className="text-sm text-slate-700 mt-1">Auto-dispatch on stock availability</p>
-                  </div>
-                </motion.div>
-
-                {/* Branch connectors (horizontal lines) */}
-                <div className="relative">
-                  <div className="absolute left-1/2 top-0 w-0.5 h-12 bg-emerald-300 -translate-x-1/2 hidden lg:block" />
-
-                  {/* Level 2: Two branches */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 relative">
-                    {/* Left branch line */}
-                    <div className="hidden lg:block absolute left-[25%] top-0 w-[25%] h-0.5 bg-emerald-300" />
-                    {/* Right branch line */}
-                    <div className="hidden lg:block absolute left-[50%] top-0 w-[25%] h-0.5 bg-emerald-300" />
-
-                    {/* Branch 1: In-Transit */}
-                    <motion.div
-                      initial={{ opacity: 0, x: -30 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.3 }}
-                      className="flex flex-col items-center text-center relative pt-12"
-                    >
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-emerald-400 bg-white" />
-                      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full max-w-xs">
-                        <Route size={28} className="text-emerald-600 mx-auto mb-3" />
-                        <h4 className="font-semibold text-slate-900">In-Transit Tracking</h4>
-                        <ul className="mt-3 space-y-2 text-xs text-slate-500 text-left">
-                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Real-time GPS tracking</li>
-                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Geofence alerts</li>
-                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> ETA predictions via AI</li>
-                        </ul>
-                      </div>
-                    </motion.div>
-
-                    {/* Branch 2: Last Mile */}
-                    <motion.div
-                      initial={{ opacity: 0, x: 30 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.5 }}
-                      className="flex flex-col items-center text-center relative pt-12"
-                    >
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-emerald-400 bg-white" />
-                      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full max-w-xs">
-                        <MapPin size={28} className="text-emerald-600 mx-auto mb-3" />
-                        <h4 className="font-semibold text-slate-900">Last-Mile Delivery</h4>
-                        <ul className="mt-3 space-y-2 text-xs text-slate-500 text-left">
-                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Driver assignment</li>
-                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Proof of delivery</li>
-                          <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Customer notifications</li>
-                        </ul>
-                      </div>
-                    </motion.div>
-                  </div>
+                    className="absolute inset-0 w-16 h-16 rounded-2xl bg-emerald-400/30 -z-10"
+                  />
                 </div>
-
-                {/* Bottom: EventGPT Intelligence */}
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.6 }}
-                  className="flex justify-center"
-                >
-                  <div className="relative">
-                    <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-2xl blur" />
-                    <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-emerald-500/30 rounded-2xl p-8 shadow-2xl text-center max-w-lg">
-                      <BrainCircuit size={36} className="text-emerald-400 mx-auto mb-4" />
-                      <h4 className="text-xl font-bold text-white mb-2">EventGPT Intelligence Layer</h4>
-                      <p className="text-sm text-slate-400">Orchestrating every event across warehouse, transit, and delivery — learning from each shipment to optimize the next.</p>
-                      <div className="flex justify-center gap-1.5 mt-4">
-                        {[1, 2, 3, 4].map((_, i) => (
-                          <motion.div key={i}
-                            animate={{ height: [8, 20, 8] }}
-                            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-                            className="w-1.5 bg-gradient-to-t from-emerald-400 to-green-500 rounded-full"
-                          />
-                        ))}
-                      </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-3">Data Sources</h3>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Warehouse Sensors', val: '12,000+' },
+                    { label: 'GPS Fleet Data', val: '8.4M pts/day' },
+                    { label: 'Marketplace API', val: '6 platforms' },
+                  ].map((s, i) => (
+                    <div key={i} className="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-lg px-4 py-2.5 text-sm">
+                      <span className="text-slate-500">{s.label}</span>
+                      <span className="font-semibold text-slate-800">{s.val}</span>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Pipeline flow arrow (desktop) */}
+              <div className="hidden lg:flex items-center justify-center self-center">
+                <motion.div
+                  animate={{ x: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight size={28} className="text-emerald-500" />
+                </motion.div>
+                <motion.div
+                  animate={{ x: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                >
+                  <ArrowRight size={28} className="text-emerald-400" />
+                </motion.div>
+                <motion.div
+                  animate={{ x: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                >
+                  <ArrowRight size={28} className="text-emerald-300" />
                 </motion.div>
               </div>
+
+              {/* Mobile arrow */}
+              <div className="flex lg:hidden justify-center">
+                <motion.div
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight size={24} className="text-emerald-400 rotate-90" />
+                </motion.div>
+              </div>
+
+              {/* Stage 2: InventoryGPT Core */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="relative"
+              >
+                {/* Holographic core */}
+                <div className="text-center mb-6">
+                  <div className="relative inline-block">
+                    {/* Outer rings */}
+                    <motion.div
+                      animate={{ rotate: [0, 360] }}
+                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                      className="absolute -inset-6 border border-emerald-300/40 rounded-full"
+                    />
+                    <motion.div
+                      animate={{ rotate: [360, 0] }}
+                      transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+                      className="absolute -inset-3 border border-emerald-400/30 rounded-full border-dashed"
+                    />
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-emerald-500/50 shadow-[0_0_40px_rgba(16,185,129,0.2)] flex items-center justify-center mx-auto">
+                      <Cpu size={34} className="text-emerald-400" />
+                    </div>
+                    {/* Data packet dots orbiting */}
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        animate={{
+                          rotate: [i * 120, i * 120 + 360],
+                        }}
+                        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                        style={{ width: 90, height: 90 }}
+                      >
+                        <div
+                          className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+                          style={{
+                            position: 'absolute',
+                            top: '0%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                          }}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mt-8">InventoryGPT Core</h3>
+                  <p className="text-sm text-slate-500 mt-1">Neural Event Processor</p>
+                </div>
+
+                {/* Metrics */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Events/sec', val: '24K' },
+                    { label: 'Avg Latency', val: '12ms' },
+                    { label: 'Routes Optimized', val: '8.2M' },
+                    { label: 'AI Accuracy', val: '97.3%' },
+                  ].map((m, i) => (
+                    <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+                      <div className="text-lg font-bold text-slate-900">{m.val}</div>
+                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Pipeline flow arrow */}
+              <div className="hidden lg:flex items-center justify-center self-center">
+                <motion.div
+                  animate={{ x: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight size={28} className="text-emerald-500" />
+                </motion.div>
+                <motion.div
+                  animate={{ x: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                >
+                  <ArrowRight size={28} className="text-emerald-400" />
+                </motion.div>
+                <motion.div
+                  animate={{ x: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                >
+                  <ArrowRight size={28} className="text-emerald-300" />
+                </motion.div>
+              </div>
+
+              <div className="flex lg:hidden justify-center">
+                <motion.div
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight size={24} className="text-emerald-400 rotate-90" />
+                </motion.div>
+              </div>
+
+              {/* Stage 3: Intelligent Actions */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="text-center"
+              >
+                <div className="relative inline-block mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center mx-auto">
+                    <Zap size={28} className="text-white" />
+                  </div>
+                  <motion.div
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.1, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                    className="absolute inset-0 w-16 h-16 rounded-2xl bg-emerald-400/30 -z-10"
+                  />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-3">Intelligent Actions</h3>
+                <div className="space-y-2">
+                  {[
+                    { label: 'ShipRocket Sync', val: 'Auto' },
+                    { label: 'Auto-Reroute', val: '2.4s avg' },
+                    { label: 'Driver Dispatch', val: 'AI assigned' },
+                  ].map((a, i) => (
+                    <div key={i} className="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-lg px-4 py-2.5 text-sm">
+                      <span className="text-slate-500">{a.label}</span>
+                      <span className="font-semibold text-emerald-600">{a.val}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             </div>
+          </div>
+
+          {/* Sci-Fi Capabilities Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h3 className="text-2xl font-bold text-slate-900 text-center mb-12">Neural Capabilities</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+              {[
+                { icon: Route, title: 'Real-Time Routing', desc: 'AI optimizes every route against traffic, weather, and priority in under 50ms.' },
+                { icon: Activity, title: 'Event Stream AI', desc: 'Processes 20+ logistics event types — dispatch, pickup, transit, delivery, POD.' },
+                { icon: MapPin, title: 'Geo-Spatial Intel', desc: 'Geo-fencing alerts, automated ETAs, and zone-based dispatch orchestration.' },
+                { icon: Users, title: 'Workload Balancing', desc: 'AI distributes deliveries across drivers using skill scores and capacity data.' },
+              ].map((c, i) => {
+                const colors = [
+                  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-600' },
+                  { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600' },
+                  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-600' },
+                  { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600' },
+                ];
+                const clr = colors[i];
+                return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 + i * 0.1 }}
+                  className="group relative bg-white border border-slate-200 rounded-2xl p-6 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${clr.bg} ${clr.border} border flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <c.icon size={18} className={clr.text} />
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-1.5 text-sm">{c.title}</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">{c.desc}</p>
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <motion.div
+                      animate={{ width: [0, 40, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                      className="h-px bg-gradient-to-r from-emerald-400 to-transparent"
+                    />
+                    <div className="w-1 h-1 rounded-full bg-emerald-400" />
+                  </div>
+                </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* Stats Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 bg-slate-50 border border-slate-200 rounded-3xl p-8"
+          >
+            {[
+              { val: '99.97%', label: 'Uptime SLA' },
+              { val: '24K/sec', label: 'Events Processed' },
+              { val: '12ms', label: 'Avg Response' },
+              { val: '8.2M+', label: 'Routes Optimized' },
+            ].map((s, i) => (
+              <div key={i} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-b from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                  {s.val}
+                </div>
+                <div className="text-xs font-semibold text-slate-400 tracking-wider uppercase mt-1">{s.label}</div>
+              </div>
+            ))}
           </motion.div>
         </div>
       </section>
@@ -546,6 +667,95 @@ export default function Home() {
         </div>
       </section>
 
+      {/* AI INVENTORY INTELLIGENCE - BENEFITS */}
+      <section className="relative py-32 px-6 md:px-20 overflow-hidden bg-[#020B1F]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/3 left-1/4 w-72 h-72 bg-emerald-500/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/3 right-1/4 w-72 h-72 bg-cyan-500/5 rounded-full blur-[100px]" />
+        </div>
+        <div className="relative max-w-6xl mx-auto">
+          <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+            <span className="text-[10px] font-bold tracking-[0.2em] text-emerald-400 mb-4 block uppercase">Intelligence Layer</span>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
+              Everything your eCommerce needs in{' '}
+              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">one AI brain.</span>
+            </h2>
+            <p className="text-slate-400 max-w-3xl mx-auto text-base md:text-lg leading-relaxed">
+              InventoryGPT connects every part of your business — from warehouse shelves to customer chat — through a single neural intelligence layer.
+            </p>
+          </motion.div>
+
+          <div className="relative">
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ minHeight: '600px' }}>
+              <defs>
+                <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.15" />
+                </linearGradient>
+              </defs>
+              <line x1="50%" y1="0" x2="25%" y2="33%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="50%" y1="0" x2="75%" y2="33%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="25%" y1="33%" x2="12%" y2="66%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="25%" y1="33%" x2="38%" y2="66%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="75%" y1="33%" x2="62%" y2="66%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="75%" y1="33%" x2="88%" y2="66%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="12%" y1="66%" x2="25%" y2="100%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="38%" y1="66%" x2="50%" y2="100%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="62%" y1="66%" x2="50%" y2="100%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="88%" y1="66%" x2="75%" y2="100%" stroke="url(#lg1)" strokeWidth="1.5" />
+              <line x1="38%" y1="66%" x2="62%" y2="66%" stroke="url(#lg1)" strokeWidth="1.5" />
+            </svg>
+
+            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
+              <motion.div className="md:col-start-2 text-center mb-8 md:mb-0" initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 mb-4">
+                  <Cpu size={36} className="text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">InventoryGPT</h3>
+                <p className="text-slate-500 text-sm mt-1">Neural Intelligence Core</p>
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
+              {[
+                { icon: Package, title: 'Smart Inventory', text: 'Auto-track stock across warehouses, stores, and marketplaces with real-time sync and low-stock alerts.', idx: 0 },
+                { icon: TrendingUp, title: 'Demand Forecasting', text: 'AI predicts what to stock, when to reorder, and how much — reducing dead stock by up to 30%.', idx: 1 },
+                { icon: Truck, title: 'Logistics Automation', text: 'Route orders to the nearest fulfillment center, auto-generate manifests, and track deliveries end-to-end.', idx: 2 },
+              ].map((c, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 + i * 0.12, duration: 0.5 }}
+                  className="group relative p-6 md:p-8 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.03] to-transparent hover:border-emerald-500/20 hover:from-emerald-500/5 hover:to-transparent transition-all duration-500"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+                    <c.icon size={18} className="text-emerald-400" />
+                  </div>
+                  <h3 className="text-white font-semibold mb-2 text-base">{c.title}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">{c.text}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-5">
+              {[
+                { icon: MessageSquare, title: 'Multi-Language Chat Support', text: 'AI agents handle customer queries in Hindi, English, Tamil, Kannada, Telugu, Malayalam, Bengali, Marathi, and more — 24/7 with zero wait time.' },
+                { icon: BarChart2, title: 'Real-Time Analytics', text: 'Live dashboards showing sell-through rates, inventory turns, margin analysis, and channel performance.' },
+                { icon: RefreshCw, title: 'Auto Redistribution', text: 'Move excess stock between locations based on real-time demand signals — no manual intervention.' },
+                { icon: Headphones, title: 'Omnichannel Support', text: 'Unified view of customer queries across WhatsApp, website chat, email, and phone with AI-assisted replies.' },
+              ].map((c, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 + i * 0.1, duration: 0.5 }}
+                  className="group relative p-6 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.03] to-transparent hover:border-cyan-500/20 hover:from-cyan-500/5 hover:to-transparent transition-all duration-500"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 border border-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+                    <c.icon size={18} className="text-cyan-400" />
+                  </div>
+                  <h3 className="text-white font-semibold mb-2 text-sm">{c.title}</h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">{c.text}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CLIENTS */}
       <section className="py-32 px-6 md:px-20 bg-white" id="clients">
         <motion.div className="max-w-6xl mx-auto" {...fadeInUp}>
@@ -572,6 +782,98 @@ export default function Home() {
             })}
           </motion.div>
         </motion.div>
+      </section>
+
+      {/* TEAM */}
+      <section className="relative py-32 px-6 md:px-20 overflow-hidden bg-white" id="team">
+        <div className="max-w-6xl mx-auto">
+          <motion.div className="text-center mb-16" {...fadeInUp}>
+            <span className="text-xs font-bold tracking-widest text-emerald-600 mb-4 block uppercase">The Team</span>
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight">
+              Built by <span className="text-emerald-600">engineers, operators &amp; defenders.</span>
+            </h2>
+            <p className="text-slate-500 max-w-2xl mx-auto text-lg">
+              Insora was founded at the intersection of full-stack AI engineering, cybersecurity, and business operations — three minds, one mission.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Shorya Singh */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="group relative bg-white border border-slate-200 rounded-2xl p-8 hover:border-emerald-400/50 hover:shadow-lg transition-all duration-300 text-center"
+            >
+              <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-5 ring-4 ring-emerald-100 shadow-lg shadow-emerald-500/20">
+                <Image
+                  src="https://res.cloudinary.com/df3l7ppo6/image/upload/v1779003207/ChatGPT_Image_May_17_2026_01_01_30_PM_sg8ulc.png"
+                  alt="Shorya Singh"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Shorya Singh</h3>
+              <div className="text-xs font-bold tracking-widest text-emerald-600 uppercase mt-1 mb-3">Founder</div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full mb-4">
+                Full Stack Developer · Gen AI
+              </div>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Architects the entire Insora platform — from real-time inventory engines and AI prediction layers to logistics mesh orchestration. Shorya brings deep expertise in Next.js, Python-based AI agents, and production-grade system design.
+              </p>
+            </motion.div>
+
+            {/* Nikhil Sharma */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="group relative bg-white border border-slate-200 rounded-2xl p-8 hover:border-emerald-400/50 hover:shadow-lg transition-all duration-300 text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-cyan-500/20">
+                <span className="text-2xl font-bold text-white">NS</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Nikhil Sharma</h3>
+              <div className="text-xs font-bold tracking-widest text-emerald-600 uppercase mt-1 mb-3">Co-Founder</div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full mb-4">
+                Cyber Security Analyst
+              </div>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Secures every layer of the Insora ecosystem — from 2FA authentication and role-based access controls to encrypted data pipelines and real-time threat detection. Nikhil ensures that client operations stay protected at scale.
+              </p>
+            </motion.div>
+
+            {/* Bhushan Geidhar */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="group relative bg-white border border-slate-200 rounded-2xl p-8 hover:border-emerald-400/50 hover:shadow-lg transition-all duration-300 text-center"
+            >
+              <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-5 ring-4 ring-amber-100 shadow-lg shadow-amber-500/20">
+                <Image
+                  src="https://res.cloudinary.com/df3l7ppo6/image/upload/v1780085168/ChatGPT_Image_May_30_2026_01_35_33_AM_blgdrq.png"
+                  alt="Bhushan Geidhar"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Bhushan Geidhar</h3>
+              <div className="text-xs font-bold tracking-widest text-emerald-600 uppercase mt-1 mb-3">COO</div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full mb-4">
+                Business Operations
+              </div>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Drives Insora's business strategy, client partnerships, and operational growth. Bhushan bridges the gap between product engineering and real-world inventory operations — ensuring every feature solves a real business problem.
+              </p>
+            </motion.div>
+          </div>
+        </div>
       </section>
 
       {/* CONTACT */}
