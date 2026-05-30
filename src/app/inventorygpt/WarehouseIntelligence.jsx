@@ -378,7 +378,8 @@ export function StockAnalysisPanel({ entity, type = 'warehouses', onClose }) {
       setLoading(true)
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}${cfg.endpoint}?code=${encodeURIComponent(code)}`, {
+        const base = isWh ? '' : (process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in')
+        const res = await fetch(`${base}${cfg.endpoint}?code=${encodeURIComponent(code)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
         const json = await res.json()
