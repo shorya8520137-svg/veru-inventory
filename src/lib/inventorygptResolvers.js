@@ -427,9 +427,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Warehouse-based product listing: "show all products in gandu nagar warehouse"
   const genericPhraseRe = /^(?:all|every|each|the|this|that|any|some|a|an|of|in|for|from|to)(?:\s+(?:all|every|each|the|this|that|any|some|a|an|of|in|for|from|to))*$/i;
   const warehouseProductMatch = lower.match(
-    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|warhorse|wh|store)/
+    /(?:product|item|stock|inventory).*(?:in|at|of|from)\s+([\w\s.-]+?)\s*(?:warehouse|wearhouse|werahouse|warhorse|wh|store)/
   ) || lower.match(
-    /(?:in|at|of|from)\s+([\w\s]+?)\s*(?:warehouse|wearhouse|werahouse|warhorse|wh|store).*(?:product|item|stock|inventory)/
+    /(?:in|at|of|from)\s+([\w\s.-]+?)\s*(?:warehouse|wearhouse|werahouse|warhorse|wh|store).*(?:product|item|stock|inventory)/
   );
   const warehouseProductName = warehouseProductMatch?.[1]?.trim();
   const isGenericWarehouseName = !!warehouseProductName && genericPhraseRe.test(warehouseProductName);
@@ -449,6 +449,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     /show.*(?:stock|inventory|quantity).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
     /(?:warehouse|wearhouse|werahouse|warhorse).*(?:stock|inventory|quantity)/.test(lower) ||
     /(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse|warhorse).*(?:stock|inventory|product)/.test(lower) ||
+    /(?:all|every|each|sare|saare|sabhi).*(?:product|item|stock|inventory).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
     /(?:stock|inventory|quantity).*(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?)\s*$/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?).*dikhao/.test(lower) ||
