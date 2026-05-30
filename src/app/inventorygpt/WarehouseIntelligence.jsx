@@ -26,11 +26,11 @@ function StatusBadge({ status }) {
 
 function StatBox({ label, value, icon: Icon, color }) {
   return (
-    <div className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-      {Icon && <Icon size={16} className={`${color || 'text-slate-500'} shrink-0`} />}
+    <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 rounded-lg border border-slate-100">
+      {Icon && <Icon size={12} className={`${color || 'text-slate-500'} shrink-0`} />}
       <div className="min-w-0">
-        <div className="text-xs text-slate-400 font-medium truncate">{label}</div>
-        <div className="text-sm font-bold text-slate-900 truncate">{value ?? '—'}</div>
+        <div className="text-[10px] text-slate-400 font-medium truncate">{label}</div>
+        <div className="text-xs font-bold text-slate-900 truncate">{value ?? '—'}</div>
       </div>
     </div>
   )
@@ -42,30 +42,30 @@ function CardFront({ wh, onViewDetails, onStockAnalysis }) {
   const healthScore = wh._health?.score ?? 0
 
   return (
-    <div className="p-5 flex flex-col h-full">
+    <div className="p-4 flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-200">
-            <Warehouse className="text-white" size={20} />
+      <div className="flex items-start justify-between mb-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow shadow-emerald-200 shrink-0">
+            <Warehouse className="text-white" size={18} />
           </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900 leading-tight">{wh.name}</h3>
-            <span className="text-xs font-mono font-semibold text-slate-400">{wh.code}</span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-slate-900 leading-tight truncate">{wh.name}</h3>
+            <span className="text-[10px] font-mono font-semibold text-slate-400">{wh.code}</span>
           </div>
         </div>
         <StatusBadge status={status} />
       </div>
 
       {/* Location & Manager */}
-      <div className="space-y-1.5 mb-3 text-sm text-slate-500">
+      <div className="space-y-1 mb-2.5 text-xs text-slate-500">
         <div className="flex items-center gap-1.5">
-          <MapPin size={14} className="shrink-0 text-slate-400" />
+          <MapPin size={12} className="shrink-0 text-slate-400" />
           <span className="truncate">{[wh.city, wh.state].filter(Boolean).join(', ') || wh.location || '—'}</span>
         </div>
         {wh.manager_name && (
           <div className="flex items-center gap-1.5">
-            <User size={14} className="shrink-0 text-slate-400" />
+            <User size={12} className="shrink-0 text-slate-400" />
             <span>{wh.manager_name}</span>
           </div>
         )}
@@ -84,14 +84,14 @@ function CardFront({ wh, onViewDetails, onStockAnalysis }) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
+      <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
         <button onClick={onViewDetails}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-md shadow-emerald-200">
-          <Eye size={14} /> View Details
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-sm">
+          <Eye size={12} /> Details
         </button>
         <button onClick={onStockAnalysis}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-all">
-          <Brain size={14} /> Stock Analysis
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-all">
+          <Brain size={12} /> Analysis
         </button>
       </div>
     </div>
@@ -194,13 +194,13 @@ export function WarehouseIntelligenceCard({ warehouse, onViewDetails, onStockAna
       style={{ perspective: 1200 }}
     >
       <motion.div
-        className="relative w-full min-h-[320px] rounded-2xl bg-white border border-slate-200 shadow-sm"
+        className="relative w-full min-h-[280px] rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden"
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
         style={{ transformStyle: 'preserve-3d' }}
       >
         {/* Front */}
-        <div style={{ backfaceVisibility: 'hidden' }} className="absolute inset-0">
+        <div style={{ backfaceVisibility: 'hidden' }} className="absolute inset-0 overflow-y-auto">
           <CardFront
             wh={warehouse}
             onViewDetails={() => setFlipped(true)}
@@ -210,7 +210,7 @@ export function WarehouseIntelligenceCard({ warehouse, onViewDetails, onStockAna
         {/* Back */}
         <div
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-          className="absolute inset-0"
+          className="absolute inset-0 overflow-y-auto"
         >
           <CardBack wh={warehouse} onFlipBack={() => setFlipped(false)} />
         </div>
