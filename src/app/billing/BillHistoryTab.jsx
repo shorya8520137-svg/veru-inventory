@@ -163,7 +163,7 @@ export default function BillHistoryTab() {
                                             <div style={{ fontSize:11, color:'#9CA3AF' }}>{bill.customer_phone}</div>
                                         </td>
                                         <td style={{ padding:'14px 16px' }}>
-                                            <span style={{ fontSize:13, fontWeight:600, color: bill.store_code ? '#059669' : '#9CA3AF' }}>{bill.store_code || '—'}</span>
+                                            <span style={{ fontSize:13, fontWeight:600, color: bill.store_code ? '#059669' : '#9CA3AF' }}>{bill.store_name || bill.store_code || '—'}</span>
                                         </td>
                                         <td style={{ padding:'14px 16px', textAlign:'center' }}>
                                             <span style={{ fontSize:14, fontWeight:700, color:'#6B7280' }}>{bill.total_items || 0}</span>

@@ -551,13 +551,17 @@ router.get('/history', authenticateToken, (req, res) => {
 
             function fetchBills(includeStoreCode) {
                 const selectCols = [
-                    'id', 'invoice_number', 'customer_name', 'customer_phone',
-                    'customer_email', 'subtotal', 'discount', 'shipping',
-                    'gst_amount', 'grand_total', 'payment_mode', 'payment_status',
-                    'items', 'total_items', 'created_at'
+                    'bills.id', 'bills.invoice_number', 'bills.customer_name', 'bills.customer_phone',
+                    'bills.customer_email', 'bills.subtotal', 'bills.discount', 'bills.shipping',
+                    'bills.gst_amount', 'bills.grand_total', 'bills.payment_mode', 'bills.payment_status',
+                    'bills.items', 'bills.total_items', 'bills.created_at'
                 ];
-                if (includeStoreCode) selectCols.splice(14, 0, 'store_code');
-                const sql = `SELECT ${selectCols.join(', ')} FROM bills ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+                let joinClause = '';
+                if (includeStoreCode) {
+                    selectCols.splice(14, 0, 'bills.store_code', 's.store_name as store_name');
+                    joinClause = ' LEFT JOIN stores s ON bills.store_code = s.store_code';
+                }
+                const sql = `SELECT ${selectCols.join(', ')} FROM bills${joinClause} ${whereClause} ORDER BY bills.created_at DESC LIMIT ? OFFSET ?`;
                 db.query(sql, [...queryParams, parseInt(limit), offset], (err, results) => {
                     if (err) {
                         if (err.message && err.message.includes("Unknown column 'store_code'") && includeStoreCode) {
