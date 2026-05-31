@@ -1635,11 +1635,44 @@ const LOGISTICS_VEHICLE_RATES = {
 const LOGISTICS_DEFAULT_WEIGHT_KG = 0.5;
 
 function selectLogisticsVehicle(weightKg) {
-  const sorted = Object.entries(LOGISTICS_VEHICLE_RATES).sort((a, b) => a[1].capacity - b[1].capacity);
-  for (const [key, v] of sorted) {
-    if (weightKg <= v.capacity) return key;
-  }
+  if (weightKg <= 10) return 'bike';
+  if (weightKg <= 50) return 'three_wheeler';
+  if (weightKg <= 500) return 'pickup';
   return 'truck';
+}
+
+function calcLogisticsConfidence(distanceKm, product, weather, traffic) {
+  let score = 0;
+  const reasons = [];
+  if (distanceKm > 0 && distanceKm !== 100) {
+    score += 30; reasons.push('✓ Distance known');
+  } else {
+    reasons.push('✗ Distance estimated (default)');
+  }
+  if (product?.weight != null && parseFloat(product.weight) > 0) {
+    score += 22; reasons.push('✓ Product weight known');
+  } else {
+    reasons.push('✗ Weight estimated (0.5kg default)');
+  }
+  if (product?.price != null && parseFloat(product.price) > 0) {
+    score += 18; reasons.push('✓ Product price known');
+  } else {
+    reasons.push('✗ Product price unavailable');
+  }
+  if (weather && weather !== 'clear') {
+    score += 10; reasons.push('✓ Weather factors applied');
+  } else {
+    reasons.push('✗ Weather: clear (default)');
+  }
+  if (traffic && traffic !== 'low') {
+    score += 10; reasons.push('✓ Traffic factors applied');
+  } else {
+    reasons.push('✗ Traffic: low (default)');
+  }
+  score = Math.min(score, 90);
+  reasons.push('✗ Real courier quote unavailable');
+  reasons.push('✗ Historical route data unavailable');
+  return { score, reasons };
 }
 
 export async function resolveInventoryGptLogistics(intent, token) {
@@ -1712,13 +1745,18 @@ export async function resolveInventoryGptLogistics(intent, token) {
     const subtotal = Math.round((baseFare + distanceCost + weightCost + vehicleCost));
     const gst = Math.round(subtotal * 0.05);
     const total = subtotal + gst;
-    const avgSellingPrice = product?.price ? parseFloat(product.price) : 0;
-    const revenueSaved = quantity * avgSellingPrice;
-    const netBenefit = revenueSaved - total;
-    const transferScore = total > 0 ? Math.round((revenueSaved / total) * 100) / 100 : 0;
-    let recommendation = 'do_not_transfer';
-    if (transferScore > 1.2) recommendation = 'transfer';
-    else if (transferScore > 0.8) recommendation = 'consider';
+    const priceKnown = product?.price != null && parseFloat(product.price) > 0;
+    const avgSellingPrice = priceKnown ? parseFloat(product.price) : 0;
+    const revenueSaved = priceKnown ? quantity * avgSellingPrice : null;
+    const netBenefit = revenueSaved !== null ? revenueSaved - total : null;
+    const transferScore = (revenueSaved !== null && total > 0) ? revenueSaved / total : null;
+    let recommendation = 'insufficient_data';
+    if (revenueSaved !== null && transferScore !== null) {
+      if (transferScore > 1.2) recommendation = 'transfer';
+      else if (transferScore > 0.8) recommendation = 'consider';
+      else recommendation = 'do_not_transfer';
+    }
+    const confidence = calcLogisticsConfidence(distanceKm, product, weather, traffic);
     return {
       source: sourceWarehouse || 'Source',
       destination: destWarehouse || 'Destination',
@@ -1730,8 +1768,8 @@ export async function resolveInventoryGptLogistics(intent, token) {
       vehicleSuggested: suggestedVehicle,
       vehicleLabel: vehicle.label,
       costBreakdown: { baseFare, distanceCost: Math.round(distanceCost), weightCost: Math.round(weightCost), vehicleCost, fuelAdjustment: 0, weatherMultiplier: 1, trafficMultiplier: 1, subtotal, gst, total },
-      transferAnalysis: { pendingOrders: quantity, avgSellingPrice, revenueSaved, netBenefit, transferScore, recommendation },
-      confidence: 'low',
+      transferAnalysis: { pendingOrders: quantity, avgSellingPrice, revenueSaved, netBenefit, transferScore, recommendation, priceKnown },
+      confidence,
     };
   }
 }
@@ -2136,52 +2174,78 @@ function buildLogisticsAnswer(logResult) {
     ``,
     `**${source || 'Source'}** → **${destination || 'Destination'}**`,
     `📍 Distance: **${distanceKm || '~100'} km**`,
+    `📦 **${product?.name || 'Product'}**${product?.barcode ? ` (\`${product.barcode}\`)` : ''}`,
+    `🔢 **Quantity:** ${quantity || 1} unit(s) | ⚖️ **${totalWeightKg || 0} kg** (chargeable: ${chargeableWeightKg || 0} kg)`,
+    `🚛 **Suggested Vehicle:** ${vehicleLabel || vehicleSuggested}`,
     ``,
-  ];
-  if (product?.name) {
-    lines.push(`📦 **Product:** ${product.name}${product.barcode ? ` (\`${product.barcode}\`)` : ''}`);
-    lines.push(`🔢 **Quantity:** ${quantity} units`);
-  }
-  lines.push(`⚖️ **Weight:** ${totalWeightKg || 0} kg (chargeable: ${chargeableWeightKg || 0} kg)`);
-  lines.push(`🚛 **Suggested Vehicle:** ${vehicleLabel || vehicleSuggested} (capacity ${LOGISTICS_VEHICLE_RATES[vehicleSuggested]?.capacity || '?'} kg)`);
-  lines.push(``);
-  lines.push(`**💰 Cost Breakdown:**`);
-  lines.push(`   · Base Fare: ₹${costBreakdown.baseFare?.toLocaleString('en-IN') || 0}`);
-  lines.push(`   · Distance (${distanceKm}km × ₹${LOGISTICS_VEHICLE_RATES[vehicleSuggested]?.perKmRate || 0}/km): ₹${costBreakdown.distanceCost?.toLocaleString('en-IN') || 0}`);
-  lines.push(`   · Weight (${chargeableWeightKg}kg × ₹${LOGISTICS_VEHICLE_RATES[vehicleSuggested]?.perKgRate || 0}/kg): ₹${costBreakdown.weightCost?.toLocaleString('en-IN') || 0}`);
-  lines.push(`   · Vehicle Cost: ₹${costBreakdown.vehicleCost?.toLocaleString('en-IN') || 0}`);
-  if (costBreakdown.fuelAdjustment > 0) {
-    lines.push(`   · Fuel Adjustment: ₹${costBreakdown.fuelAdjustment?.toLocaleString('en-IN') || 0}`);
-  }
-  if (costBreakdown.weatherMultiplier !== 1 || costBreakdown.trafficMultiplier !== 1) {
-    lines.push(`   · Weather × Traffic: ${costBreakdown.weatherMultiplier || 1} × ${costBreakdown.trafficMultiplier || 1}`);
-  }
-  lines.push(`   · GST (5%): ₹${costBreakdown.gst?.toLocaleString('en-IN') || 0}`);
-  lines.push(`   ─────────────────────────────`);
-  lines.push(`   **Total: ₹${costBreakdown.total?.toLocaleString('en-IN') || 0}**`);
-  lines.push(``);
+    `**💰 Cost Breakdown:**`,
+    costBreakdown.baseFare != null ? `   · Base Fare: ₹${costBreakdown.baseFare.toLocaleString('en-IN')}` : null,
+    costBreakdown.distanceCost != null ? `   · Distance (${distanceKm}km): ₹${costBreakdown.distanceCost.toLocaleString('en-IN')}` : null,
+    costBreakdown.weightCost != null ? `   · Weight (${chargeableWeightKg}kg): ₹${costBreakdown.weightCost.toLocaleString('en-IN')}` : null,
+    costBreakdown.vehicleCost != null ? `   · Vehicle Cost: ₹${costBreakdown.vehicleCost.toLocaleString('en-IN')}` : null,
+    costBreakdown.fuelAdjustment > 0 ? `   · Fuel Adjustment: ₹${costBreakdown.fuelAdjustment.toLocaleString('en-IN')}` : null,
+    (costBreakdown.weatherMultiplier !== 1 || costBreakdown.trafficMultiplier !== 1)
+      ? `   · Weather × Traffic: ${costBreakdown.weatherMultiplier || 1} × ${costBreakdown.trafficMultiplier || 1}`
+      : null,
+    costBreakdown.gst != null ? `   · GST (5%): ₹${costBreakdown.gst.toLocaleString('en-IN')}` : null,
+    `   ─────────────────────────────`,
+    `   **Total: ₹${(costBreakdown.total || 0).toLocaleString('en-IN')}**`,
+    ``,
+  ].filter(Boolean);
 
   // Transfer analysis
   if (transferAnalysis) {
+    const priceKnown = transferAnalysis.priceKnown || (transferAnalysis.revenueSaved !== null && transferAnalysis.revenueSaved > 0);
+
+    if (!priceKnown) {
+      lines.push(`**⚠️ Missing Data Detected**`);
+      lines.push(`   · Product Selling Price Unavailable`);
+      lines.push(`   · Revenue Impact Unknown`);
+      lines.push(`   → Transfer cost is ₹${(costBreakdown.total || 0).toLocaleString('en-IN')} but we cannot`) ;
+      lines.push(`     calculate revenue benefit without a selling price.`);
+      lines.push(`   → Would you like InventoryGPT to estimate product value`);
+      lines.push(`     from historical sales?`);
+      lines.push(``);
+    }
+
     lines.push(`**📊 Transfer Analysis:**`);
-    lines.push(`   · Pending Orders: ${transferAnalysis.pendingOrders || 0}`);
-    lines.push(`   · Avg Selling Price: ₹${(transferAnalysis.avgSellingPrice || 0).toLocaleString('en-IN')}`);
-    lines.push(`   · Revenue at Risk: ₹${transferAnalysis.revenueSaved?.toLocaleString('en-IN') || 0}`);
-    lines.push(`   · Net Benefit: ₹${transferAnalysis.netBenefit?.toLocaleString('en-IN') || 0}`);
-    lines.push(`   · Transfer Score: ${transferAnalysis.transferScore || 0}`);
-    lines.push(``);
-    if (transferAnalysis.recommendation === 'transfer') {
-      lines.push(`✅ **RECOMMENDED** — Revenue saved exceeds transfer cost.`);
-    } else if (transferAnalysis.recommendation === 'consider') {
-      lines.push(`⚠️ **CONSIDER** — Revenue is close to cost. Evaluate urgency.`);
+    lines.push(`   · Pending Orders: ${transferAnalysis.pendingOrders || 1}`);
+    if (priceKnown) {
+      lines.push(`   · Avg Selling Price: ₹${(transferAnalysis.avgSellingPrice || 0).toLocaleString('en-IN')}`);
+      lines.push(`   · Revenue at Risk: ₹${(transferAnalysis.revenueSaved || 0).toLocaleString('en-IN')}`);
+      lines.push(`   · Net Benefit: ₹${(transferAnalysis.netBenefit || 0).toLocaleString('en-IN')}`);
+      lines.push(`   · Transfer Score: ${transferAnalysis.transferScore != null ? transferAnalysis.transferScore.toFixed(2) : 'N/A'}`);
     } else {
-      lines.push(`⛔ **NOT RECOMMENDED** — Transfer cost exceeds revenue at risk.`);
+      lines.push(`   · Avg Selling Price: Unknown`);
+      lines.push(`   · Revenue at Risk: Unknown`);
+      lines.push(`   · Net Benefit: Cannot calculate — price missing`);
+      lines.push(`   · Transfer Score: N/A`);
+    }
+    lines.push(``);
+
+    if (transferAnalysis.recommendation === 'transfer') {
+      lines.push(`✅ **RECOMMENDED** — Revenue (₹${(transferAnalysis.revenueSaved || 0).toLocaleString('en-IN')}) exceeds transfer cost (₹${(costBreakdown.total || 0).toLocaleString('en-IN')}).`);
+    } else if (transferAnalysis.recommendation === 'consider') {
+      lines.push(`⚠️ **CONSIDER** — Revenue is close to cost. Evaluate urgency before proceeding.`);
+    } else if (transferAnalysis.recommendation === 'do_not_transfer') {
+      lines.push(`⛔ **NOT RECOMMENDED** — Transfer cost (₹${(costBreakdown.total || 0).toLocaleString('en-IN')}) exceeds revenue at risk (₹${(transferAnalysis.revenueSaved || 0).toLocaleString('en-IN')}).`);
+    } else {
+      lines.push(`❓ **NEED PRODUCT VALUE** — Transfer cost available but revenue impact cannot be calculated because average order value is missing.`);
     }
   }
 
+  // Confidence
+  if (confidence && typeof confidence === 'object') {
+    lines.push(``);
+    lines.push(`**Confidence: ${Math.round(confidence.score)}%**`);
+    confidence.reasons.forEach(r => lines.push(`   ${r}`));
+  } else {
+    lines.push(``);
+    lines.push(`_Confidence: ${confidence || 'low'}_`);
+  }
+
   lines.push(``);
-  lines.push(`_Confidence: ${confidence}_`);
-  lines.push(`_For a more detailed estimate with interactive controls, visit the Logistics page._`);
+  lines.push(`_For a detailed estimate with interactive controls, visit the Logistics page._`);
 
   return {
     answer: lines.join('\n'),

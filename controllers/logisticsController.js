@@ -16,11 +16,44 @@ const GST_RATE = 0.05;
 const DEFAULT_WEIGHT_KG = 0.5;
 
 function selectVehicle(weightKg) {
-  const sorted = Object.entries(VEHICLE_RATES).sort((a, b) => a[1].capacity - b[1].capacity);
-  for (const [key, v] of sorted) {
-    if (weightKg <= v.capacity) return key;
-  }
+  if (weightKg <= 10) return 'bike';
+  if (weightKg <= 50) return 'three_wheeler';
+  if (weightKg <= 500) return 'pickup';
   return 'truck';
+}
+
+function calcConfidence(distanceKm, product, weather, traffic) {
+  let score = 0;
+  const reasons = [];
+  if (distanceKm > 0 && distanceKm !== 100) {
+    score += 30; reasons.push('✓ Distance known');
+  } else {
+    reasons.push('✗ Distance estimated (default)');
+  }
+  if (product?.weight != null && parseFloat(product.weight) > 0) {
+    score += 22; reasons.push('✓ Product weight known');
+  } else {
+    reasons.push('✗ Weight estimated (0.5kg default)');
+  }
+  if (product?.price != null && parseFloat(product.price) > 0) {
+    score += 18; reasons.push('✓ Product price known');
+  } else {
+    reasons.push('✗ Product price unavailable');
+  }
+  if (weather && weather !== 'clear') {
+    score += 10; reasons.push('✓ Weather factors applied');
+  } else {
+    reasons.push('✗ Weather: clear (default)');
+  }
+  if (traffic && traffic !== 'low') {
+    score += 10; reasons.push('✓ Traffic factors applied');
+  } else {
+    reasons.push('✗ Traffic: low (default)');
+  }
+  score = Math.min(score, 90);
+  reasons.push('✗ Real courier quote unavailable');
+  reasons.push('✗ Historical route data unavailable');
+  return { score, reasons };
 }
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -139,18 +172,20 @@ exports.logisticsEstimate = async (req, res) => {
 
     // Transfer decision
     const pendingOrders = quantity;
-    const avgSellingPrice = product?.price ? parseFloat(product.price) : 0;
-    const revenueSaved = pendingOrders * avgSellingPrice;
-    const netBenefit = revenueSaved - total;
-    const transferScore = total > 0 ? revenueSaved / total : 0;
+    const priceKnown = product?.price != null && parseFloat(product.price) > 0;
+    const avgSellingPrice = priceKnown ? parseFloat(product.price) : 0;
+    const revenueSaved = priceKnown ? pendingOrders * avgSellingPrice : null;
+    const netBenefit = revenueSaved !== null ? revenueSaved - total : null;
+    const transferScore = (revenueSaved !== null && total > 0) ? revenueSaved / total : null;
 
-    let recommendation = 'do_not_transfer';
-    if (transferScore > 1.2) recommendation = 'transfer';
-    else if (transferScore > 0.8) recommendation = 'consider';
+    let recommendation = 'insufficient_data';
+    if (revenueSaved !== null && transferScore !== null) {
+      if (transferScore > 1.2) recommendation = 'transfer';
+      else if (transferScore > 0.8) recommendation = 'consider';
+      else recommendation = 'do_not_transfer';
+    }
 
-    let confidence = 'low';
-    if (distanceKm > 0 && product?.weight != null) confidence = 'high';
-    else if (distanceKm > 0) confidence = 'medium';
+    const confidence = calcConfidence(distanceKm, product, weather, traffic);
 
     res.json({
       success: true,
@@ -186,8 +221,9 @@ exports.logisticsEstimate = async (req, res) => {
         avgSellingPrice,
         revenueSaved,
         netBenefit,
-        transferScore: Math.round(transferScore * 100) / 100,
+        transferScore: transferScore !== null ? Math.round(transferScore * 100) / 100 : null,
         recommendation,
+        priceKnown,
       },
       confidence,
     });
