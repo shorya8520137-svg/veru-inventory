@@ -569,6 +569,26 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   if (/sku|barcode|product|item|name|what about this/.test(lower))
     return { type: "product", field: "summary", wantsExport };
 
+  // Logistics/transfer cost estimation: "can I transfer X from Y to Z", "logistics cost", etc.
+  const logisticsMatch = lower.match(/(?:logistics|transfer\s+(?:cost|stock|product|item)|ship\s+(?:stock|product|item)|transport|moving\s+(?:stock|product|inventory|item)|shift\s+(?:stock|product|item)|"can i".*(?:transfer|ship|move|shift)|"how much".*(?:transfer|ship|move|shift|cost)|"cost to".*(?:transfer|ship|move|shift)|courier\s+cost|shipping\s+cost|transport\s+(?:cost|charge|price)|freight\s+(?:cost|charge|price)|move\s+(?:stock|product|item|inventory)\s+from|transfer\s+(?:stock|product|item)\s+from)/i);
+  if (logisticsMatch) {
+    // Extract source and destination
+    const sdMatch = lower.match(/(?:from|between)\s+(.+?)\s+(?:to|and)\s+(.+?)(?:\s+(?:warehouse|store|wh|godown))?$/i);
+    const productName = lower
+      .replace(/logistics|transfer|ship|transport|moving|shift|move|cost|price|charge|to|from|between|and|"can i"|"how much"|"cost to"|i want|i need|please|pls|bro|bhai/gi, '')
+      .replace(/\s+(?:warehouse|store|wh|godoon|godown)\s*/gi, ' ')
+      .replace(/\s+(?:cost|price|charge|fee|rate)\s*/gi, ' ')
+      .replace(/\s+/g, ' ').trim();
+    return {
+      type: 'logistics',
+      productName: productName || null,
+      sourceWarehouse: sdMatch?.[1]?.trim() || null,
+      destWarehouse: sdMatch?.[2]?.trim() || null,
+      raw,
+      wantsExport,
+    };
+  }
+
   // Catch-all: any query mentioning warehouse/store with action words
   // Handles Hindi word order and loose spelling variations
   if (/\bwarehouse\b/.test(lower) && /\b(show|list|all|total|count|detail|deatil|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
@@ -1593,6 +1613,118 @@ export async function resolveInventoryGptGraph({
   return { product, timeline, orders };
 }
 
+const LOGISTICS_VEHICLE_RATES = {
+  bike: { label: 'Bike', capacity: 50, baseFare: 100, perKmRate: 8, perKgRate: 1, vehicleCost: 500 },
+  three_wheeler: { label: '3 Wheeler', capacity: 500, baseFare: 200, perKmRate: 12, perKgRate: 1.5, vehicleCost: 1000 },
+  pickup: { label: 'Pickup/Tata Ace', capacity: 3000, baseFare: 300, perKmRate: 18, perKgRate: 2, vehicleCost: 2000 },
+  mini_truck: { label: 'Mini Truck (Tata 407)', capacity: 7000, baseFare: 400, perKmRate: 25, perKgRate: 2.5, vehicleCost: 3500 },
+  truck: { label: 'Truck (10+ wheeler)', capacity: 16000, baseFare: 500, perKmRate: 35, perKgRate: 3, vehicleCost: 5000 },
+};
+
+const LOGISTICS_DEFAULT_WEIGHT_KG = 0.5;
+
+function selectLogisticsVehicle(weightKg) {
+  const sorted = Object.entries(LOGISTICS_VEHICLE_RATES).sort((a, b) => a[1].capacity - b[1].capacity);
+  for (const [key, v] of sorted) {
+    if (weightKg <= v.capacity) return key;
+  }
+  return 'truck';
+}
+
+export async function resolveInventoryGptLogistics(intent, token) {
+  const { productName, sourceWarehouse, destWarehouse, raw } = intent;
+  const lower = String(raw || '').toLowerCase();
+  const qtyMatch = lower.match(/(\d+)\s*(?:qty|quantity|unit|pc|pcs|item|items)/);
+  const quantity = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+  const weather = lower.match(/weather[=:]\s*(clear|rain|heavy_rain|storm)/i)?.[1] || 'clear';
+  const traffic = lower.match(/traffic[=:]\s*(low|medium|high|extreme)/i)?.[1] || 'low';
+
+  // Search product by name to get weight/price
+  let product = null;
+  let searchProduct = null;
+  if (productName) {
+    const pResult = await apiGet(`/api/products?search=${encodeURIComponent(productName)}&limit=5`, token);
+    if (!pResult.error) {
+      const rows = rowsFromPayload(pResult.data);
+      if (rows.length) {
+        searchProduct = normalizeProduct(rows[0]);
+        product = { name: searchProduct.product_name, barcode: searchProduct.barcode || searchProduct.sku, price: searchProduct.price, weight: searchProduct.weight };
+      }
+    }
+    if (!product) {
+      const wResult = await apiGet(`/api/website/products?search=${encodeURIComponent(productName)}&limit=5`, token);
+      if (!wResult.error) {
+        const rows = rowsFromPayload(wResult.data);
+        if (rows.length) {
+          const wp = normalizeProduct(rows[0]);
+          product = { name: wp.product_name, barcode: wp.barcode || wp.sku, price: wp.price, weight: wp.weight };
+        }
+      }
+    }
+  }
+
+  // Estimate weight
+  const unitWeight = product?.weight ? parseFloat(product.weight) : LOGISTICS_DEFAULT_WEIGHT_KG;
+  const weightKg = unitWeight * quantity;
+  const chargeableWeightKg = weightKg; // simplified — no volumetric without dims
+
+  const suggestedVehicle = selectLogisticsVehicle(chargeableWeightKg);
+  const vehicle = LOGISTICS_VEHICLE_RATES[suggestedVehicle];
+
+  // Call Express endpoint for distance and cost
+  try {
+    const body = {
+      productName: product?.name || productName || null,
+      productBarcode: product?.barcode || null,
+      sourceWarehouse: sourceWarehouse || '',
+      destWarehouse: destWarehouse || '',
+      quantity,
+      weather,
+      traffic,
+      vehicleType: suggestedVehicle,
+    };
+    const response = await fetch(`${API_BASE}/api/inventorygpt/logistics-estimate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (data.success) return data;
+    return { error: data.error || 'Could not calculate estimate' };
+  } catch (err) {
+    // Fallback: estimate locally without distance
+    const distanceKm = 100;
+    const baseFare = vehicle.baseFare;
+    const distanceCost = distanceKm * vehicle.perKmRate;
+    const weightCost = chargeableWeightKg * vehicle.perKgRate;
+    const vehicleCost = vehicle.vehicleCost;
+    const subtotal = Math.round((baseFare + distanceCost + weightCost + vehicleCost));
+    const gst = Math.round(subtotal * 0.05);
+    const total = subtotal + gst;
+    const avgSellingPrice = product?.price ? parseFloat(product.price) : 0;
+    const revenueSaved = quantity * avgSellingPrice;
+    const netBenefit = revenueSaved - total;
+    const transferScore = total > 0 ? Math.round((revenueSaved / total) * 100) / 100 : 0;
+    let recommendation = 'do_not_transfer';
+    if (transferScore > 1.2) recommendation = 'transfer';
+    else if (transferScore > 0.8) recommendation = 'consider';
+    return {
+      source: sourceWarehouse || 'Source',
+      destination: destWarehouse || 'Destination',
+      distanceKm,
+      product,
+      quantity,
+      totalWeightKg: Math.round(weightKg * 100) / 100,
+      chargeableWeightKg: Math.round(chargeableWeightKg * 100) / 100,
+      vehicleSuggested: suggestedVehicle,
+      vehicleLabel: vehicle.label,
+      costBreakdown: { baseFare, distanceCost: Math.round(distanceCost), weightCost: Math.round(weightCost), vehicleCost, fuelAdjustment: 0, weatherMultiplier: 1, trafficMultiplier: 1, subtotal, gst, total },
+      transferAnalysis: { pendingOrders: quantity, avgSellingPrice, revenueSaved, netBenefit, transferScore, recommendation },
+      confidence: 'low',
+    };
+  }
+}
+
 function buildCategoriesAnswer(categoriesResult, website, wantsExport) {
   const rows = categoriesResult.rows || [];
   const label = website
@@ -1980,6 +2112,72 @@ function buildGraphAnswer(graphResult, barcode, wantsExport) {
     exportFilename: wantsExport
       ? `inventorygpt-graph-${barcode || "data"}.tsv`
       : null,
+  };
+}
+
+function buildLogisticsAnswer(logResult) {
+  if (logResult.error) {
+    return { answer: `Could not calculate logistics estimate: ${logResult.error}` };
+  }
+  const { source, destination, distanceKm, product, quantity, totalWeightKg, chargeableWeightKg, vehicleSuggested, vehicleLabel, costBreakdown, transferAnalysis, confidence } = logResult;
+  const lines = [
+    `🚚 **Logistics Cost Estimate**`,
+    ``,
+    `**${source || 'Source'}** → **${destination || 'Destination'}**`,
+    `📍 Distance: **${distanceKm || '~100'} km**`,
+    ``,
+  ];
+  if (product?.name) {
+    lines.push(`📦 **Product:** ${product.name}${product.barcode ? ` (\`${product.barcode}\`)` : ''}`);
+    lines.push(`🔢 **Quantity:** ${quantity} units`);
+  }
+  lines.push(`⚖️ **Weight:** ${totalWeightKg || 0} kg (chargeable: ${chargeableWeightKg || 0} kg)`);
+  lines.push(`🚛 **Suggested Vehicle:** ${vehicleLabel || vehicleSuggested} (capacity ${LOGISTICS_VEHICLE_RATES[vehicleSuggested]?.capacity || '?'} kg)`);
+  lines.push(``);
+  lines.push(`**💰 Cost Breakdown:**`);
+  lines.push(`   · Base Fare: ₹${costBreakdown.baseFare?.toLocaleString('en-IN') || 0}`);
+  lines.push(`   · Distance (${distanceKm}km × ₹${LOGISTICS_VEHICLE_RATES[vehicleSuggested]?.perKmRate || 0}/km): ₹${costBreakdown.distanceCost?.toLocaleString('en-IN') || 0}`);
+  lines.push(`   · Weight (${chargeableWeightKg}kg × ₹${LOGISTICS_VEHICLE_RATES[vehicleSuggested]?.perKgRate || 0}/kg): ₹${costBreakdown.weightCost?.toLocaleString('en-IN') || 0}`);
+  lines.push(`   · Vehicle Cost: ₹${costBreakdown.vehicleCost?.toLocaleString('en-IN') || 0}`);
+  if (costBreakdown.fuelAdjustment > 0) {
+    lines.push(`   · Fuel Adjustment: ₹${costBreakdown.fuelAdjustment?.toLocaleString('en-IN') || 0}`);
+  }
+  if (costBreakdown.weatherMultiplier !== 1 || costBreakdown.trafficMultiplier !== 1) {
+    lines.push(`   · Weather × Traffic: ${costBreakdown.weatherMultiplier || 1} × ${costBreakdown.trafficMultiplier || 1}`);
+  }
+  lines.push(`   · GST (5%): ₹${costBreakdown.gst?.toLocaleString('en-IN') || 0}`);
+  lines.push(`   ─────────────────────────────`);
+  lines.push(`   **Total: ₹${costBreakdown.total?.toLocaleString('en-IN') || 0}**`);
+  lines.push(``);
+
+  // Transfer analysis
+  if (transferAnalysis) {
+    lines.push(`**📊 Transfer Analysis:**`);
+    lines.push(`   · Pending Orders: ${transferAnalysis.pendingOrders || 0}`);
+    lines.push(`   · Avg Selling Price: ₹${(transferAnalysis.avgSellingPrice || 0).toLocaleString('en-IN')}`);
+    lines.push(`   · Revenue at Risk: ₹${transferAnalysis.revenueSaved?.toLocaleString('en-IN') || 0}`);
+    lines.push(`   · Net Benefit: ₹${transferAnalysis.netBenefit?.toLocaleString('en-IN') || 0}`);
+    lines.push(`   · Transfer Score: ${transferAnalysis.transferScore || 0}`);
+    lines.push(``);
+    if (transferAnalysis.recommendation === 'transfer') {
+      lines.push(`✅ **RECOMMENDED** — Revenue saved exceeds transfer cost.`);
+    } else if (transferAnalysis.recommendation === 'consider') {
+      lines.push(`⚠️ **CONSIDER** — Revenue is close to cost. Evaluate urgency.`);
+    } else {
+      lines.push(`⛔ **NOT RECOMMENDED** — Transfer cost exceeds revenue at risk.`);
+    }
+  }
+
+  lines.push(``);
+  lines.push(`_Confidence: ${confidence}_`);
+  lines.push(`_For a more detailed estimate with interactive controls, visit the Logistics page._`);
+
+  return {
+    answer: lines.join('\n'),
+    extraData: {
+      type: 'logistics_estimate',
+      ...logResult,
+    },
   };
 }
 
@@ -2672,6 +2870,14 @@ export async function tryInventoryGptDeterministicAnswer({
         product1: { ...p, name: `${p.name} (All Locations)`, price: p.price, barcode: p.barcode, current_stock: totalStock, stock_by_location: locations, movements: [] },
         product2: { ...p, name: `${p.name} (All Locations)`, price: p.price, barcode: p.barcode, current_stock: totalStock, stock_by_location: locations, movements: [] },
       },
+    };
+  }
+
+  if (intent.type === "logistics") {
+    const logResult = await resolveInventoryGptLogistics(intent, authToken);
+    return {
+      ...buildLogisticsAnswer(logResult),
+      render: 'text',
     };
   }
 

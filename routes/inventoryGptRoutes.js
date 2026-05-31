@@ -96,7 +96,9 @@ router.get('/', (req, res) => {
             'POST /api/inventorygpt/recommendations',
             'PUT /api/inventorygpt/recommendations/:id/approve',
             'PUT /api/inventorygpt/recommendations/:id/reject',
-            'GET /api/inventorygpt/store-intelligence'
+            'GET /api/inventorygpt/store-intelligence',
+            'POST /api/inventorygpt/logistics-estimate',
+            'GET /api/inventorygpt/logistics-places'
         ]
     });
 });
@@ -587,5 +589,11 @@ router.get('/store-intelligence', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// ── LOGISTICS COST ESTIMATION ──
+const logisticsController = require('../controllers/logisticsController');
+
+router.post('/logistics-estimate', logisticsController.logisticsEstimate);
+router.get('/logistics-places', logisticsController.geocodeWarehouse);
 
 module.exports = router;

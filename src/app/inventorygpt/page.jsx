@@ -38,6 +38,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import MarkdownBody from "./MarkdownBody";
 import ParallelComparison from "./ParallelComparison";
 import { WarehouseIntelligenceCard, StockAnalysisPanel } from "./WarehouseIntelligence";
+import LogisticsEstimateCard from "./LogisticsEstimateCard";
 import * as XLSX from "xlsx";
 import {
   BarChart,
@@ -1217,6 +1218,9 @@ function AssistantMessage({
   // Check for parallel comparison
   const showComparison = message.extraData?.type === "comparison" && message.extraData?.product1 && message.extraData?.product2 && !isStreaming;
 
+  // Check for logistics estimate
+  const showLogisticsEstimate = message.extraData?.type === "logistics_estimate" && !isStreaming;
+
   async function copyText() {
     try {
       await navigator.clipboard.writeText(fullContent);
@@ -1306,6 +1310,18 @@ function AssistantMessage({
         ) : showComparison ? (
           /* Parallel comparison UI */
           <ParallelComparison data={message.extraData} onVisualize={(rows, cols, title) => setGraphData({ rows, columns: cols, title })} />
+        ) : showLogisticsEstimate ? (
+          <>
+            <LogisticsEstimateCard data={message.extraData} onVisualize={(rows, cols, title) => setGraphData({ rows, columns: cols, title })} />
+            {graphData && (
+              <GraphContainer
+                rows={graphData.rows}
+                columns={graphData.columns}
+                title={graphData.title}
+                onClose={() => setGraphData(null)}
+              />
+            )}
+          </>
         ) : (
           /* Regular text response */
           <>
