@@ -574,14 +574,14 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "product", field: "summary", wantsExport };
 
   // Logistics/transfer cost estimation: "can I transfer X from Y to Z", "logistics cost", etc.
-  const logisticsMatch = lower.match(/(?:logistics|transfer\s+(?:cost|stock|product|item)|ship\s+(?:stock|product|item)|transport|moving\s+(?:stock|product|inventory|item)|shift\s+(?:stock|product|item)|"can i".*(?:transfer|ship|move|shift)|"how much".*(?:transfer|ship|move|shift|cost)|"cost to".*(?:transfer|ship|move|shift)|courier\s+cost|shipping\s+cost|transport\s+(?:cost|charge|price)|freight\s+(?:cost|charge|price)|move\s+(?:stock|product|item|inventory)\s+from|transfer\s+(?:stock|product|item)\s+from)/i);
+  const logisticsMatch = lower.match(/(?:logistics|transfer(?: cost| stock| product| item)?|ship\s+(?:stock|product|item)|transport|moving\s+(?:stock|product|inventory|item)|shift\s+(?:stock|product|item)|can\s+i\s+(?:transfer|ship|move|shift)|how\s+much\s+(?:transfer|ship|move|shift|cost)|cost\s+to\s+(?:transfer|ship|move|shift)|courier\s+cost|shipping\s+cost|transport\s+(?:cost|charge|price)|freight\s+(?:cost|charge|price)|move\s+(?:stock|product|item|inventory)\s+from|transfer\s+(?:stock|product|item)\s+from)/i);
   if (logisticsMatch) {
     // Extract source and destination
     const sdMatch = lower.match(/(?:from|between)\s+(.+?)\s+(?:to|and)\s+(.+?)(?:\s+(?:warehouse|store|wh|godown))?$/i);
     const src = sdMatch?.[1]?.trim() || null;
     const dst = sdMatch?.[2]?.trim() || null;
     let productName = lower
-      .replace(/logistics|transfer|ship|transport|moving|shift|move|cost|price|charge|to|from|between|and|"can i"|"how much"|"cost to"|i want|i need|please|pls|bro|bhai/gi, '')
+      .replace(/logistics|transfer|ship|transport|moving|shift|move|cost|price|charge|to|from|between|and|can i|how much|cost to|i want|i need|please|pls|bro|bhai/gi, '')
       .replace(/\s+(?:warehouse|store|wh|godoon|godown)\s*/gi, ' ')
       .replace(/\s+(?:cost|price|charge|fee|rate)\s*/gi, ' ')
       .replace(/\s+/g, ' ').trim();
