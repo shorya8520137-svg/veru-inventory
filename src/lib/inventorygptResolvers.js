@@ -3,6 +3,10 @@ const API_BASE =
   process.env.API_BASE ||
   "https://api.giftgala.in";
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function authHeaders(token) {
   return token
     ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
@@ -574,16 +578,23 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   if (logisticsMatch) {
     // Extract source and destination
     const sdMatch = lower.match(/(?:from|between)\s+(.+?)\s+(?:to|and)\s+(.+?)(?:\s+(?:warehouse|store|wh|godown))?$/i);
-    const productName = lower
+    const src = sdMatch?.[1]?.trim() || null;
+    const dst = sdMatch?.[2]?.trim() || null;
+    let productName = lower
       .replace(/logistics|transfer|ship|transport|moving|shift|move|cost|price|charge|to|from|between|and|"can i"|"how much"|"cost to"|i want|i need|please|pls|bro|bhai/gi, '')
       .replace(/\s+(?:warehouse|store|wh|godoon|godown)\s*/gi, ' ')
       .replace(/\s+(?:cost|price|charge|fee|rate)\s*/gi, ' ')
       .replace(/\s+/g, ' ').trim();
+    // Remove source/destination codes from product name
+    if (src) productName = productName.replace(new RegExp(escapeRegex(src), 'gi'), '').replace(/\s+/g, ' ').trim();
+    if (dst) productName = productName.replace(new RegExp(escapeRegex(dst), 'gi'), '').replace(/\s+/g, ' ').trim();
+    productName = productName.replace(/\d+\s*(?:qty|quantity|unit|pc|pcs|item|items)/gi, '').replace(/\s+/g, ' ').trim();
+    if (!productName) productName = null;
     return {
       type: 'logistics',
-      productName: productName || null,
-      sourceWarehouse: sdMatch?.[1]?.trim() || null,
-      destWarehouse: sdMatch?.[2]?.trim() || null,
+      productName,
+      sourceWarehouse: src,
+      destWarehouse: dst,
       raw,
       wantsExport,
     };
