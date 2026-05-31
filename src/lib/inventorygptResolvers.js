@@ -596,6 +596,27 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     if (dst) productName = productName.replace(new RegExp(escapeRegex(dst), 'gi'), '').replace(/\s+/g, ' ').trim();
     productName = productName.replace(/\d+\s*(?:qty|quantity|unit|pc|pcs|item|items)/gi, '').replace(/\s+/g, ' ').trim();
     if (!productName) productName = null;
+
+    // Follow-up: if src/dst/product missing, inherit from last logistics context in history
+    if ((!src || !dst || !productName) && Array.isArray(conversationHistory)) {
+      for (const msg of [...conversationHistory].reverse()) {
+        const c = String(msg?.content || '');
+        if (msg?.role === 'assistant' && c.includes('Logistics Cost Estimate')) {
+          const followSrc = c.match(/\*\*([^*]+?)\s*→/);
+          const followDst = c.match(/→\s*([^*]+?)\*\*/);
+          const followProd = c.match(/📦\s+\*\*([^*]+)\*\*/);
+          const followQty = c.match(/Quantity:\s*(\d+)/);
+          if (!src && followSrc) src = followSrc[1].trim();
+          if (!dst && followDst) dst = followDst[1].trim();
+          if (!productName && followProd) productName = followProd[1].trim();
+          if (followQty && !lower.match(/\d+\s*(?:qty|quantity|unit|pc|pcs|item|items)/)) {
+            // Don't override qty here — quantity is extracted from raw in resolveInventoryGptLogistics
+          }
+          break;
+        }
+      }
+    }
+
     return {
       type: 'logistics',
       productName,
@@ -1684,7 +1705,7 @@ function calcLogisticsConfidence(distanceKm, product, weather, traffic) {
 export async function resolveInventoryGptLogistics(intent, token) {
   const { productName, sourceWarehouse, destWarehouse, raw } = intent;
   const lower = String(raw || '').toLowerCase();
-  const qtyMatch = lower.match(/(\d+)\s*(?:qty|quantity|unit|pc|pcs|item|items)/);
+  const qtyMatch = lower.match(/(\d+)\s*(?:qty|quantity|unit|pc|pcs|item|items|stock)/i);
   const quantity = qtyMatch ? parseInt(qtyMatch[1]) : 1;
   const weather = lower.match(/weather[=:]\s*(clear|rain|heavy_rain|storm)/i)?.[1] || 'clear';
   const traffic = lower.match(/traffic[=:]\s*(low|medium|high|extreme)/i)?.[1] || 'low';
