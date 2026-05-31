@@ -184,7 +184,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   // Map common Hindi words and misspellings to English equivalents.
   // Use word boundaries to avoid mangling English words.
   const NORM_MAP = [
-    [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|werhouse|weahouse|godaam|gudam|godaun)\b/gi, 'warehouse'],
+    [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|werhouse|weahouse|werehouse|werehouses|godaam|gudam|godaun)\b/gi, 'warehouse'],
     [/\bstores?\b/gi, 'store'],
     [/\b(dukaan|dukan|dookan)\b/gi, 'store'],
     [/\bmujhe\b|\bmujha\b|\bmuja\b|\bmujhko\b|\bmere\b/gi, 'me'],
