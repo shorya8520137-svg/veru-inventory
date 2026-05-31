@@ -191,7 +191,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     [/\b(sabhi|sab|tamam|tamaam|poora|pura|saare|saara|saari)\b/gi, 'all'],
     [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo)\b/gi, 'show'],
     [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
-    [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|deatils|detalis|detial|detaills)\b/gi, 'details'],
+    [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|deatils|detalis|detial|detaills|deails)\b/gi, 'details'],
     [/\b(compair|comapir|compaire|comapre)\b/gi, 'compare'],
   ];
   for (const [pattern, replacement] of NORM_MAP) {
@@ -483,7 +483,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       lower,
     )
   ) {
-    const wantsDetails = /details|complete.*detail/.test(lower);
+    const wantsDetails = /details|complete.*detail|deails/.test(lower);
     return { type: wantsDetails ? "store_details" : "stores", wantsExport };
   }
   if (/store inventory|inventory.*store|stores inventory/.test(lower))
