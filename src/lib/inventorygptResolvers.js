@@ -501,11 +501,11 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "audit", wantsExport };
   if (/order|sale|revenue|regional|region/.test(lower))
     return { type: "orders", wantsExport };
-  if (/description|describe|details?|about this|about product/.test(lower))
+  if (/description|describe|details?|about this|about product/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
     return { type: "product", field: "description", wantsExport };
-  if (/price|cost|mrp|rate|amount/.test(lower))
+  if (/price|cost|mrp|rate|amount/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
     return { type: "product", field: "price", wantsExport };
-  if (/stock|quantity|qty|available|availability/.test(lower))
+  if (/stock|quantity|qty|available|availability/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
     return { type: "stock", wantsExport };
   // Compare products: "compare amul butter with aashirvaad atta", "compare X and Y", "compare X vs Y"
   let compareMatch = lower.match(/compare\s+(.+?)\s+(?:and|with|vs\.?|to)\s+(.+)/i);
