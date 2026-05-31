@@ -148,7 +148,7 @@ export default function LogisticsEstimateCard({ data, onVisualize }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-600">
-            {confidence} confidence
+            {typeof confidence === 'object' ? `${confidence.score || 0}%` : confidence} confidence
           </span>
           {onVisualize && vehicleSuggested && (
             <button
