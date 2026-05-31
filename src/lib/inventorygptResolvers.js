@@ -602,16 +602,23 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       for (const msg of [...conversationHistory].reverse()) {
         const c = String(msg?.content || '');
         if (msg?.role === 'assistant' && c.includes('Logistics Cost Estimate')) {
-          const followSrc = c.match(/\*\*([^*]+?)\s*→/);
-          const followDst = c.match(/→\s*([^*]+?)\*\*/);
-          const followProd = c.match(/📦\s+\*\*([^*]+)\*\*/);
-          const followQty = c.match(/Quantity:\s*(\d+)/);
+          const followSrc = c.match(/\*\*([^*]+?)\*\*\s*→/);
           if (!src && followSrc) src = followSrc[1].trim();
+          const followDst = c.match(/→\s*\*\*([^*]+?)\*\*/);
           if (!dst && followDst) dst = followDst[1].trim();
-          if (!productName && followProd) productName = followProd[1].trim();
-          if (followQty && !lower.match(/\d+\s*(?:qty|quantity|unit|pc|pcs|item|items)/)) {
-            // Don't override qty here — quantity is extracted from raw in resolveInventoryGptLogistics
+          // Try plain-text fallback (source → destination without bold)
+          if (!src) {
+            const plainSrc = c.match(/^[^*\n]+?\*\*([^*\n]+?)\s*→/m);
+            if (plainSrc) src = plainSrc[1].trim();
           }
+          if (!src || !dst) {
+            // Fallback: match raw source→dest from any line
+            const routeMatch = c.match(/([a-zA-Z0-9_-]+)\s*→\s*([a-zA-Z0-9_-]+)/);
+            if (!src && routeMatch) src = routeMatch[1].trim();
+            if (!dst && routeMatch) dst = routeMatch[2].trim();
+          }
+          const followProd = c.match(/📦\s+\*\*([^*]+?)\*\*/);
+          if (!productName && followProd && followProd[1].toLowerCase() !== 'product') productName = followProd[1].trim();
           break;
         }
       }
