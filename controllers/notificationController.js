@@ -22,13 +22,19 @@ class NotificationController {
             );
             
             // Get unread count
-            const unreadCount = await new Promise((resolve, reject) => {
-                const query = 'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE';
-                db.query(query, [userId], (err, results) => {
-                    if (err) reject(err);
-                    else resolve(results[0].count);
+            let unreadCount = 0;
+            try {
+                unreadCount = await new Promise((resolve, reject) => {
+                    const query = 'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE';
+                    db.query(query, [userId], (err, results) => {
+                        if (err) reject(err);
+                        else resolve(results?.[0]?.count || 0);
+                    });
                 });
-            });
+            } catch (e) {
+                console.warn('Unread count query failed:', e.message);
+                unreadCount = 0;
+            }
             
             res.json({
                 success: true,

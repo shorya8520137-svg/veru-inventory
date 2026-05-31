@@ -321,7 +321,7 @@ class ExistingSchemaNotificationService {
             const query = `
                 SELECT n.*, u.name as sender_name
                 FROM notifications n
-                LEFT JOIN users u ON JSON_EXTRACT(n.data, '$.user_id') = u.id
+                LEFT JOIN users u ON JSON_UNQUOTE(JSON_EXTRACT(n.data, '$.user_id')) = CAST(u.id AS CHAR)
                 WHERE n.user_id = ? OR n.user_id IS NULL
                 ORDER BY n.created_at DESC
                 LIMIT ? OFFSET ?
@@ -331,13 +331,19 @@ class ExistingSchemaNotificationService {
                 if (err) {
                     reject(err);
                 } else {
-                    // Parse data JSON
-                    const notifications = results.map(notification => ({
-                        ...notification,
-                        data: typeof notification.data === 'string' 
-                            ? JSON.parse(notification.data) 
-                            : notification.data
-                    }));
+                    // Parse data JSON safely
+                    const notifications = results.map(notification => {
+                        try {
+                            return {
+                                ...notification,
+                                data: typeof notification.data === 'string' 
+                                    ? JSON.parse(notification.data) 
+                                    : notification.data
+                            };
+                        } catch {
+                            return { ...notification, data: {} };
+                        }
+                    });
                     resolve(notifications);
                 }
             });
