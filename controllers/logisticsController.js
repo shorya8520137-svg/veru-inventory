@@ -202,23 +202,18 @@ exports.geocodeWarehouse = async (req, res) => {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: 'query param q required' });
 
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    if (!apiKey) {
-      return res.status(400).json({ error: 'GOOGLE_PLACES_API_KEY not configured' });
-    }
-
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&key=${apiKey}`;
-    const response = await fetch(url);
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+    const response = await fetch(url, { headers: { 'User-Agent': 'VeruInventory/1.0' } });
     const data = await response.json();
 
-    if (data.status !== 'OK' || !data.results?.length) {
+    if (!data?.length) {
       return res.json({ success: false, places: [] });
     }
 
-    const place = data.results[0];
-    const lat = place.geometry?.location?.lat;
-    const lng = place.geometry?.location?.lng;
-    const address = place.formatted_address || '';
+    const place = data[0];
+    const lat = place.lat;
+    const lng = place.lon;
+    const address = place.display_name || '';
 
     // Cache in warehouse_coordinates table
     try {
