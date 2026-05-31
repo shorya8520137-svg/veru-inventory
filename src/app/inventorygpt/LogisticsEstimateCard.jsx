@@ -79,12 +79,28 @@ function TransferBadge({ recommendation }) {
       </span>
     );
   }
+  if (recommendation === "insufficient_data") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
+        <AlertTriangle className="h-3.5 w-3.5" />
+        NEED PRODUCT VALUE
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
       <AlertTriangle className="h-3.5 w-3.5" />
       NOT RECOMMENDED
     </span>
   );
+}
+
+function ValueDisplay({ value, prefix, fallback }) {
+  if (value === null || value === undefined) {
+    return <span className="text-slate-400">{fallback || "—"}</span>;
+  }
+  const display = prefix ? `${prefix}${typeof value === "number" ? value.toLocaleString("en-IN") : value}` : value;
+  return <>{display}</>;
 }
 
 export default function LogisticsEstimateCard({ data, onVisualize }) {
@@ -242,29 +258,42 @@ export default function LogisticsEstimateCard({ data, onVisualize }) {
                   <div>
                     <p className="text-xs text-slate-500">Avg Price</p>
                     <p className="text-lg font-bold text-slate-900">
-                      ₹{(transferAnalysis.avgSellingPrice || 0).toLocaleString("en-IN")}
+                      {transferAnalysis.priceKnown
+                        ? `₹${(transferAnalysis.avgSellingPrice || 0).toLocaleString("en-IN")}`
+                        : <span className="text-slate-400">Unknown</span>}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Revenue Saved</p>
                     <p className="text-lg font-bold text-emerald-600">
-                      ₹{(transferAnalysis.revenueSaved || 0).toLocaleString("en-IN")}
+                      {transferAnalysis.revenueSaved != null
+                        ? `₹${transferAnalysis.revenueSaved.toLocaleString("en-IN")}`
+                        : <span className="text-slate-400">Unknown</span>}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Net Benefit</p>
-                    <p className={`text-lg font-bold ${(transferAnalysis.netBenefit || 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      ₹{(transferAnalysis.netBenefit || 0).toLocaleString("en-IN")}
+                    <p className={`text-lg font-bold ${transferAnalysis.netBenefit != null ? (transferAnalysis.netBenefit >= 0 ? "text-emerald-600" : "text-red-600") : "text-slate-400"}`}>
+                      {transferAnalysis.netBenefit != null
+                        ? `₹${transferAnalysis.netBenefit.toLocaleString("en-IN")}`
+                        : "Unknown"}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-slate-600">Transfer Score:</span>
-                    <span className="text-lg font-bold text-slate-900">{transferAnalysis.transferScore || 0}</span>
+                    <span className="text-lg font-bold text-slate-900">
+                      {transferAnalysis.transferScore != null ? transferAnalysis.transferScore : <span className="text-slate-400">N/A</span>}
+                    </span>
                   </div>
                   <TransferBadge recommendation={transferAnalysis.recommendation} />
                 </div>
+                {!transferAnalysis.priceKnown && (
+                  <p className="text-xs text-slate-500 italic mt-2">
+                    → Product selling price missing. Revenue impact cannot be calculated. Would you like InventoryGPT to estimate product value from historical sales?
+                  </p>
+                )}
               </motion.div>
             )}
           </div>
