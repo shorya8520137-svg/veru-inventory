@@ -507,6 +507,11 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "product", field: "price", wantsExport };
   if (/stock|quantity|qty|available|availability/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
     return { type: "stock", wantsExport };
+  // "compare X in all the warehouse/store" — "in" is not a standard compare separator
+  const compareAllInMatch = lower.match(/compare\s+(.+?)\s+in\s+all\s+(?:the\s+)?(?:warehouse|warehouses|store|stores)(?:\s+and\s+(?:store|stores|warehouse|warehouses))?$/i);
+  if (compareAllInMatch) {
+    return { type: "compare_all", product1: compareAllInMatch[1].trim(), wantsExport, warehouseScope: null };
+  }
   // Compare products: "compare amul butter with aashirvaad atta", "compare X and Y", "compare X vs Y"
   let compareMatch = lower.match(/compare\s+(.+?)\s+(?:and|with|vs\.?|to)\s+(.+)/i);
   if (!compareMatch) {
@@ -531,9 +536,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     if (allWarehouses) {
       return { type: "compare_all", product1: p1, wantsExport, warehouseScope: null };
     }
-    // Also handle "to all warehouse/store" suffix in p2 (e.g. "compare X and Y to all warehouse")
+    // Also handle "to/in all warehouse/store" suffix in p2 (e.g. "compare X and Y to all warehouse")
     // p2 = "3M Sticky Notes to all warehouse and store" → strip " to all..." → p2 = "3M Sticky Notes"
-    const toAllSuffix = p2.match(/^(.+?)\s+to\s+all\s+(?:the\s+)?(?:warehouse|warehouses|store|stores)(?:\s+and\s+(?:store|stores|warehouse|warehouses))?$/i);
+    const toAllSuffix = p2.match(/^(.+?)\s+(?:to|in)\s+all\s+(?:the\s+)?(?:warehouse|warehouses|store|stores)(?:\s+and\s+(?:store|stores|warehouse|warehouses))?$/i);
     if (toAllSuffix) {
       p2 = toAllSuffix[1].trim();
       // Both p1 and p2 are now clean product names — do a regular compare across all locations
