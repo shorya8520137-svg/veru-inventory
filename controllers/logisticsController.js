@@ -199,24 +199,10 @@ exports.logisticsEstimate = async (req, res) => {
 
 exports.geocodeWarehouse = async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, city } = req.query;
     if (!q) return res.status(400).json({ error: 'query param q required' });
 
-    // Look up warehouse city from DB for better geocoding
-    let searchQuery = q;
-    try {
-      const pool = db.promise();
-      const [rows] = await pool.execute(
-        `SELECT warehouse_name, city, state, address FROM warehouses WHERE code = ? OR name = ? LIMIT 1`,
-        [q, q]
-      );
-      if (rows.length) {
-        const w = rows[0];
-        const parts = [w.warehouse_name || w.city || q, w.city, w.state].filter(Boolean);
-        if (parts.length > 1) searchQuery = parts.join(', ');
-      }
-    } catch (_) {}
-
+    const searchQuery = city || q;
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`;
     const response = await fetch(url, { headers: { 'User-Agent': 'VeruInventory/1.0' } });
     const data = await response.json();
