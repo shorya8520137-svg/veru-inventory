@@ -578,13 +578,19 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   if (logisticsMatch) {
     // Extract source and destination
     const sdMatch = lower.match(/(?:from|between)\s+(.+?)\s+(?:to|and)\s+(.+?)(?:\s+(?:warehouse|store|wh|godown))?$/i);
-    const src = sdMatch?.[1]?.trim() || null;
-    const dst = sdMatch?.[2]?.trim() || null;
+    let src = sdMatch?.[1]?.trim() || null;
+    let dst = sdMatch?.[2]?.trim() || null;
+    // Strip weather/traffic suffixes from source/destination
+    const stripWeatherTraffic = (s) => s ? s.replace(/\s*(?:weather|traffic)\s*[=:]\s*\S+/gi, '').trim() : s;
+    if (src) src = stripWeatherTraffic(src);
+    if (dst) dst = stripWeatherTraffic(dst);
     let productName = lower
       .replace(/logistics|transfer|ship|transport|moving|shift|move|cost|price|charge|to|from|between|and|can i|how much|cost to|i want|i need|please|pls|bro|bhai/gi, '')
       .replace(/\s+(?:warehouse|store|wh|godoon|godown)\s*/gi, ' ')
       .replace(/\s+(?:cost|price|charge|fee|rate)\s*/gi, ' ')
       .replace(/\s+/g, ' ').trim();
+    // Also strip weather/traffic specs from product name
+    productName = productName.replace(/\s*(?:weather|traffic)\s*[=:]\s*\S+/gi, '').trim();
     // Remove source/destination codes from product name
     if (src) productName = productName.replace(new RegExp(escapeRegex(src), 'gi'), '').replace(/\s+/g, ' ').trim();
     if (dst) productName = productName.replace(new RegExp(escapeRegex(dst), 'gi'), '').replace(/\s+/g, ' ').trim();
