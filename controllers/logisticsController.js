@@ -55,10 +55,7 @@ exports.logisticsEstimate = async (req, res) => {
       const pool = db.promise();
       if (productBarcode) {
         const [rows] = await pool.execute(
-          `SELECT dp.p_id as id, dp.product_name, dp.barcode, dp.price, dp.weight,
-                  COALESCE(dp.length_cm, 0) as length_cm,
-                  COALESCE(dp.width_cm, 0) as width_cm,
-                  COALESCE(dp.height_cm, 0) as height_cm
+          `SELECT dp.p_id as id, dp.product_name, dp.barcode, dp.price, dp.weight
            FROM dispatch_product dp
            WHERE dp.barcode = ? LIMIT 1`,
           [productBarcode]
@@ -68,10 +65,7 @@ exports.logisticsEstimate = async (req, res) => {
       if (!product && productName) {
         const like = `%${productName}%`;
         const [rows] = await db.promise().execute(
-          `SELECT dp.p_id as id, dp.product_name, dp.barcode, dp.price, dp.weight,
-                  COALESCE(dp.length_cm, 0) as length_cm,
-                  COALESCE(dp.width_cm, 0) as width_cm,
-                  COALESCE(dp.height_cm, 0) as height_cm
+          `SELECT dp.p_id as id, dp.product_name, dp.barcode, dp.price, dp.weight
            FROM dispatch_product dp
            WHERE dp.product_name LIKE ? LIMIT 1`,
           [like]
@@ -93,29 +87,25 @@ exports.logisticsEstimate = async (req, res) => {
     if (sourceLat && sourceLng && destLat && destLng) {
       distanceKm = Math.round(haversineKm(sourceLat, sourceLng, destLat, destLng));
     } else {
-      // Try to get coordinates from warehouse_coordinates cache or warehouses table
-      const pool = db.promise();
-      const [srcRows] = await pool.execute(
-        `SELECT wc.latitude, wc.longitude, w.latitude as w_lat, w.longitude as w_lng
-         FROM (SELECT ? as name) tmp
-         LEFT JOIN warehouse_coordinates wc ON wc.warehouse_code = ?
-         LEFT JOIN warehouses w ON w.code = ? OR w.name = ?
-         LIMIT 1`,
-        [sourceWarehouse, sourceWarehouse, sourceWarehouse, sourceWarehouse]
-      );
-      const srcLat = srcRows[0]?.latitude || srcRows[0]?.w_lat;
-      const srcLng = srcRows[0]?.longitude || srcRows[0]?.w_lng;
+      // Try to get coordinates from warehouse_coordinates cache
+      let srcLat = 0, srcLng = 0, dstLat = 0, dstLng = 0;
+      try {
+        const pool = db.promise();
+        const [srcRows] = await pool.execute(
+          `SELECT latitude, longitude FROM warehouse_coordinates WHERE warehouse_code = ? LIMIT 1`,
+          [sourceWarehouse]
+        );
+        if (srcRows.length) { srcLat = parseFloat(srcRows[0].latitude); srcLng = parseFloat(srcRows[0].longitude); }
+      } catch (_) {}
 
-      const [dstRows] = await pool.execute(
-        `SELECT wc.latitude, wc.longitude, w.latitude as w_lat, w.longitude as w_lng
-         FROM (SELECT ? as name) tmp
-         LEFT JOIN warehouse_coordinates wc ON wc.warehouse_code = ?
-         LEFT JOIN warehouses w ON w.code = ? OR w.name = ?
-         LIMIT 1`,
-        [destWarehouse, destWarehouse, destWarehouse, destWarehouse]
-      );
-      const dstLat = dstRows[0]?.latitude || dstRows[0]?.w_lat;
-      const dstLng = dstRows[0]?.longitude || dstRows[0]?.w_lng;
+      try {
+        const pool = db.promise();
+        const [dstRows] = await pool.execute(
+          `SELECT latitude, longitude FROM warehouse_coordinates WHERE warehouse_code = ? LIMIT 1`,
+          [destWarehouse]
+        );
+        if (dstRows.length) { dstLat = parseFloat(dstRows[0].latitude); dstLng = parseFloat(dstRows[0].longitude); }
+      } catch (_) {}
 
       if (srcLat && srcLng && dstLat && dstLng) {
         distanceKm = Math.round(haversineKm(parseFloat(srcLat), parseFloat(srcLng), parseFloat(dstLat), parseFloat(dstLng)));
