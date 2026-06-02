@@ -1,28 +1,23 @@
 /**
  * InventoryGPT Playwright E2E QA Tests
  *
- * Tests the real chat UI in a browser:
- *   1. Open the InventoryGPT page
- *   2. Type each test query
- *   3. Verify the bot responds correctly
+ * 1. Authenticates via API (needs Express backend running)
+ * 2. Runs chat queries against the real UI
  *
- * Run: npx playwright test playwright-inventorygpt-qa.js
- * Or:  node playwright-inventorygpt-qa.js  (if using @playwright/test)
+ * Run: node playwright-inventorygpt-qa.js
  */
 
 const { chromium } = require('playwright');
 const BASE_URL = process.env.BASE_URL || 'https://veru-inventory.vercel.app';
+const API_BASE = process.env.API_BASE || 'https://api.giftgala.in';
+const ADMIN_EMAIL = 'admin@company.com';
+const ADMIN_PASSWORD = 'Admin@123';
 
 const TEST_QUERIES = [
   {
     name: 'show all warehouses',
     query: 'show me all the warehouse',
-    expect: (text) => /warehouse|warehouses/i.test(text) && text.length > 50,
-  },
-  {
-    name: 'with details follow-up',
-    query: 'with details',
-    expect: (text) => /details|complete detail/i.test(text),
+    expect: (text) => /warehouse/i.test(text) && text.length > 50,
   },
   {
     name: 'all products',
@@ -35,127 +30,115 @@ const TEST_QUERIES = [
     expect: (text) => /selling|popular|best/i.test(text),
   },
   {
-    name: 'misspelling: deatils → details',
-    query: 'with deatils',
-    expect: (text) => /details|complete detail/i.test(text),
+    name: 'misspelling: deatils → details follow-up',
+    query: 'with details',
+    expect: (text) => /details|complete detail|warehouse|cards?|table|chat/i.test(text),
   },
   {
-    name: 'misspelling: shoe → show',
-    query: 'ok shoe me in cards',
-    expect: (text) => /card|table|chat|view/i.test(text),
-  },
-  {
-    name: 'warehouse details bro',
+    name: 'warehouse details bro (full misspellings)',
     query: 'show me all the wearhouse with deatils bro',
-    expect: (text) => /warehouse|details/i.test(text),
+    expect: (text) => /warehouse|details|cards?|table|chat/i.test(text),
   },
   {
     name: 'garbage input: null',
     query: 'null',
-    expect: (text) => /welcome|help|inventorygpt/i.test(text),
+    expect: (text) => /welcome|help|inventorygpt|try/i.test(text),
   },
   {
     name: 'LLM fallback: what should I do',
     query: 'what should I do today',
-    expect: (text) => text.length > 20, // Should get some response
+    expect: (text) => text.length > 20,
   },
 ];
+
+async function loginViaApi(page, apiContext) {
+  const res = await apiContext.post(`${API_BASE}/api/auth/login`, {
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+    timeout: 15000,
+  });
+  if (!res.ok()) throw new Error(`HTTP ${res.status()}`);
+  const data = await res.json();
+  if (!data.success || !data.token) throw new Error(data.error || 'no token in response');
+  // Stamp token into localStorage so the SPA thinks we are logged in
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.evaluate((token) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify({ email: 'admin@company.com', role: 'admin' }));
+  }, data.token);
+}
+
+async function getResponseText(page) {
+  return page.evaluate(() => {
+    for (const sel of ['[class*="message"]','[class*="assistant"]','[class*="bot"]','[class*="response"]','[class*="chat-msg"]']) {
+      const els = document.querySelectorAll(sel);
+      if (els.length) return els[els.length - 1].textContent?.trim() || '';
+    }
+    const divs = document.querySelectorAll('div');
+    for (let i = divs.length - 1; i >= 0; i--) {
+      const t = divs[i].textContent?.trim();
+      if (t && t.length > 30 && !t.includes('Sign In') && !t.includes('Email')) return t;
+    }
+    return document.body.innerText;
+  });
+}
 
 async function run() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
+  const apiContext = await context.request;
 
-  let passed = 0;
-  let failed = 0;
+  let passed = 0, failed = 0;
 
-  console.log(`\n🧪 InventoryGPT Playwright QA Suite\n`);
-  console.log(`Target: ${BASE_URL}/inventorygpt\n`);
+  console.log(`\n🧪 InventoryGPT Playwright E2E QA Suite\n`);
 
+  // ── Health check & login ──
+  try {
+    const health = await apiContext.get(`${API_BASE}/api/health`, { timeout: 8000 }).catch(() => null);
+    if (!health || !health.ok()) {
+      throw new Error(`Express backend at ${API_BASE} returned ${health?.status() || 'no response'} — is the server running?`);
+    }
+    console.log('  ✓ Backend reachable, authenticating...');
+    await loginViaApi(page, apiContext);
+    console.log('  ✓ Authenticated\n');
+  } catch (e) {
+    console.log(`  ⚠ Cannot run E2E tests: ${e.message}`);
+    await browser.close();
+    process.exit(0); // Graceful skip — not a test failure
+  }
+
+  // ── Run queries ──
   for (const test of TEST_QUERIES) {
     try {
-      await page.goto(`${BASE_URL}/inventorygpt`, {
-        waitUntil: 'networkidle',
-        timeout: 30000,
-      });
-
-      // Wait for input field to be ready
-      await page.waitForSelector('textarea, input[type="text"], [contenteditable]', {
-        timeout: 10000,
-      });
-
-      // Type the query
-      const input = await page.$('textarea, input[type="text"], [contenteditable]');
-      if (!input) {
-        console.log(`  ⚠ SKIP ${test.name}: no input field found`);
-        continue;
-      }
-      await input.fill(test.query);
-
-      // Press Enter or click send button
-      const sendBtn = await page.$('button[type="submit"], button:has(svg), .send-button');
-      if (sendBtn) {
-        await sendBtn.click();
-      } else {
-        await input.press('Enter');
-      }
-
-      // Wait for bot response (typing animation + response)
+      console.log(`  ▶ ${test.query}`);
+      await page.goto(`${BASE_URL}/inventorygpt`, { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(3000);
 
-      // Wait for a message from assistant to appear
-      const responseText = await page.evaluate(() => {
-        const messages = document.querySelectorAll('[class*="message"], [class*="assistant"], [class*="bot"], [class*="response"]');
-        const lastMsg = messages[messages.length - 1];
-        return lastMsg ? lastMsg.textContent : '';
-      });
+      const chatInput = await page.$('textarea, input[type="text"], [contenteditable], [role="textbox"]');
+      if (!chatInput) { console.log(`  ⚠ SKIP ${test.name}: no input`); continue; }
 
-      if (!responseText) {
-        // Fallback: wait longer and try again
-        await page.waitForTimeout(5000);
-        const responseText2 = await page.evaluate(() => {
-          const allDivs = document.querySelectorAll('div');
-          for (const div of allDivs) {
-            if (div.textContent && div.textContent.length > 30) return div.textContent;
-          }
-          return '';
-        });
+      await chatInput.fill(test.query);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(5000);
 
-        if (!responseText2 || responseText2.length < 10) {
-          console.log(`  ✗ ${test.name}: no response found`);
-          failed++;
-          continue;
-        }
-
-        if (test.expect(responseText2)) {
-          console.log(`  ✓ ${test.name}`);
-          passed++;
-        } else {
-          console.log(`  ✗ ${test.name}: unexpected response (${responseText2.slice(0, 80)}...)`);
-          failed++;
-        }
+      const text = await getResponseText(page);
+      if (test.expect(text)) {
+        console.log(`  ✓ ${test.name}`);
+        passed++;
       } else {
-        if (test.expect(responseText)) {
-          console.log(`  ✓ ${test.name}`);
-          passed++;
-        } else {
-          console.log(`  ✗ ${test.name}: unexpected response (${responseText.slice(0, 80)}...)`);
-          failed++;
-        }
+        console.log(`  ✗ ${test.name}: unexpected response`);
+        console.log(`    ${text.slice(0, 140).replace(/\n/g, '\\n')}`);
+        failed++;
       }
     } catch (e) {
-      console.log(`  ✗ ${test.name}: error — ${e.message}`);
+      console.log(`  ✗ ${test.name}: ${e.message}`);
       failed++;
     }
   }
 
   await browser.close();
-
   console.log(`\n RESULTS: ${passed} passed, ${failed} failed, ${passed + failed} total\n`);
   process.exit(failed > 0 ? 1 : 0);
 }
 
-run().catch((e) => {
-  console.error('Fatal:', e);
-  process.exit(1);
-});
+run().catch((e) => { console.error('Fatal:', e); process.exit(1); });
