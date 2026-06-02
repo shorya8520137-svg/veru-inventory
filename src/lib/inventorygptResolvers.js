@@ -168,6 +168,140 @@ export function extractActiveContext(conversationHistory = []) {
   return context;
 }
 
+// ── Session State: Extract last intent + entities from conversation history ──
+export function extractSessionState(conversationHistory = []) {
+  const state = {
+    intent: null,
+    warehouse: null,
+    product: null,
+    category: null,
+    sku: null,
+    responseType: null,
+  };
+  if (!Array.isArray(conversationHistory) || conversationHistory.length < 2) return state;
+
+  // Search from most recent backwards
+  for (const message of [...conversationHistory].reverse()) {
+    const content = String(message?.content || "");
+
+    if (message?.role === "assistant") {
+      // Detect response type from assistant messages
+      if (/warehouse network|warehouses found|warehouse details/i.test(content)) {
+        state.intent = "warehouse";
+        state.responseType = /details/i.test(content) ? "WAREHOUSE_DETAILS" : "WAREHOUSE_LIST";
+      } else if (/store network|stores found/i.test(content)) {
+        state.intent = "store";
+        state.responseType = "STORE_LIST";
+      } else if (/products in\s+"[^"]+"/i.test(content) || /products in \*\*[^*]+\*\*/i.test(content)) {
+        state.intent = "category_products";
+        state.responseType = "CATEGORY_PRODUCTS";
+        const catMatch = content.match(/products in\s+[^a-z]*"?([a-z][\w\s&-]+?)"?/i);
+        if (catMatch) state.category = catMatch[1].trim();
+      } else if (/top selling|best seller|most popular|best-selling/i.test(content)) {
+        state.intent = "best_seller";
+        state.responseType = "BEST_SELLER";
+      } else if (/logistics cost estimate|transfer analysis/i.test(content)) {
+        state.intent = "logistics";
+        state.responseType = "LOGISTICS";
+      } else if (/product comparison|comparing|vs\s/i.test(content)) {
+        state.intent = "compare";
+        state.responseType = "COMPARE";
+      } else if (/order intelligence|website orders/i.test(content)) {
+        state.intent = "orders";
+        state.responseType = "ORDERS";
+      } else if (/audit intelligence/i.test(content)) {
+        state.intent = "audit";
+        state.responseType = "AUDIT";
+      } else if (/product journey|journey of|timeline|stock intelligence/i.test(content)) {
+        state.intent = "product_journey";
+        state.responseType = "JOURNEY";
+        const nameMatch = content.match(/journey of\s+\*\*([^*]+)\*\*/i) || content.match(/stock intelligence.*?\*\*([^*]+)\*\*/i);
+        if (nameMatch) state.product = nameMatch[1].trim();
+      }
+
+      // Extract entities from assistant responses
+      if (!state.sku) {
+        const skuMatch = content.match(/(?:SKU|Product Code|Barcode):\s*`?([A-Za-z0-9-]+)`?/i);
+        if (skuMatch) state.sku = skuMatch[1];
+      }
+      if (!state.warehouse) {
+        const whMatch = content.match(/\b([A-Z]{2,8}_WH)\b/i);
+        if (whMatch) state.warehouse = whMatch[1].toUpperCase();
+        const nameMatch = content.match(/\*\*([^*]+?)\*\*\s*\(`[A-Z]{2,8}_WH`\)/);
+        if (nameMatch && !state.product) state.warehouse = nameMatch[1].trim();
+      }
+    }
+
+    // Stop once we have meaningful state
+    if (state.intent && (state.responseType || state.warehouse || state.product || state.sku)) break;
+  }
+
+  return state;
+}
+
+// ── Normalize follow-up queries with session context ──
+export function normalizeFollowUpQuery(question, conversationHistory = []) {
+  const q = String(question || "").trim();
+  if (!q) return question;
+
+  const lower = q.toLowerCase();
+  const state = extractSessionState(conversationHistory);
+
+  // If no session state or query is already a complete intent, return as-is
+  if (!state.intent) return question;
+
+  // Detect short follow-up phrases
+  const isShortFollowUp = q.length < 60 && !/^(show|list|get|display|view|find|search|check|tell|how|what|when|where|why|which|who)\b/i.test(q) && !/excel|spreadsheet|csv|export|download/i.test(q);
+
+  // ── "with details" / "details" after warehouse/store list ──
+  if ((/^details?$/i.test(q) || /^with\s+details?$/i.test(q)) && (state.intent === "warehouse" || state.intent === "store")) {
+    return `show all ${state.intent === "warehouse" ? "warehouse" : "store"} with complete details`;
+  }
+
+  // ── "show dispatch" / "show journey" / "show timeline" after a product was mentioned ──
+  if ((/^show\s+(dispatch|journey|timeline|ledger|movement|stock|price|audit)/i.test(q)) && !/\b(?:sku|barcode)\b/i.test(q)) {
+    if (state.product || state.sku) {
+      const entity = state.product || state.sku;
+      return `show ${q.replace(/^show\s+/i, "")} of ${entity}`;
+    }
+  }
+
+  // ── "compare with X" / "compare this" after a product ──
+  if ((/^compare\s+(?:with|this|it|that)?\s*(.+)?$/i.test(q)) && state.product) {
+    const target = q.replace(/^compare\s+(?:with|this|it|that)?\s*/i, "").trim();
+    if (target && target.length > 1) {
+      return `compare ${state.product} with ${target}`;
+    }
+    return `compare ${state.product}`;
+  }
+
+  // ── "show product" / "show stock" / "details" after a product was mentioned ──
+  if (isShortFollowUp && (state.product || state.sku) && (state.intent === "product_journey" || state.responseType === "JOURNEY" || state.responseType === "PRODUCT_DETAIL")) {
+    const entity = state.product || `SKU ${state.sku}`;
+    return `show me details of ${entity}`;
+  }
+
+  // ── "that category" / "same category" / "this category" after categories were shown ──
+  if ((/^(?:that|this|same)\s+category$/i.test(q) || /^show\s+(?:me\s+)?(?:that|this|same)\s+category/i.test(q)) && state.category) {
+    return `show all products in ${state.category} category`;
+  }
+
+  // ── "show orders" / "show transfers" — full intent, pass through ──
+  if (/^show\s+(orders|transfers?|logistics?|warehouses?|stores?|categories?|products?|inventory|stock)\b/i.test(q)) {
+    return question; // Already a complete query
+  }
+
+  // ── Any other short follow-up: inherit last entity context ──
+  if (isShortFollowUp && (state.product || state.warehouse || state.category || state.sku)) {
+    const entity = state.product || state.warehouse || state.category || `SKU ${state.sku}`;
+    if (state.intent === "warehouse") return `${question} warehouse details`.trim();
+    if (state.intent === "category_products") return `show all products in ${state.category || entity} ${question}`.trim();
+    if (state.product) return `show ${question} of ${state.product}`.trim();
+  }
+
+  return question;
+}
+
 export function isUserFrustrated(text) {
   const lower = String(text || "").toLowerCase();
   // Detect frustration, anger, impatience, or swearing
@@ -642,6 +776,16 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
 
+  // Show ALL products (no category, no warehouse) — list from catalogs
+  if (
+    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:product|products|item|items)\s*$/i.test(lower) ||
+    /^(?:all|every|the\s+entire)\s+(?:product|products|item|items)\s*$/i.test(lower) ||
+    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every)\s+(?:products?|items?)\s*$/i.test(lower) ||
+    /^(?:all\s+product|sabhi\s+product|saare\s+product|sare\s+product)/.test(lower)
+  ) {
+    return { type: "all_products", wantsExport };
+  }
+
   // Catch-all: any query mentioning warehouse/store with action words
   // Handles Hindi word order and loose spelling variations
   if (/\bwarehouse\b/.test(lower) && /\b(show|list|all|total|count|detail|deatil|how many|how much|me|sab|saare|dikhao)\b/.test(lower)) {
@@ -724,6 +868,84 @@ function findProduct(list, barcode) {
     ) ||
     null
   );
+}
+
+export async function resolveInventoryGptAllProducts(token, limit = 50) {
+  const merged = [];
+  const seen = new Set();
+
+  const endpoints = [
+    { source: "dispatch_product", path: `/api/products?limit=${limit}` },
+    { source: "website_products", path: `/api/website/products?limit=${limit}` },
+  ];
+
+  for (const endpoint of endpoints) {
+    const result = await apiGet(endpoint.path, token);
+    if (result.error) continue;
+    const rows = rowsFromPayload(result.data);
+    for (const row of rows) {
+      const normalized = normalizeProduct(row, endpoint.source);
+      const key = normalized.sku || normalized.barcode || normalized.product_name;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(normalized);
+      }
+    }
+  }
+
+  const sorted = merged.sort((a, b) => (a.product_name || "").localeCompare(b.product_name || ""));
+  return { rows: sorted, total: sorted.length, error: sorted.length ? null : "No products found" };
+}
+
+function buildAllProductsAnswer(result, wantsExport) {
+  const rows = result.rows || [];
+  const total = result.total || rows.length;
+  const lines = ["📦 **All Products**", ""];
+  lines.push(`Total products found: **${total}**`);
+  lines.push("");
+
+  if (!rows.length) {
+    lines.push("No products found in the catalog.");
+    lines.push("");
+    lines.push("Would you like to check categories or warehouses instead?");
+  } else {
+    const visible = rows.slice(0, 5);
+    visible.forEach((p, i) => {
+      const priceStr = p.price != null ? ` · ${formatInr(p.price)}` : "";
+      const stockStr = p.stock != null ? ` · ${p.stock} units` : "";
+      lines.push(`${i + 1}. **${p.product_name}** (\`${p.sku || p.barcode}\`)${priceStr}${stockStr} · ${catalogLabel(p.source)}`);
+    });
+
+    if (rows.length > 5) {
+      lines.push("");
+      lines.push(`[READ_MORE:${rows.length - 5}:all_products]`);
+    }
+
+    lines.push("");
+    lines.push("Want to narrow down? Try: **show products in [category]** or **show stock at [warehouse]**.");
+  }
+
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, ["sku", "product_name", "category", "price", "stock", "source"])
+      : null,
+    exportFilename: "inventorygpt-all-products.tsv",
+    extraData: {
+      type: "table_preview",
+      title: "All Products",
+      total,
+      columns: ["Product", "SKU", "Category", "Price", "Stock"],
+      rows: rows.map(r => ({
+        product: r.product_name,
+        sku: r.sku || "",
+        category: r.category || "",
+        price: r.price ?? null,
+        stock: r.stock ?? 0,
+      })),
+      allRows: rows,
+    },
+  };
 }
 
 export async function resolveInventoryGptProduct(
@@ -2522,8 +2744,14 @@ export async function tryInventoryGptDeterministicAnswer({
   localProducts = [],
   conversationHistory = [],
 }) {
-  const q = String(question || "").trim();
+  let q = String(question || "").trim();
   if (!q) return null;
+
+  // ── Pre-Intent Layer: Normalize follow-ups with session context ──
+  const normalized = normalizeFollowUpQuery(q, conversationHistory);
+  if (normalized !== q) {
+    q = normalized;
+  }
 
   const intent = detectInventoryGptIntent(q, conversationHistory);
   if (!intent) return null;
@@ -2587,6 +2815,15 @@ export async function tryInventoryGptDeterministicAnswer({
         categoryProducts,
         intent.wantsExport,
       ),
+      render: "text",
+    };
+  }
+
+  // All products listing
+  if (intent.type === "all_products") {
+    const allProducts = await resolveInventoryGptAllProducts(authToken, 50);
+    return {
+      ...buildAllProductsAnswer(allProducts, intent.wantsExport),
       render: "text",
     };
   }
@@ -3040,9 +3277,13 @@ export async function tryInventoryGptDeterministicAnswer({
       return {
         answer:
           `I checked both catalogs for ${searchRef}, but I could not find this product.\n\n` +
-          "- Checked: **Product catalog** (dispatch products)\n" +
-          "- Checked: **Website Product catalog**\n\n" +
-          "Please confirm the product name or SKU/barcode, or ask me to show categories/products separately.",
+          "Here are some things you can try:\n" +
+          "• **Show all products** — Browse the full product catalog\n" +
+          "• **Show categories** — Browse products by category\n" +
+          "• **Search by name** — Just type the product name (e.g., Aashirvaad Atta)\n" +
+          "• **Show warehouses** — Check warehouse stock\n" +
+          "• **Show orders** — View recent orders\n\n" +
+          "What would you like to do?",
         render: "text",
       };
     }

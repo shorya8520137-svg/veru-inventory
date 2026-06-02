@@ -340,9 +340,13 @@ export async function POST(req) {
         success: true,
         answer:
           `I checked both catalogs for SKU \`${effectiveBarcode}\`, but I could not find this product.\n\n` +
-          `- Checked: **Product catalog** (dispatch products)\n` +
-          `- Checked: **Website Product catalog**\n\n` +
-          `Please confirm the SKU/barcode, or ask me to show categories/products separately.`,
+          "Here are some things you can try:\n" +
+          "• **Show all products** — Browse the full product catalog\n" +
+          "• **Show categories** — Browse products by category\n" +
+          "• **Search by name** — Just type the product name (e.g., Aashirvaad Atta)\n" +
+          "• **Show warehouses** — Check warehouse stock\n" +
+          "• **Show orders** — View recent orders\n\n" +
+          "What would you like to do?",
         model: "local-lookup",
         render: "text",
       });
