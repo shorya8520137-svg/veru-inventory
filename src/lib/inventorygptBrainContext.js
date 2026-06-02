@@ -136,6 +136,45 @@ export async function buildInventoryGptBrainContext(authToken, opts = {}) {
     console.warn("[brain] website:", e?.message);
   }
 
+  // ── Enriched context for executive summaries ──
+  try {
+    const [orderStatsRes, lowStockRes, highStockRes] = await Promise.all([
+      fetch(`${API_BASE}/api/website/orders/stats`, { headers }),
+      fetch(`${API_BASE}/api/inventory?limit=10&sortBy=stock&sortOrder=asc`, { headers }),
+      fetch(`${API_BASE}/api/inventory?limit=10&sortBy=stock&sortOrder=desc`, { headers }),
+    ]);
+    if (orderStatsRes.ok) {
+      const statsData = await orderStatsRes.json();
+      brain.orderStats = statsData?.data || statsData;
+    }
+    if (lowStockRes.ok) {
+      const lowData = await lowStockRes.json();
+      brain.lowStockItems = pickRows(lowData)
+        .filter(r => (r.stock ?? r.quantity ?? 0) < 10)
+        .slice(0, 10)
+        .map(r => ({
+          name: r.product_name || r.name || r.code || "Product",
+          sku: r.code || r.sku || r.barcode || "",
+          stock: Number(r.stock ?? r.qty_available ?? 0),
+          warehouse: r.warehouse || "",
+        }));
+    }
+    if (highStockRes.ok) {
+      const highData = await highStockRes.json();
+      brain.highStockItems = pickRows(highData)
+        .filter(r => (r.stock ?? r.quantity ?? 0) > 100)
+        .slice(0, 10)
+        .map(r => ({
+          name: r.product_name || r.name || r.code || "Product",
+          sku: r.code || r.sku || r.barcode || "",
+          stock: Number(r.stock ?? r.qty_available ?? 0),
+          warehouse: r.warehouse || "",
+        }));
+    }
+  } catch (e) {
+    console.warn("[brain] enrichment:", e?.message);
+  }
+
   const aiBase = (
     process.env.INVENTORYGPT_AI_BASE_URL ||
     process.env.NEXT_PUBLIC_INVENTORYGPT_AI_BASE_URL ||

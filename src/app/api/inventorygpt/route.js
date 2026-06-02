@@ -390,19 +390,37 @@ export async function POST(req) {
       });
     }
 
+    const inventorySummary = brain?.inventoryTotalUnits != null
+      ? `Total inventory: ${brain.inventoryTotalUnits} units across ${brain.warehouses ? Object.keys(brain.warehouses).length : '?'} warehouses.`
+      : "";
+
+    const orderSummary = brain?.orderStats
+      ? `Orders: ${brain.orderStats.total_orders || brain.orderStats.total || 0} total, ₹${(brain.orderStats.total_revenue || brain.orderStats.revenue || 0).toLocaleString("en-IN")} revenue, ${brain.orderStats.pending_orders || brain.orderStats.pending || 0} pending.`
+      : "";
+
+    const lowStockSummary = brain?.lowStockItems?.length
+      ? `Low stock alerts: ${brain.lowStockItems.length} items below 10 units (e.g. ${brain.lowStockItems.slice(0, 3).map(i => `${i.name}: ${i.stock} units at ${i.warehouse}`).join(", ")}).`
+      : "";
+
+    const deadStockSummary = brain?.highStockItems?.length
+      ? `Dead stock candidates: ${brain.highStockItems.length} items above 100 units (e.g. ${brain.highStockItems.slice(0, 3).map(i => `${i.name}: ${i.stock} units at ${i.warehouse}`).join(", ")}).`
+      : "";
+
     const productContext =
       liveProducts.length > 0
-        ? `Live inventory sample:\n${JSON.stringify(liveProducts.slice(0, 30), null, 2)}`
-        : "No live inventory rows in context.";
+        ? `\nLive inventory sample (${liveProducts.length} total):\n${JSON.stringify(liveProducts.slice(0, 15), null, 2)}`
+        : "";
 
     const categoryContext =
       liveCategories.length > 0
-        ? `\nCategories:\n${JSON.stringify(liveCategories.slice(0, 20), null, 2)}`
+        ? `\nCategories (${liveCategories.length}):\n${JSON.stringify(liveCategories.slice(0, 15), null, 2)}`
         : "";
+
+    const enrichedContext = [inventorySummary, orderSummary, lowStockSummary, deadStockSummary].filter(Boolean).join("\n");
 
     const historyContext =
       conversationHistory?.length > 0
-        ? `\nPrevious:\n${conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}`
+        ? `\nConversation history (most recent first):\n${conversationHistory.slice(-6).map((m) => `${m.role}: ${m.content}`).join("\n")}`
         : "";
 
     const completion = await requestOpenRouterCompletion([
@@ -448,7 +466,8 @@ CRITICAL RULES:
 - Never expose SQL errors, internal APIs, or "Source:" labels
 - If data is missing, say so clearly and suggest alternatives
 
-Live inventory data context:
+DATA SUMMARY:
+${enrichedContext || "No live data available"}
 ${productContext}${categoryContext}${historyContext}
 
 Question: ${question}`,

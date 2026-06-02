@@ -503,6 +503,14 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     )
   )
     return { type: "audit", wantsExport };
+  // Best-seller / top-selling / most popular products
+  if (
+    /most\s*(?:selling|sold|popular|ordered|requested|favourite|favorite)|best\s*(?:seller|sellers?|salers?|selling)|top\s*(?:selling|sold|popular|product|item|seller)|highest\s*(?:selling|sold)|trending/.test(lower) ||
+    /sabse\s*(?:zyada|jada|jyda|bik|bikne|biknewala|popular|best|behtreen)/.test(lower) ||
+    /(?:kaun|konsa|kounsa|bata)\s*(?:sabse|jada|zyada)\s*(?:bikta|bikne|bik|popular)/.test(lower)
+  ) {
+    return { type: "best_seller", wantsExport };
+  }
   if (/order|sale|revenue|regional|region/.test(lower))
     return { type: "orders", wantsExport };
   if (/description|describe|details?|about this|about product/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
@@ -874,6 +882,115 @@ export async function resolveInventoryGptOrders(token) {
     stats: stats.error ? null : stats.data?.data || stats.data,
     orders: orders.error ? [] : rowsFromPayload(orders.data),
     error: stats.error || orders.error || null,
+  };
+}
+
+export async function resolveInventoryGptBestSellers(token, limit = 10) {
+  // Fetch recent completed/dispatched orders
+  const result = await apiGet("/api/website/orders?status=completed&limit=20&sortBy=order_date&sortOrder=DESC", token);
+  if (result.error) {
+    // Fallback: try without status filter
+    const fallback = await apiGet("/api/website/orders?limit=20&sortBy=order_date&sortOrder=DESC", token);
+    if (fallback.error) {
+      // Last resort: use inventory data to find products with highest stock movement
+      const invResult = await apiGet("/api/inventory?limit=100&sortBy=stock&sortOrder=desc", token);
+      if (invResult.error) return { error: "Could not fetch order or inventory data" };
+      const invRows = rowsFromPayload(invResult.data);
+      const topStock = invRows.slice(0, limit).map(r => ({
+        name: r.product_name || r.name || r.code || "Product",
+        sku: r.code || r.sku || r.barcode || "",
+        stock: Number(r.stock ?? r.qty_available ?? 0),
+        warehouse: r.warehouse || "",
+        source: "inventory_heuristic",
+      }));
+      return { rows: topStock, total: topStock.length, source: "inventory" };
+    }
+  }
+
+  const orders = result.error ? [] : rowsFromPayload(result.data || fallback?.data);
+  if (!orders.length) return { error: "No completed orders found" };
+
+  // Fetch order details in parallel (limited concurrency) to get items
+  const itemCounts = {};
+  const orderChunks = [];
+  for (let i = 0; i < orders.length; i += 5) {
+    orderChunks.push(orders.slice(i, i + 5));
+  }
+  for (const chunk of orderChunks) {
+    const details = await Promise.all(
+      chunk.map(o => apiGet(`/api/website/orders/${o.id || o.order_id}`, token))
+    );
+    for (const det of details) {
+      if (det.error) continue;
+      const orderData = det.data?.data || det.data || {};
+      const items = Array.isArray(orderData.items) ? orderData.items : [];
+      for (const item of items) {
+        const key = item.product_id || item.barcode || item.sku || item.name || "unknown";
+        const qty = Number(item.quantity ?? item.qty ?? 1);
+        itemCounts[key] = itemCounts[key] || { name: item.name || item.product_name || key, sku: item.barcode || item.sku || key, quantity: 0, revenue: 0, orders: 0 };
+        itemCounts[key].quantity += qty;
+        itemCounts[key].revenue += Number(item.price ?? item.total ?? 0) * qty;
+        itemCounts[key].orders += 1;
+      }
+    }
+  }
+
+  const ranked = Object.values(itemCounts)
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, limit);
+
+  if (!ranked.length) {
+    // Fallback to inventory heuristic
+    const invResult = await apiGet("/api/inventory?limit=100&sortBy=stock&sortOrder=desc", token);
+    if (!invResult.error) {
+      const invRows = rowsFromPayload(invResult.data);
+      const topStock = invRows.slice(0, limit).map(r => ({
+        name: r.product_name || r.name || r.code || "Product",
+        sku: r.code || r.sku || r.barcode || "",
+        stock: Number(r.stock ?? r.qty_available ?? 0),
+        warehouse: r.warehouse || "",
+        source: "inventory_heuristic",
+      }));
+      return { rows: topStock, total: topStock.length, source: "inventory" };
+    }
+    return { error: "No order item data available" };
+  }
+
+  return { rows: ranked, total: ranked.length, source: "orders" };
+}
+
+function buildBestSellersAnswer(result, wantsExport) {
+  const rows = result.rows || [];
+  const lines = ["🏆 **Top Selling Products**", ""];
+
+  if (result.source === "inventory") {
+    lines.push("Based on current inventory levels (highest stocked items):");
+    lines.push("");
+    rows.forEach((r, i) => {
+      lines.push(`${i + 1}. **${r.name}** (\`${r.sku}\`) · **${r.stock} units** in stock${r.warehouse ? ` · ${r.warehouse}` : ""}`);
+    });
+    lines.push("");
+    lines.push("_Note: These are inventory-based estimates. Order data will appear once sales are recorded._");
+  } else {
+    const totalQty = rows.reduce((s, r) => s + r.quantity, 0);
+    const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
+    lines.push(`Based on recent completed order data — **${result.total} products** found, **${totalQty} units** sold (₹${totalRev.toLocaleString("en-IN")} revenue).`);
+    lines.push("");
+    rows.forEach((r, i) => {
+      lines.push(`${i + 1}. **${r.name}** (\`${r.sku}\`) · **${r.quantity} units** sold${r.revenue ? ` · ₹${r.revenue.toLocaleString("en-IN")}` : ""} · **${r.orders} order(s)**`);
+    });
+    lines.push("");
+    lines.push("Want to drill into any of these? Ask **show journey of [product name]** or **compare [product A] and [product B]**.");
+  }
+
+  return {
+    answer: lines.join("\n"),
+    exportTsv: wantsExport
+      ? rowsToTsv(rows, result.source === "inventory" 
+          ? ["name", "sku", "stock", "warehouse", "source"]
+          : ["name", "sku", "quantity", "revenue", "orders", "source"])
+      : null,
+    exportFilename: "inventorygpt-bestsellers.tsv",
   };
 }
 
@@ -3046,6 +3163,20 @@ export async function tryInventoryGptDeterministicAnswer({
     return {
       ...buildLogisticsAnswer(logResult),
       render: 'text',
+    };
+  }
+
+  if (intent.type === "best_seller") {
+    const bestSellers = await resolveInventoryGptBestSellers(authToken, 10);
+    if (bestSellers.error) {
+      return {
+        answer: `Could not determine best-selling products: ${bestSellers.error}. Ask me **show products** or **show warehouse stock** instead.`,
+        render: "text",
+      };
+    }
+    return {
+      ...buildBestSellersAnswer(bestSellers, intent.wantsExport),
+      render: "text",
     };
   }
 
