@@ -456,7 +456,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     /(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse|warhorse).*(?:stock|inventory|product)/.test(lower) ||
     /(?:all|every|each|sare|saare|sabhi).*(?:product|item|stock|inventory).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
     /(?:stock|inventory|quantity).*(?:all|every|each|sare|saare|sabhi).*(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
-    /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?)\s*$/.test(lower) ||
+    /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?)\s+in\s+(?:the\s+)?(?:warehouse|wearhouse|werahouse|warhorse)/.test(lower) ||
     /^show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:stock|inventory|products?|items?).*dikhao/.test(lower) ||
     /(?:sare|saare|sabhi|all)\s+(?:stock|product|item|inventory|samagri|cheeze?)\s+(?:dikhao|show)/.test(lower)
   ) {
@@ -570,7 +570,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       wantsExport,
     };
   }
-  if (/sku|barcode|product|item|name|what about this/.test(lower))
+  if (/sku|barcode|product|item|name|what about this/.test(lower) && !/show\s+(?:all|every|the\s+entire)\s+product|all\s+product|list\s+product/.test(lower))
     return { type: "product", field: "summary", wantsExport };
 
   // Logistics/transfer cost estimation: "can I transfer X from Y to Z", "logistics cost", etc.
