@@ -312,15 +312,6 @@ function extractBarcode(text) {
   return looksLikeProductQuestion ? m[1] : null;
 }
 
-function productFollowUpType(question) {
-  const lower = String(question || "").toLowerCase();
-  if (/journey|timeline|ledger|movement/.test(lower)) return "journey";
-  if (/price|cost|mrp/.test(lower)) return "price";
-  if (/stock|quantity|qty/.test(lower)) return "stock";
-  if (/description|details?|about/.test(lower)) return "description";
-  return null;
-}
-
 export async function POST(req) {
   try {
     const { question, products, categories, conversationHistory, authToken } =
