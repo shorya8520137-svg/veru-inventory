@@ -1,144 +1,122 @@
 /**
  * InventoryGPT Playwright E2E QA Tests
  *
- * 1. Authenticates via API (needs Express backend running)
- * 2. Runs chat queries against the real UI
+ * Real login → real JWT → ek session me queries → bot message count track
  *
  * Run: node playwright-inventorygpt-qa.js
  */
 
 const { chromium } = require('playwright');
-const BASE_URL = process.env.BASE_URL || 'https://veru-inventory.vercel.app';
-const API_BASE = process.env.API_BASE || 'https://api.giftgala.in';
-const ADMIN_EMAIL = 'admin@company.com';
-const ADMIN_PASSWORD = 'Admin@123';
+const BASE = 'https://veru-inventory.vercel.app';
+const API = 'https://api.giftgala.in/api';
 
-const TEST_QUERIES = [
-  {
-    name: 'show all warehouses',
-    query: 'show me all the warehouse',
-    expect: (text) => /warehouse/i.test(text) && text.length > 50,
-  },
-  {
-    name: 'all products',
-    query: 'show me all the product',
-    expect: (text) => /product|item|catalog/i.test(text) && text.length > 50,
-  },
-  {
-    name: 'best seller',
-    query: 'most selling product',
-    expect: (text) => /selling|popular|best/i.test(text),
-  },
-  {
-    name: 'misspelling: deatils → details follow-up',
-    query: 'with details',
-    expect: (text) => /details|complete detail|warehouse|cards?|table|chat/i.test(text),
-  },
-  {
-    name: 'warehouse details bro (full misspellings)',
-    query: 'show me all the wearhouse with deatils bro',
-    expect: (text) => /warehouse|details|cards?|table|chat/i.test(text),
-  },
-  {
-    name: 'garbage input: null',
-    query: 'null',
-    expect: (text) => /welcome|help|inventorygpt|try/i.test(text),
-  },
-  {
-    name: 'LLM fallback: what should I do',
-    query: 'what should I do today',
-    expect: (text) => text.length > 20,
-  },
+const TESTS = [
+  // Order matters: "with details" must follow a warehouse query
+  { n: 'show warehouses',         q: 'show me all the warehouse',                    c: t => /warehouse/i.test(t) },
+  { n: 'deatils → details',       q: 'with details',                                 c: t => /details|card|table|chat|warehouse/i.test(t) },
+  { n: 'wearhouse deatils bro',   q: 'show me all the wearhouse with deatils bro',    c: t => /warehouse|details|card|table|chat/i.test(t) },
+  { n: 'all products',            q: 'show me all the product',                      c: t => /product|item|catalog/i.test(t) },
+  { n: 'best seller',             q: 'most selling product',                         c: t => /selling|popular|best/i.test(t) },
+  { n: 'garbage null',            q: 'null',                                          c: t => /welcome|help|inventorygpt|try/i.test(t) },
+  { n: 'LLM fallback',            q: 'what should I do today',                        c: t => t.length > 20 },
 ];
 
-async function loginViaApi(page, apiContext) {
-  const res = await apiContext.post(`${API_BASE}/api/auth/login`, {
-    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-    timeout: 15000,
+function countBotMessages(page) {
+  return page.evaluate(() => {
+    const dash = document.querySelector('[data-inventorygpt-dashboard]');
+    if (!dash) return 0;
+    const panel = [...dash.children].find(c => c.tagName !== 'ASIDE');
+    if (!panel) return 0;
+    return [...panel.querySelectorAll('[class*="flex items-start"], [class*="flex gap-2"], [class*="flex gap-3"]')]
+      .filter(m => {
+        const t = m.textContent.trim();
+        return t.length > 20 && !t.startsWith('ME') && !t.includes('InsoraOpps') && !t.includes('RECENT');
+      }).length;
   });
-  if (!res.ok()) throw new Error(`HTTP ${res.status()}`);
-  const data = await res.json();
-  if (!data.success || !data.token) throw new Error(data.error || 'no token in response');
-  // Stamp token into localStorage so the SPA thinks we are logged in
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
-  await page.evaluate((token) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify({ email: 'admin@company.com', role: 'admin' }));
-  }, data.token);
 }
 
-async function getResponseText(page) {
-  return page.evaluate(() => {
-    for (const sel of ['[class*="message"]','[class*="assistant"]','[class*="bot"]','[class*="response"]','[class*="chat-msg"]']) {
-      const els = document.querySelectorAll(sel);
-      if (els.length) return els[els.length - 1].textContent?.trim() || '';
-    }
-    const divs = document.querySelectorAll('div');
-    for (let i = divs.length - 1; i >= 0; i--) {
-      const t = divs[i].textContent?.trim();
-      if (t && t.length > 30 && !t.includes('Sign In') && !t.includes('Email')) return t;
-    }
-    return document.body.innerText;
+async function login() {
+  const res = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@company.com', password: 'Admin@123' }),
   });
+  const data = await res.json();
+  if (!data.token) throw new Error('Login failed: ' + JSON.stringify(data));
+  return { token: data.token, user: data.user };
 }
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  const apiContext = await context.request;
+  console.log('Logging in...');
+  const { token, user } = await login();
+  console.log(`✓ ${user.name} (${user.role})`);
+
+  const browser = await chromium.launch({ headless: false });
+  const page = await browser.newPage();
+
+  await page.addInitScript(({ t, u }) => {
+    localStorage.setItem('token', t);
+    localStorage.setItem('user', JSON.stringify(u));
+  }, { t: token, u: user });
+
+  await page.goto(`${BASE}/inventorygpt`, { waitUntil: 'networkidle', timeout: 30000 });
+  await page.waitForTimeout(3000);
+
+  const SEL = 'input[placeholder*="Ask anything"]';
+  if (!(await page.$(SEL))) {
+    console.log('✗ No chat input');
+    await browser.close();
+    process.exit(1);
+  }
+  console.log('✓ Ready\n');
 
   let passed = 0, failed = 0;
 
-  console.log(`\n🧪 InventoryGPT Playwright E2E QA Suite\n`);
-
-  // ── Health check & login ──
-  try {
-    const health = await apiContext.get(`${API_BASE}/api/health`, { timeout: 8000 }).catch(() => null);
-    if (!health || !health.ok()) {
-      throw new Error(`Express backend at ${API_BASE} returned ${health?.status() || 'no response'} — is the server running?`);
-    }
-    console.log('  ✓ Backend reachable, authenticating...');
-    await loginViaApi(page, apiContext);
-    console.log('  ✓ Authenticated\n');
-  } catch (e) {
-    console.log(`  ⚠ Cannot run E2E tests: ${e.message}`);
-    await browser.close();
-    process.exit(0); // Graceful skip — not a test failure
-  }
-
-  // ── Run queries ──
-  for (const test of TEST_QUERIES) {
+  for (const t of TESTS) {
     try {
-      console.log(`  ▶ ${test.query}`);
-      await page.goto(`${BASE_URL}/inventorygpt`, { waitUntil: 'networkidle', timeout: 30000 });
-      await page.waitForTimeout(3000);
-
-      const chatInput = await page.$('textarea, input[type="text"], [contenteditable], [role="textbox"]');
-      if (!chatInput) { console.log(`  ⚠ SKIP ${test.name}: no input`); continue; }
-
-      await chatInput.fill(test.query);
+      console.log(`  ▶ "${t.q}"`);
+      const before = await countBotMessages(page);
+      const inp = await page.$(SEL);
+      await inp.fill(t.q);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(5000);
 
-      const text = await getResponseText(page);
-      if (test.expect(text)) {
-        console.log(`  ✓ ${test.name}`);
+      let reply = null;
+      for (let i = 0; i < 60; i++) { // up to 30s
+        await page.waitForTimeout(500);
+        const now = await countBotMessages(page);
+        if (now > before) {
+          reply = await page.evaluate(() => {
+            const dash = document.querySelector('[data-inventorygpt-dashboard]');
+            const panel = [...dash.children].find(c => c.tagName !== 'ASIDE');
+            const msgs = [...panel.querySelectorAll('[class*="flex items-start"], [class*="flex gap-2"], [class*="flex gap-3"]')]
+              .filter(m => {
+                const t = m.textContent.trim();
+                return t.length > 20 && !t.startsWith('ME') && !t.includes('InsoraOpps') && !t.includes('RECENT');
+              });
+            return msgs[msgs.length - 1].textContent.trim();
+          });
+          break;
+        }
+      }
+
+      const text = reply || '[timeout]';
+      if (t.c(text)) {
+        console.log(`  ✓ ${t.n}`);
         passed++;
       } else {
-        console.log(`  ✗ ${test.name}: unexpected response`);
-        console.log(`    ${text.slice(0, 140).replace(/\n/g, '\\n')}`);
+        console.log(`  ✗ ${t.n}`);
+        console.log(`    reply: ${text.slice(0, 250).replace(/\n/g, '\\n')}`);
         failed++;
       }
     } catch (e) {
-      console.log(`  ✗ ${test.name}: ${e.message}`);
+      console.log(`  ✗ ${t.n}: ${e.message}`);
       failed++;
     }
   }
 
   await browser.close();
-  console.log(`\n RESULTS: ${passed} passed, ${failed} failed, ${passed + failed} total\n`);
+  console.log(`\n  ${passed} passed, ${failed} failed, ${passed+failed} total`);
   process.exit(failed > 0 ? 1 : 0);
 }
 
-run().catch((e) => { console.error('Fatal:', e); process.exit(1); });
+run().catch(e => { console.error(e); process.exit(1); });

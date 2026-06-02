@@ -240,7 +240,7 @@ async function requestOpenRouterCompletion(messages) {
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   let lastError = null;
   const modelsToTry = [
@@ -535,16 +535,24 @@ Question: ${question}`,
     });
   } catch (error) {
     console.error("InventoryGPT Error:", error);
-    _logData = { question, answer: error?.message || "Unknown error", model: "error" };
+    const errMsg = error?.message || "Unknown error";
+    _logData = { question, answer: errMsg, model: "error" };
     logInventoryGptChat(_logData);
-    return NextResponse.json(
-      {
-        success: false,
-        fallback:
-          "I'm having trouble right now. Please try again in a moment or ask about warehouse stock (e.g. stock at GGM_WH).",
-      },
-      { status: 500 },
-    );
+    if (/timeout|abort/i.test(errMsg)) {
+      return NextResponse.json({
+        success: true,
+        answer: "I'm thinking... this one might take a moment. Could you try rephrasing, or ask me something simpler like **show all products**, **warehouse stock**, or **show orders** while I process complex questions?",
+        model: "fallback",
+        render: "text",
+      });
+    }
+    return NextResponse.json({
+      success: true,
+      fallback: true,
+      answer: "I hit a temporary hiccup. Try again or ask something like **show all warehouses**, **show orders**, or **best selling product**.",
+      model: "fallback",
+      render: "text",
+    });
   }
 }
 

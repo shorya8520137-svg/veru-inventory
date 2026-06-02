@@ -360,6 +360,15 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     };
   }
 
+  // ── Frustration / abuse — catch early before product/SKU lookup ──
+  if (isUserFrustrated(raw)) {
+    return {
+      type: "help_prompt",
+      frustration: true,
+      wantsExport,
+    };
+  }
+
   // ── Intent-first phrases (check before general entity detection) ──
   // Best-seller / most-selling / most popular
   if (
@@ -375,7 +384,8 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:the\s+)?(?:product|products|item|items)\s*$/i.test(lower) ||
     /^(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:the\s+)?(?:product|products|item|items)\s*$/i.test(lower) ||
     /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every)\s+(?:the\s+)?(?:products?|items?)\s*$/i.test(lower) ||
-    /^(?:all\s+product|sabhi\s+product|saare\s+product|sare\s+product|saari\s+product)/.test(lower)
+    /^(?:all\s+product|sabhi\s+product|saare\s+product|sare\s+product|saari\s+product)/.test(lower) ||
+    /product\s+(?:show|dikha|dikhao|deka|bata|dikhae|dikhaa)/i.test(lower)
   ) {
     return { type: "all_products", wantsExport };
   }
@@ -943,14 +953,14 @@ function buildAllProductsAnswer(result, wantsExport) {
   const rows = result.rows || [];
   const total = result.total || rows.length;
   const lines = ["📦 **All Products**", ""];
-  lines.push(`Total products found: **${total}**`);
-  lines.push("");
 
   if (!rows.length) {
-    lines.push("No products found in the catalog.");
+    lines.push("I checked your catalog but couldn't find any products yet.");
     lines.push("");
-    lines.push("Would you like to check categories or warehouses instead?");
+    lines.push("Would you like to check **categories** or **warehouses** instead?");
   } else {
+    lines.push(`Here are all **${total}** products from your catalog:`);
+    lines.push("");
     const visible = rows.slice(0, 5);
     visible.forEach((p, i) => {
       const priceStr = p.price != null ? ` · ${formatInr(p.price)}` : "";
@@ -964,7 +974,7 @@ function buildAllProductsAnswer(result, wantsExport) {
     }
 
     lines.push("");
-    lines.push("Want to narrow down? Try: **show products in [category]** or **show stock at [warehouse]**.");
+    lines.push("Want to narrow down? Try a **category name** or ask **stock at [warehouse]**.");
   }
 
   return {
@@ -3493,6 +3503,19 @@ export async function tryInventoryGptDeterministicAnswer({
   }
 
   if (intent.type === "help_prompt") {
+    if (intent.frustration) {
+      return {
+        answer:
+          "I'm here to help you with your inventory. Let's keep it professional.\n\n" +
+          "Try asking:\n" +
+          "• **show me all products**\n" +
+          "• **show all warehouses**\n" +
+          "• **most selling product**\n" +
+          "• **show orders**\n" +
+          "• **what should I do today**",
+        render: "text",
+      };
+    }
     return {
       answer:
         "👋 **Welcome to InventoryGPT!**\n\n" +
