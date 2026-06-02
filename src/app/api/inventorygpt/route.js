@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { tryInsoraOppsDataAnswer } from "@/lib/insoraOppsOpsAnswer";
 import { buildInventoryGptBrainContext } from "@/lib/inventorygptBrainContext";
 import { tryInventoryGptDeterministicAnswer } from "@/lib/inventorygptResolvers";
+import { logInventoryGptChat } from "@/lib/inventorygptChatLogger";
 
 const OPENROUTER_API_KEY =
   process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY;
@@ -238,28 +239,64 @@ async function requestOpenRouterCompletion(messages) {
     );
   }
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENROUTER_MODEL,
-      temperature: 0,
-      max_tokens: 1000,
-      messages,
-    }),
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+  let lastError = null;
+  const modelsToTry = [
+    OPENROUTER_MODEL,
+    "mistralai/mistral-7b-instruct",
+    "mistralai/mistral-7b-instruct-v0.1",
+    "openchat/openchat-7b:free",
+    "cognitivecomputations/dolphin-mixtral-8x7b:free",
+  ].filter(Boolean);
+
+  // De-duplicate models
+  const seenModels = new Set();
+  const uniqueModels = modelsToTry.filter(m => {
+    if (seenModels.has(m)) return false;
+    seenModels.add(m);
+    return true;
   });
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const errorMessage =
-      data?.error?.message || data?.message || `HTTP ${response.status}`;
-    throw new Error(`OpenRouter API error: ${errorMessage}`);
+  for (const model of uniqueModels) {
+    try {
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          max_tokens: 2000,
+          messages,
+        }),
+        signal: controller.signal,
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        lastError = data?.error?.message || data?.message || `HTTP ${response.status}`;
+        continue; // Try next model
+      }
+
+      const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+      if (content) {
+        clearTimeout(timeoutId);
+        return { content, model };
+      }
+      lastError = "Empty response from model";
+    } catch (e) {
+      lastError = e?.message || "Unknown error";
+      if (e?.name === "AbortError") lastError = "Request timed out";
+      continue;
+    }
   }
 
-  return data;
+  clearTimeout(timeoutId);
+  throw new Error(`All OpenRouter models failed. Last error: ${lastError}`);
 }
 
 function extractBarcode(text) {
@@ -273,6 +310,15 @@ function extractBarcode(text) {
     raw.replace(/\D/g, "") === m[1];
 
   return looksLikeProductQuestion ? m[1] : null;
+}
+
+function productFollowUpType(question) {
+  const lower = String(question || "").toLowerCase();
+  if (/journey|timeline|ledger|movement/.test(lower)) return "journey";
+  if (/price|cost|mrp/.test(lower)) return "price";
+  if (/stock|quantity|qty/.test(lower)) return "stock";
+  if (/description|details?|about/.test(lower)) return "description";
+  return null;
 }
 
 export async function POST(req) {
@@ -296,7 +342,11 @@ export async function POST(req) {
       conversationHistory,
     });
 
+  let _logData = { question };
+
     if (deterministicAnswer?.answer) {
+      _logData = { question, answer: deterministicAnswer.answer, model: "deterministic-resolver", intentType: deterministicAnswer.intentType, renderType: deterministicAnswer.render };
+      logInventoryGptChat(_logData);
       return NextResponse.json({
         success: true,
         answer: deterministicAnswer.answer,
@@ -354,6 +404,8 @@ export async function POST(req) {
 
     const opsAnswer = await tryInsoraOppsDataAnswer(question, authToken || "", null, conversationHistory);
     if (opsAnswer?.answer) {
+      _logData = { question, answer: opsAnswer.answer, model: "ops-resolver", renderType: opsAnswer.render };
+      logInventoryGptChat(_logData);
       return NextResponse.json({
         success: true,
         answer: opsAnswer.answer,
@@ -478,18 +530,22 @@ Question: ${question}`,
       },
     ]);
 
-    const answer =
-      completion.choices?.[0]?.message?.content ||
-      completion.choices?.[0]?.text;
+    const answer = completion.content;
+
     if (!answer) throw new Error("No response from AI model");
+
+    _logData = { question, answer, model: completion.model || OPENROUTER_MODEL };
+    logInventoryGptChat(_logData);
 
     return NextResponse.json({
       success: true,
       answer,
-      model: OPENROUTER_MODEL,
+      model: completion.model || OPENROUTER_MODEL,
     });
   } catch (error) {
     console.error("InventoryGPT Error:", error);
+    _logData = { question, answer: error?.message || "Unknown error", model: "error" };
+    logInventoryGptChat(_logData);
     return NextResponse.json(
       {
         success: false,

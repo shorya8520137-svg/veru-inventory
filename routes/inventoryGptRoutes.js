@@ -596,4 +596,90 @@ const logisticsController = require('../controllers/logisticsController');
 router.post('/logistics-estimate', logisticsController.logisticsEstimate);
 router.get('/logistics-places', logisticsController.geocodeWarehouse);
 
+// ── CHAT LOGS (for admin monitoring) ──
+async function ensureChatLogsTable() {
+    await pool.execute(`
+        CREATE TABLE IF NOT EXISTS inventorygpt_chat_logs (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            session_id VARCHAR(64) NOT NULL,
+            user_question TEXT NOT NULL,
+            bot_response TEXT NOT NULL,
+            model VARCHAR(64) DEFAULT NULL,
+            intent_type VARCHAR(64) DEFAULT NULL,
+            render_type VARCHAR(32) DEFAULT NULL,
+            response_time_ms INT DEFAULT NULL,
+            user_email VARCHAR(255) DEFAULT NULL,
+            metadata JSON DEFAULT NULL,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_chat_logs_session (session_id),
+            KEY idx_chat_logs_created (created_at),
+            KEY idx_chat_logs_user (user_email),
+            KEY idx_chat_logs_intent (intent_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+}
+
+router.post('/chat-logs', async (req, res) => {
+    try {
+        await ensureChatLogsTable();
+        const { session_id, user_question, bot_response, model, intent_type, render_type, response_time_ms, user_email, metadata } = req.body || {};
+        if (!user_question) {
+            return res.status(400).json({ success: false, error: 'user_question is required' });
+        }
+        const [result] = await pool.execute(
+            `INSERT INTO inventorygpt_chat_logs
+             (session_id, user_question, bot_response, model, intent_type, render_type, response_time_ms, user_email, metadata)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                session_id || 'anonymous',
+                String(user_question).slice(0, 5000),
+                String(bot_response || '').slice(0, 50000),
+                model || null,
+                intent_type || null,
+                render_type || null,
+                response_time_ms || null,
+                user_email || null,
+                metadata || null,
+            ]
+        );
+        res.status(201).json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Error logging InventoryGPT chat:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.get('/chat-logs', async (req, res) => {
+    try {
+        await ensureChatLogsTable();
+        const { limit = 100, offset = 0, session_id, user_email, intent_type } = req.query;
+        const params = [];
+        let sql = `SELECT id, session_id, user_question, bot_response, model, intent_type,
+                          render_type, response_time_ms, user_email, created_at
+                   FROM inventorygpt_chat_logs WHERE 1=1`;
+        if (session_id) {
+            sql += ' AND session_id = ?';
+            params.push(session_id);
+        }
+        if (user_email) {
+            sql += ' AND user_email = ?';
+            params.push(user_email);
+        }
+        if (intent_type) {
+            sql += ' AND intent_type = ?';
+            params.push(intent_type);
+        }
+        sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        params.push(Number(limit), Number(offset));
+
+        const [rows] = await pool.execute(sql, params);
+        const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM inventorygpt_chat_logs');
+        res.json({ success: true, data: rows, total: countResult[0].total, count: rows.length });
+    } catch (error) {
+        console.error('Error fetching InventoryGPT chat logs:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

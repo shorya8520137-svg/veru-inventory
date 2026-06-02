@@ -3,6 +3,27 @@ const API_BASE =
   process.env.API_BASE ||
   "https://api.giftgala.in";
 
+// ── Shared spelling normalisation map (used by both normalise + intent detect) ──
+const NORM_MAP = [
+  [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|werhouse|weahouse|werehouse|werehouses|godaam|gudam|godaun)\b/gi, 'warehouse'],
+  [/\bstores?\b/gi, 'store'],
+  [/\b(dukaan|dukan|dookan)\b/gi, 'store'],
+  [/\bmujhe\b|\bmujha\b|\bmuja\b|\bmujhko\b|\bmere\b/gi, 'me'],
+  [/\b(sabhi|sab|tamam|tamaam|poora|pura|saare|saara|saari)\b/gi, 'all'],
+  [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo|shoe|shoes|shoo)\b/gi, 'show'],
+  [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
+  [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|deatils|detalis|detial|detaills|deails)\b/gi, 'details'],
+  [/\b(compair|comapir|compaire|comapre)\b/gi, 'compare'],
+];
+
+function normaliseText(text) {
+  let t = String(text || '').toLowerCase();
+  for (const [pattern, replacement] of NORM_MAP) {
+    t = t.replace(pattern, replacement);
+  }
+  return t.replace(/\s+/g, ' ').trim();
+}
+
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -241,14 +262,15 @@ export function extractSessionState(conversationHistory = []) {
 
 // ── Normalize follow-up queries with session context ──
 export function normalizeFollowUpQuery(question, conversationHistory = []) {
-  const q = String(question || "").trim();
-  if (!q) return question;
+  const raw = String(question || "").trim();
+  if (!raw) return question;
 
-  const lower = q.toLowerCase();
   const state = extractSessionState(conversationHistory);
-
-  // If no session state or query is already a complete intent, return as-is
   if (!state.intent) return question;
+
+  // Normalize spelling so misspellings like "deatils" → "details" work
+  const q = normaliseText(raw);
+  const lower = q;
 
   // Detect short follow-up phrases
   const isShortFollowUp = q.length < 60 && !/^(show|list|get|display|view|find|search|check|tell|how|what|when|where|why|which|who)\b/i.test(q) && !/excel|spreadsheet|csv|export|download/i.test(q);
@@ -316,31 +338,27 @@ export function isUserFrustrated(text) {
 
 export function detectInventoryGptIntent(question, conversationHistory = []) {
   const raw = String(question || "").trim();
-  let lower = raw.toLowerCase();
 
   // ── Fuzzy normalization ──────────────────────────────────────────
   // Map common Hindi words and misspellings to English equivalents.
-  // Use word boundaries to avoid mangling English words.
-  const NORM_MAP = [
-    [/\b(warehouse|warehouses|wearhouse|wearhouses|werahouse|werahouses|warhorse|warhorses|warehosue|warehose|wharehouse|warhouse|warehous|warehaouse|warehouose|werhouse|weahouse|werehouse|werehouses|godaam|gudam|godaun)\b/gi, 'warehouse'],
-    [/\bstores?\b/gi, 'store'],
-    [/\b(dukaan|dukan|dookan)\b/gi, 'store'],
-    [/\bmujhe\b|\bmujha\b|\bmuja\b|\bmujhko\b|\bmere\b/gi, 'me'],
-    [/\b(sabhi|sab|tamam|tamaam|poora|pura|saare|saara|saari)\b/gi, 'all'],
-    [/\b(dikhao|dikha|dekhau|dikaho|dikao|deka|dekhao|dikhawo|shwo)\b/gi, 'show'],
-    [/\b(kro|karo|kare|kar|karta)\b/gi, 'do'],
-    [/\b(vistar|jaankari|jankari|sampurna|poori|deatil|deatils|detalis|detial|detaills|deails)\b/gi, 'details'],
-    [/\b(compair|comapir|compaire|comapre)\b/gi, 'compare'],
-  ];
-  for (const [pattern, replacement] of NORM_MAP) {
-    lower = lower.replace(pattern, replacement);
-  }
-  // Clean up extra spaces from removals
-  lower = lower.replace(/\s+/g, ' ').trim();
+  let lower = normaliseText(raw);
 
   const wantsExport = /excel|spreadsheet|csv|export|download|sheet|table/.test(
     lower,
   );
+
+  // ── Edge case: garbage / meaningless input ──
+  const isGarbage = (
+    /^(null|undefined|none|n\/a|na|\?+|\.+)$/i.test(lower) ||
+    (lower.length > 15 && /^(.)\1+$/.test(lower.replace(/\s+/g, ''))) ||
+    /drop\s+table|alert\s*\(|script|<[^>]+>|--\s*$|';/.test(lower)
+  );
+  if (isGarbage) {
+    return {
+      type: "help_prompt",
+      wantsExport,
+    };
+  }
 
   // ── Intent-first phrases (check before general entity detection) ──
   // Best-seller / most-selling / most popular
@@ -380,13 +398,14 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   const detectedCategory = categoryNames.find(cat => lower.includes(cat)) || activeContext.category;
   
   // Detect if query is JUST a product name (no action words, no question words)
-  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao|cards?|table|chat|all|every|the\s+entire|the\s+complete|complete|list|few|some|any/.test(lower);
+  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|generate|make|create|build|prepare|run|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao|cards?|table|chat|all|every|the\s+entire|the\s+complete|complete|list|few|some|any/.test(lower);
 
   // Display preference response: user said cards/table/chat after being asked
-  if (/^(?:card|cards|table|tables?|chat|text)\s*$/.test(lower) && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+  const displayPrefMatch = lower.match(/\b(cards?|tables?|chat|text)\b/);
+  if (displayPrefMatch && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
     const lastAssistant = [...conversationHistory].reverse().find((m) => m?.role === "assistant");
     if (lastAssistant?.content && /how.*(?:see|view|like|c.*rds|table|chat)/i.test(lastAssistant.content)) {
-      return { type: "display_preference", wantsExport };
+      return { type: "display_preference", preference: displayPrefMatch[1].toLowerCase(), wantsExport };
     }
   }
 
@@ -680,9 +699,9 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     return { type: "audit", wantsExport };
   if (/order|sale|revenue|regional|region/.test(lower))
     return { type: "orders", wantsExport };
-  if (/description|describe|details?|about this|about product/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
+  if (/description|describe|details?|about this|about product/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower) && !/^with\s+details?$/i.test(lower))
     return { type: "product", field: "description", wantsExport };
-  if (/price|cost|mrp|rate|amount/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
+  if (/price|cost|mrp|\brate\b|amount/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
     return { type: "product", field: "price", wantsExport };
   if (/stock|quantity|qty|available|availability/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
     return { type: "stock", wantsExport };
@@ -745,7 +764,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       wantsExport,
     };
   }
-  if (/sku|barcode|product|item|name|what about this/.test(lower) && !/show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:the\s+)?product|^(?:show\s+(?:me\s+)?)?all\s+(?:the\s+)?(?:product|products|item|items)$|list\s+(?:all\s+)?(?:the\s+)?(?:product|products|item|items)/i.test(lower))
+  if (!/generate|make|create|build|prepare|run|report|analyze|analyse/.test(lower) && /sku|barcode|product|item|name|what about this/.test(lower) && !/show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:the\s+)?product|^(?:show\s+(?:me\s+)?)?all\s+(?:the\s+)?(?:product|products|item|items)$|list\s+(?:all\s+)?(?:the\s+)?(?:product|products|item|items)/i.test(lower))
     return { type: "product", field: "summary", wantsExport };
 
   // Logistics/transfer cost estimation: "can I transfer X from Y to Z", "logistics cost", etc.
@@ -3469,6 +3488,26 @@ export async function tryInventoryGptDeterministicAnswer({
         "• **Show orders** — View recent orders\n" +
         "• **Best sellers** — Most popular products\n\n" +
         "What would you like to do?",
+      render: "text",
+    };
+  }
+
+  if (intent.type === "help_prompt") {
+    return {
+      answer:
+        "👋 **Welcome to InventoryGPT!**\n\n" +
+        "I can help you with:\n\n" +
+        "📦 **Products** — Show all products, search by name/SKU, browse categories\n" +
+        "🏬 **Warehouses** — View warehouse stock, details, comparisons\n" +
+        "📊 **Analytics** — Best sellers, inventory health, stock alerts\n" +
+        "🚚 **Logistics** — Transfer cost estimates between warehouses\n" +
+        "📋 **Orders** — Recent orders, revenue, pending\n\n" +
+        "Try asking:\n" +
+        "• **show me all products**\n" +
+        "• **show all warehouses**\n" +
+        "• **most selling product**\n" +
+        "• **what should I do today**\n" +
+        "• **show orders**",
       render: "text",
     };
   }
