@@ -327,7 +327,7 @@ export function normalizeFollowUpQuery(question, conversationHistory = []) {
 export function isUserFrustrated(text) {
   const lower = String(text || "").toLowerCase();
   // Detect frustration, anger, impatience, or swearing
-  return /abuse|bc|bhenchod|behenchod|bhosdike|bhosda|madarchod|maderchod|chutiya|chut|laud?a|lavde?|gaand|gandu|randi|bitch|fuck|shit|asshole|damn|wtf|stfu|screw|stupid|idiot|dumb|useless|worst|hate|angry|annoy|irritat|frustrat/i.test(lower) ||
+  return /abuse|bc|bhenchod|behenchod|bhosdike|bhosda|madarchod|maderchod|chutiya|chut|laud?a|lavde?|gaand|gandu|randi|bitch|fuck|shit|asshole|damn|wtf|stfu|screw|stupid|idiot|dumb|useless|worst|hate|angry|annoy|irritat|frustrat|bdsk|bds[kc]|badsk/i.test(lower) ||
     /(?:why|kyu|kyun|kyo)\s+(?:are|is)\s+(?:you|it)\s+(?:asking|ask|question)/i.test(lower) ||
     /just\s+(?:show|give|tell|do|answer)/i.test(lower) ||
     /(?:stop|enough|basta|chup|chup kar|shut)/i.test(lower) ||
@@ -385,7 +385,8 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     /^(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:the\s+)?(?:product|products|item|items)\s*$/i.test(lower) ||
     /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every)\s+(?:the\s+)?(?:products?|items?)\s*$/i.test(lower) ||
     /^(?:all\s+product|sabhi\s+product|saare\s+product|sare\s+product|saari\s+product)/.test(lower) ||
-    /product\s+(?:show|dikha|dikhao|deka|bata|dikhae|dikhaa)/i.test(lower)
+    /product\s+(?:show|dikha|dikhao|deka|bata|dikhae|dikhaa)/i.test(lower) ||
+    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:the\s+)?(?:product|products)\s*$/i.test(lower)
   ) {
     return { type: "all_products", wantsExport };
   }
