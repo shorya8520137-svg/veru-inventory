@@ -173,12 +173,12 @@ exports.getProductJourney = async (req, res) => {
         } else if (entry.movement_type === 'DISPATCH' && entry.reference) {
           const ref = entry.reference;
           const dp = await asyncQuery(
-            `SELECT customer, awb, order_ref, logistics, customer_name
+            `SELECT customer, awb, order_ref, logistics
              FROM warehouse_dispatch WHERE CONCAT('DISPATCH_', id) LIKE ? OR awb = ? OR order_ref = ? LIMIT 1`,
             [`%${ref}%`, ref, ref]
           );
           if (dp.length) {
-            entry.customer = dp[0].customer_name || dp[0].customer;
+            entry.customer = dp[0].customer;
             entry.awb = dp[0].awb;
             entry.order_ref = dp[0].order_ref;
             entry.logistics = dp[0].logistics;
