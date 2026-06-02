@@ -342,6 +342,26 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     lower,
   );
 
+  // ── Intent-first phrases (check before general entity detection) ──
+  // Best-seller / most-selling / most popular
+  if (
+    /most\s*(?:selling|sold|popular|ordered|requested|favourite|favorite)|best\s*(?:seller|sellers?|salers?|selling)|top\s*(?:selling|sold|popular|product|item|seller)|highest\s*(?:selling|sold)|trending/.test(lower) ||
+    /sabse\s*(?:zyada|jada|jyda|bik|bikne|biknewala|popular|best|behtreen)/.test(lower) ||
+    /(?:kaun|konsa|kounsa|bata)\s*(?:sabse|jada|zyada)\s*(?:bikta|bikne|bik|popular)/.test(lower)
+  ) {
+    return { type: "best_seller", wantsExport };
+  }
+
+  // Show ALL products intent
+  if (
+    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:the\s+)?(?:product|products|item|items)\s*$/i.test(lower) ||
+    /^(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:the\s+)?(?:product|products|item|items)\s*$/i.test(lower) ||
+    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every)\s+(?:the\s+)?(?:products?|items?)\s*$/i.test(lower) ||
+    /^(?:all\s+product|sabhi\s+product|saare\s+product|sare\s+product|saari\s+product)/.test(lower)
+  ) {
+    return { type: "all_products", wantsExport };
+  }
+
   // Extract active context from conversation history
   const activeContext = extractActiveContext(conversationHistory);
 
@@ -360,7 +380,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   const detectedCategory = categoryNames.find(cat => lower.includes(cat)) || activeContext.category;
   
   // Detect if query is JUST a product name (no action words, no question words)
-  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao|cards?|table|chat/.test(lower);
+  const isJustEntity = !/show|list|get|display|view|find|search|check|tell|batao|kya|kise|kis|konsa|belong|which|what|how|when|where|who|why|stock|price|cost|timeline|journey|audit|order|transfer|return|damage|excel|export|download|category|categor|warehouse|warhorse|wearhouse|werahouse|store|details|address|manager|contact|location|compare|comparison|dikha|dikhao|deka|dekhao|cards?|table|chat|all|every|the\s+entire|the\s+complete|complete|list|few|some|any/.test(lower);
 
   // Display preference response: user said cards/table/chat after being asked
   if (/^(?:card|cards|table|tables?|chat|text)\s*$/.test(lower) && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
@@ -658,14 +678,6 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
     )
   )
     return { type: "audit", wantsExport };
-  // Best-seller / top-selling / most popular products
-  if (
-    /most\s*(?:selling|sold|popular|ordered|requested|favourite|favorite)|best\s*(?:seller|sellers?|salers?|selling)|top\s*(?:selling|sold|popular|product|item|seller)|highest\s*(?:selling|sold)|trending/.test(lower) ||
-    /sabse\s*(?:zyada|jada|jyda|bik|bikne|biknewala|popular|best|behtreen)/.test(lower) ||
-    /(?:kaun|konsa|kounsa|bata)\s*(?:sabse|jada|zyada)\s*(?:bikta|bikne|bik|popular)/.test(lower)
-  ) {
-    return { type: "best_seller", wantsExport };
-  }
   if (/order|sale|revenue|regional|region/.test(lower))
     return { type: "orders", wantsExport };
   if (/description|describe|details?|about this|about product/.test(lower) && !/\b(?:warehouse|store)\b/.test(lower))
@@ -733,7 +745,7 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       wantsExport,
     };
   }
-  if (/sku|barcode|product|item|name|what about this/.test(lower) && !/show\s+(?:all|every|the\s+entire)\s+product|all\s+product|list\s+product/.test(lower))
+  if (/sku|barcode|product|item|name|what about this/.test(lower) && !/show\s+(?:me\s+)?(?:all|every|the\s+entire)\s+(?:the\s+)?product|^(?:show\s+(?:me\s+)?)?all\s+(?:the\s+)?(?:product|products|item|items)$|list\s+(?:all\s+)?(?:the\s+)?(?:product|products|item|items)/i.test(lower))
     return { type: "product", field: "summary", wantsExport };
 
   // Logistics/transfer cost estimation: "can I transfer X from Y to Z", "logistics cost", etc.
@@ -795,16 +807,6 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
       raw,
       wantsExport,
     };
-  }
-
-  // Show ALL products (no category, no warehouse) — list from catalogs
-  if (
-    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every|the\s+entire|the\s+complete|complete)\s+(?:product|products|item|items)\s*$/i.test(lower) ||
-    /^(?:all|every|the\s+entire)\s+(?:product|products|item|items)\s*$/i.test(lower) ||
-    /^(?:show|list|get|display|view|see)\s+(?:me\s+)?(?:all|every)\s+(?:products?|items?)\s*$/i.test(lower) ||
-    /^(?:all\s+product|sabhi\s+product|saare\s+product|sare\s+product)/.test(lower)
-  ) {
-    return { type: "all_products", wantsExport };
   }
 
   // Catch-all: any query mentioning warehouse/store with action words
