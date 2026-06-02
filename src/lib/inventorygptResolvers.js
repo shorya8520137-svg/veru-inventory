@@ -371,7 +371,28 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   }
 
   // ========================================
-  // STEP 2 — IF ONLY PRODUCT NAME → PRODUCT_OVERVIEW
+  // STEP 2 — META-STATEMENTS BEFORE PRODUCT LOOKUP
+  // ========================================
+  // "I only know the product name", "I don't know the SKU", "I don't have barcode"
+  // These are meta-statements, not product searches
+  const metaPatterns = [
+    /i\s+(?:only\s+)?know\s+(?:the\s+)?(?:product\s+)?name/i,
+    /i\s+(?:do|does|did|don't|doesn't|didn't|dont)\s*(?:n['']t|not|nt)?\s+know\s+(?:the\s+)?(?:sku|barcode|code|product\s+code)/i,
+    /i\s+(?:only\s+)?have\s+(?:the\s+)?(?:product\s+)?name/i,
+    /i\s+(?:don't|dont|do\s+not)\s+have\s+(?:the\s+)?(?:sku|barcode|code)/i,
+    /(?:mujhe|muje|mujha|mere\s+paas)\s+(?:sirf|only|keval)\s+(?:product|product\s+ka)\s+name/i,
+    /(?:sku|barcode|code)\s+(?:nahi\s+)?(?:pata|malum|malaum|nahi\s+hai)/i,
+  ];
+  const isMetaStatement = metaPatterns.some(p => p.test(lower));
+  if (isMetaStatement) {
+    return {
+      type: "search_help",
+      wantsExport,
+    };
+  }
+
+  // ========================================
+  // STEP 3 — IF ONLY PRODUCT NAME → PRODUCT_OVERVIEW
   // ========================================
   if (isJustEntity && raw.length > 2 && !detectedSKU && !detectedWarehouse && !detectedCategory) {
     // User just typed a product name like "Lakme Absolute Lipstick"
@@ -3429,6 +3450,25 @@ export async function tryInventoryGptDeterministicAnswer({
   if (intent.type === "audit") {
     const audit = await resolveInventoryGptAudit(authToken, q);
     return { ...buildAuditAnswer(audit, intent.wantsExport), render: "text" };
+  }
+
+  if (intent.type === "search_help") {
+    return {
+      answer:
+        "No problem. You can search using:\n\n" +
+        "• **Product Name** — e.g., Aashirvaad Atta\n" +
+        "• **Partial Name** — e.g., Atta\n" +
+        "• **SKU / Barcode** — e.g., FG-082-5KG or 890123456789\n" +
+        "• **Category** — e.g., show all products in grocery\n\n" +
+        "Or try one of these:\n" +
+        "• **Show all products** — Browse the full catalog\n" +
+        "• **Show categories** — Browse by category\n" +
+        "• **Show warehouses** — See warehouse stock\n" +
+        "• **Show orders** — View recent orders\n" +
+        "• **Best sellers** — Most popular products\n\n" +
+        "What would you like to do?",
+      render: "text",
+    };
   }
 
   return null;
