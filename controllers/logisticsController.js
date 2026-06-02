@@ -1,11 +1,11 @@
 const db = require('../db/connection');
 
 const VEHICLE_RATES = {
-  bike:         { label: 'Bike',         capacity: 50,    baseFare: 100,  perKmRate: 8,  perKgRate: 1,   vehicleCost: 500  },
-  three_wheeler:{ label: '3 Wheeler',    capacity: 500,   baseFare: 200,  perKmRate: 12, perKgRate: 1.5, vehicleCost: 1000 },
-  pickup:       { label: 'Pickup/Tata Ace', capacity: 3000, baseFare: 300, perKmRate: 18, perKgRate: 2,   vehicleCost: 2000 },
-  mini_truck:   { label: 'Mini Truck (Tata 407)', capacity: 7000, baseFare: 400, perKmRate: 25, perKgRate: 2.5, vehicleCost: 3500 },
-  truck:        { label: 'Truck (10+ wheeler)', capacity: 16000, baseFare: 500, perKmRate: 35, perKgRate: 3,   vehicleCost: 5000 },
+  bike:         { label: 'Bike',         capacity: 10,    baseFare: 100,  perKmRate: 8,  perKgRate: 1,   vehicleCost: 500,  maxRangeKm: 10   },
+  three_wheeler:{ label: '3 Wheeler',    capacity: 50,    baseFare: 200,  perKmRate: 12, perKgRate: 1.5, vehicleCost: 1000, maxRangeKm: 50   },
+  pickup:       { label: 'Pickup/Tata Ace', capacity: 500,  baseFare: 300, perKmRate: 18, perKgRate: 2,   vehicleCost: 2000, maxRangeKm: 100  },
+  mini_truck:   { label: 'Mini Truck (Tata 407)', capacity: 7000, baseFare: 400, perKmRate: 25, perKgRate: 2.5, vehicleCost: 3500, maxRangeKm: 500  },
+  truck:        { label: 'Truck (10+ wheeler)', capacity: 16000, baseFare: 500, perKmRate: 35, perKgRate: 3,   vehicleCost: 5000, maxRangeKm: 5000 },
 };
 
 const WEATHER_MULT = { clear: 1.0, rain: 1.15, heavy_rain: 1.3, storm: 1.5 };
@@ -15,11 +15,26 @@ const FAF_RATE = 0.0065;
 const GST_RATE = 0.05;
 const DEFAULT_WEIGHT_KG = 0.5;
 
-function selectVehicle(weightKg) {
-  if (weightKg <= 10) return 'bike';
-  if (weightKg <= 50) return 'three_wheeler';
-  if (weightKg <= 500) return 'pickup';
-  return 'truck';
+function selectVehicle(weightKg, distanceKm = 0) {
+  // Weight-based recommendation
+  let byWeight = 'truck';
+  if (weightKg <= 10) byWeight = 'bike';
+  else if (weightKg <= 50) byWeight = 'three_wheeler';
+  else if (weightKg <= 500) byWeight = 'pickup';
+  else if (weightKg <= 7000) byWeight = 'mini_truck';
+
+  // Distance-based: find smallest vehicle that can cover the distance
+  let byDistance = 'truck';
+  const sorted = Object.entries(VEHICLE_RATES).sort((a, b) => a[1].maxRangeKm - b[1].maxRangeKm);
+  for (const [key, v] of sorted) {
+    if (distanceKm <= v.maxRangeKm) { byDistance = key; break; }
+  }
+
+  // Use stricter of the two (higher index = heavier duty)
+  const order = ['bike', 'three_wheeler', 'pickup', 'mini_truck', 'truck'];
+  const weightIdx = order.indexOf(byWeight);
+  const distIdx = order.indexOf(byDistance);
+  return order[Math.max(weightIdx, distIdx)];
 }
 
 function calcConfidence(distanceKm, product, weather, traffic) {
@@ -78,6 +93,7 @@ exports.logisticsEstimate = async (req, res) => {
       return res.status(400).json({ error: 'sourceWarehouse and destWarehouse are required' });
     }
 
+    const quantitySpecified = req.body.quantity !== undefined;
     quantity = parseInt(quantity) || 1;
     weather = weather || 'clear';
     traffic = traffic || 'low';
@@ -105,6 +121,21 @@ exports.logisticsEstimate = async (req, res) => {
         );
         if (rows.length) product = rows[0];
       }
+    }
+
+    // Fallback: if dispatch_product has no price, try website products
+    if (product && !product.price && (productName || productBarcode)) {
+      try {
+        const pool = db.promise();
+        const search = productBarcode || productName;
+        const [wp] = await pool.execute(
+          `SELECT price FROM website_products WHERE sku = ? OR barcode = ? OR product_name LIKE ? LIMIT 1`,
+          [search, search, `%${productName || product.barcode || ''}%`]
+        );
+        if (wp.length && wp[0].price) {
+          product = { ...product, price: wp[0].price };
+        }
+      } catch (_) {}
     }
 
     const weightKg = product?.weight ? parseFloat(product.weight) * quantity : DEFAULT_WEIGHT_KG * quantity;
@@ -148,7 +179,7 @@ exports.logisticsEstimate = async (req, res) => {
       }
     }
 
-    const suggestedVehicle = vehicleType || selectVehicle(chargeableWeightKg);
+    const suggestedVehicle = vehicleType || selectVehicle(chargeableWeightKg, distanceKm);
     const vehicle = VEHICLE_RATES[suggestedVehicle] || VEHICLE_RATES.pickup;
 
     const baseFare = vehicle.baseFare;
@@ -171,7 +202,7 @@ exports.logisticsEstimate = async (req, res) => {
     const total = subtotal + gst;
 
     // Transfer decision
-    const pendingOrders = quantity;
+    const pendingOrders = quantitySpecified ? quantity : Math.max(50, quantity);
     const priceKnown = product?.price != null && parseFloat(product.price) > 0;
     const avgSellingPrice = priceKnown ? parseFloat(product.price) : 0;
     const revenueSaved = priceKnown ? pendingOrders * avgSellingPrice : null;

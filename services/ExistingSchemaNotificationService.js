@@ -317,37 +317,66 @@ class ExistingSchemaNotificationService {
 
     // Get user notifications
     async getUserNotifications(userId, limit = 50, offset = 0) {
-        return new Promise((resolve, reject) => {
-            const query = `
-                SELECT n.*, u.name as sender_name
-                FROM notifications n
-                LEFT JOIN users u ON JSON_UNQUOTE(JSON_EXTRACT(n.data, '$.user_id')) = CAST(u.id AS CHAR)
-                WHERE n.user_id = ? OR n.user_id IS NULL
-                ORDER BY n.created_at DESC
-                LIMIT ? OFFSET ?
-            `;
-            
-            db.query(query, [userId, limit, offset], (err, results) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    // Parse data JSON safely
-                    const notifications = results.map(notification => {
-                        try {
-                            return {
-                                ...notification,
-                                data: typeof notification.data === 'string' 
-                                    ? JSON.parse(notification.data) 
-                                    : notification.data
-                            };
-                        } catch {
-                            return { ...notification, data: {} };
-                        }
-                    });
-                    resolve(notifications);
-                }
+        try {
+            return await new Promise((resolve, reject) => {
+                const query = `
+                    SELECT n.*, u.name as sender_name
+                    FROM notifications n
+                    LEFT JOIN users u ON JSON_UNQUOTE(JSON_EXTRACT(n.data, '$.user_id')) = CAST(u.id AS CHAR)
+                    WHERE (n.user_id = ? OR n.user_id IS NULL)
+                      AND (n.data IS NULL OR n.data = '' OR JSON_VALID(n.data))
+                    ORDER BY n.created_at DESC
+                    LIMIT ? OFFSET ?
+                `;
+                db.query(query, [userId, limit, offset], (err, results) => {
+                    if (err) reject(err);
+                    else {
+                        const notifications = results.map(notification => {
+                            try {
+                                return {
+                                    ...notification,
+                                    data: typeof notification.data === 'string'
+                                        ? JSON.parse(notification.data)
+                                        : notification.data
+                                };
+                            } catch {
+                                return { ...notification, data: {} };
+                            }
+                        });
+                        resolve(notifications);
+                    }
+                });
             });
-        });
+        } catch {
+            // Fallback: simpler query without the JSON JOIN
+            return await new Promise((resolve, reject) => {
+                const query = `
+                    SELECT n.*, NULL as sender_name
+                    FROM notifications n
+                    WHERE n.user_id = ? OR n.user_id IS NULL
+                    ORDER BY n.created_at DESC
+                    LIMIT ? OFFSET ?
+                `;
+                db.query(query, [userId, limit, offset], (err, results) => {
+                    if (err) reject(err);
+                    else {
+                        const notifications = results.map(notification => {
+                            try {
+                                return {
+                                    ...notification,
+                                    data: typeof notification.data === 'string'
+                                        ? JSON.parse(notification.data)
+                                        : notification.data
+                                };
+                            } catch {
+                                return { ...notification, data: {} };
+                            }
+                        });
+                        resolve(notifications);
+                    }
+                });
+            });
+        }
     }
 
     // Mark notification as read

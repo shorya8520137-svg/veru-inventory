@@ -67,14 +67,14 @@ N8N_WEBHOOK_ANALYSIS.md
 
 # Backend files (not needed for frontend deployment)
 server.js
-controllers/
-routes/
-middleware/
-services/
-jobs/
-config/
-db/
-migrations/
+/controllers/
+/routes/
+/middleware/
+/services/
+/jobs/
+/config/
+/db/
+/migrations/
 
 # Node modules will be handled by Vercel
 node_modules/

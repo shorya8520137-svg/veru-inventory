@@ -1659,20 +1659,30 @@ export async function resolveInventoryGptGraph({
 }
 
 const LOGISTICS_VEHICLE_RATES = {
-  bike: { label: 'Bike', capacity: 50, baseFare: 100, perKmRate: 8, perKgRate: 1, vehicleCost: 500 },
-  three_wheeler: { label: '3 Wheeler', capacity: 500, baseFare: 200, perKmRate: 12, perKgRate: 1.5, vehicleCost: 1000 },
-  pickup: { label: 'Pickup/Tata Ace', capacity: 3000, baseFare: 300, perKmRate: 18, perKgRate: 2, vehicleCost: 2000 },
-  mini_truck: { label: 'Mini Truck (Tata 407)', capacity: 7000, baseFare: 400, perKmRate: 25, perKgRate: 2.5, vehicleCost: 3500 },
-  truck: { label: 'Truck (10+ wheeler)', capacity: 16000, baseFare: 500, perKmRate: 35, perKgRate: 3, vehicleCost: 5000 },
+  bike: { label: 'Bike', capacity: 10, baseFare: 100, perKmRate: 8, perKgRate: 1, vehicleCost: 500, maxRangeKm: 10 },
+  three_wheeler: { label: '3 Wheeler', capacity: 50, baseFare: 200, perKmRate: 12, perKgRate: 1.5, vehicleCost: 1000, maxRangeKm: 50 },
+  pickup: { label: 'Pickup/Tata Ace', capacity: 500, baseFare: 300, perKmRate: 18, perKgRate: 2, vehicleCost: 2000, maxRangeKm: 100 },
+  mini_truck: { label: 'Mini Truck (Tata 407)', capacity: 7000, baseFare: 400, perKmRate: 25, perKgRate: 2.5, vehicleCost: 3500, maxRangeKm: 500 },
+  truck: { label: 'Truck (10+ wheeler)', capacity: 16000, baseFare: 500, perKmRate: 35, perKgRate: 3, vehicleCost: 5000, maxRangeKm: 5000 },
 };
 
 const LOGISTICS_DEFAULT_WEIGHT_KG = 0.5;
 
-function selectLogisticsVehicle(weightKg) {
-  if (weightKg <= 10) return 'bike';
-  if (weightKg <= 50) return 'three_wheeler';
-  if (weightKg <= 500) return 'pickup';
-  return 'truck';
+function selectLogisticsVehicle(weightKg, distanceKm = 0) {
+  let byWeight = 'truck';
+  if (weightKg <= 10) byWeight = 'bike';
+  else if (weightKg <= 50) byWeight = 'three_wheeler';
+  else if (weightKg <= 500) byWeight = 'pickup';
+  else if (weightKg <= 7000) byWeight = 'mini_truck';
+
+  let byDistance = 'truck';
+  const sorted = Object.entries(LOGISTICS_VEHICLE_RATES).sort((a, b) => a[1].maxRangeKm - b[1].maxRangeKm);
+  for (const [key, v] of sorted) {
+    if (distanceKm <= v.maxRangeKm) { byDistance = key; break; }
+  }
+
+  const order = ['bike', 'three_wheeler', 'pickup', 'mini_truck', 'truck'];
+  return order[Math.max(order.indexOf(byWeight), order.indexOf(byDistance))];
 }
 
 function calcLogisticsConfidence(distanceKm, product, weather, traffic) {
@@ -1749,6 +1759,20 @@ export async function resolveInventoryGptLogistics(intent, token) {
   const suggestedVehicle = selectLogisticsVehicle(chargeableWeightKg);
   const vehicle = LOGISTICS_VEHICLE_RATES[suggestedVehicle];
 
+  // Helper: calculate cost locally with given vehicle + distance
+  function calcLocalCost(vehKey, distKm, wghtKg, weatherCond, trafficCond) {
+    const v = LOGISTICS_VEHICLE_RATES[vehKey] || LOGISTICS_VEHICLE_RATES.pickup;
+    const bf = v.baseFare;
+    const dc = distKm * v.perKmRate;
+    const wc = wghtKg * v.perKgRate;
+    const vc = v.vehicleCost;
+    const wm = { clear: 1, rain: 1.2, heavy_rain: 1.4, storm: 1.5 }[weatherCond] || 1;
+    const tm = { low: 1, medium: 1.15, high: 1.25, extreme: 1.4 }[trafficCond] || 1;
+    const sub = Math.round((bf + dc + wc + vc) * wm * tm);
+    const g = Math.round(sub * 0.05);
+    return { baseFare: bf, distanceCost: Math.round(dc), weightCost: Math.round(wc), vehicleCost: vc, fuelAdjustment: 0, weatherMultiplier: wm, trafficMultiplier: tm, subtotal: sub, gst: g, total: sub + g };
+  }
+
   // Call Express endpoint for distance and cost
   try {
     const body = {
@@ -1759,7 +1783,6 @@ export async function resolveInventoryGptLogistics(intent, token) {
       quantity,
       weather,
       traffic,
-      vehicleType: suggestedVehicle,
     };
     const response = await fetch(`${API_BASE}/api/inventorygpt/logistics-estimate`, {
       method: 'POST',
@@ -1767,23 +1790,59 @@ export async function resolveInventoryGptLogistics(intent, token) {
       body: JSON.stringify(body),
     });
     const data = await response.json();
-    if (data.success) return data;
+    if (data.success) {
+      // Override: production API may have stale vehicle/cost logic
+      const dist = data.distanceKm || 100;
+      const correctVehicle = selectLogisticsVehicle(chargeableWeightKg, dist);
+      const costComp = calcLocalCost(correctVehicle, dist, chargeableWeightKg, weather, traffic);
+
+      // Fix product name if API returned null but we have it
+      const fixedProduct = data.product || product;
+
+      // Fix pendingOrders: use realistic default
+      const effectiveQty = quantity >= 50 ? quantity : 50;
+
+      // Fix transfer analysis with resolver's price knowledge
+      const priceKnown = fixedProduct?.price != null && parseFloat(fixedProduct.price) > 0;
+      const avgPrice = priceKnown ? parseFloat(fixedProduct.price) : 0;
+      const revSaved = priceKnown ? effectiveQty * avgPrice : null;
+      const netBen = revSaved !== null ? revSaved - costComp.total : null;
+      const tScore = (revSaved !== null && costComp.total > 0) ? revSaved / costComp.total : null;
+      let rec = 'insufficient_data';
+      if (revSaved !== null && tScore !== null) {
+        if (tScore > 1.2) rec = 'transfer';
+        else if (tScore > 0.8) rec = 'consider';
+        else rec = 'do_not_transfer';
+      }
+
+      return {
+        ...data,
+        product: fixedProduct,
+        vehicleSuggested: correctVehicle,
+        vehicleLabel: LOGISTICS_VEHICLE_RATES[correctVehicle].label,
+        costBreakdown: costComp,
+        transferAnalysis: {
+          pendingOrders: effectiveQty,
+          avgSellingPrice: avgPrice,
+          revenueSaved: revSaved,
+          netBenefit: netBen,
+          transferScore: tScore !== null ? Math.round(tScore * 100) / 100 : null,
+          recommendation: rec,
+          priceKnown,
+        },
+      };
+    }
     return { error: data.error || 'Could not calculate estimate' };
   } catch (err) {
     // Fallback: estimate locally without distance
     const distanceKm = 100;
-    const baseFare = vehicle.baseFare;
-    const distanceCost = distanceKm * vehicle.perKmRate;
-    const weightCost = chargeableWeightKg * vehicle.perKgRate;
-    const vehicleCost = vehicle.vehicleCost;
-    const subtotal = Math.round((baseFare + distanceCost + weightCost + vehicleCost));
-    const gst = Math.round(subtotal * 0.05);
-    const total = subtotal + gst;
+    const costComp = calcLocalCost(suggestedVehicle, distanceKm, chargeableWeightKg, weather, traffic);
+    const effectiveQty = quantity >= 50 ? quantity : 50;
     const priceKnown = product?.price != null && parseFloat(product.price) > 0;
     const avgSellingPrice = priceKnown ? parseFloat(product.price) : 0;
-    const revenueSaved = priceKnown ? quantity * avgSellingPrice : null;
-    const netBenefit = revenueSaved !== null ? revenueSaved - total : null;
-    const transferScore = (revenueSaved !== null && total > 0) ? revenueSaved / total : null;
+    const revenueSaved = priceKnown ? effectiveQty * avgSellingPrice : null;
+    const netBenefit = revenueSaved !== null ? revenueSaved - costComp.total : null;
+    const transferScore = (revenueSaved !== null && costComp.total > 0) ? revenueSaved / costComp.total : null;
     let recommendation = 'insufficient_data';
     if (revenueSaved !== null && transferScore !== null) {
       if (transferScore > 1.2) recommendation = 'transfer';
@@ -1799,10 +1858,10 @@ export async function resolveInventoryGptLogistics(intent, token) {
       quantity,
       totalWeightKg: Math.round(weightKg * 100) / 100,
       chargeableWeightKg: Math.round(chargeableWeightKg * 100) / 100,
-      vehicleSuggested: suggestedVehicle,
+      vehicleSuggested,
       vehicleLabel: vehicle.label,
-      costBreakdown: { baseFare, distanceCost: Math.round(distanceCost), weightCost: Math.round(weightCost), vehicleCost, fuelAdjustment: 0, weatherMultiplier: 1, trafficMultiplier: 1, subtotal, gst, total },
-      transferAnalysis: { pendingOrders: quantity, avgSellingPrice, revenueSaved, netBenefit, transferScore, recommendation, priceKnown },
+      costBreakdown: costComp,
+      transferAnalysis: { pendingOrders: effectiveQty, avgSellingPrice, revenueSaved, netBenefit, transferScore, recommendation, priceKnown },
       confidence,
     };
   }
