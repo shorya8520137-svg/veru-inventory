@@ -324,16 +324,139 @@ export function normalizeFollowUpQuery(question, conversationHistory = []) {
   return question;
 }
 
+// ── Comprehensive Abuse/Gaali Database ──
+// Category: vulgarity level 0-5, 5=worst
+const ABUSE_WORDS = [
+  // ── Hindi / Hinglish ──
+  { w: /bc|bhenchod|behenchod|bhen chod|behen chod|bhencho\d?/i, lang: "hi", cat: "mother_insult", level: 5 },
+  { w: /mc|madarchod|maderchod|ma[a]+r?[a]*chod|maa chod/i, lang: "hi", cat: "mother_insult", level: 5 },
+  { w: /bhosdike|bhosd?i[kc]e|bhosda/i, lang: "hi", cat: "vulgar", level: 4 },
+  { w: /chutiya|chut(iya|ie|ye)/i, lang: "hi", cat: "insult", level: 4 },
+  { w: /chut/i, lang: "hi", cat: "vulgar", level: 3 },
+  { w: /gaand|gandu|gand/i, lang: "hi", cat: "vulgar", level: 4 },
+  { w: /lauda?|lavde?|lode?/i, lang: "hi", cat: "vulgar", level: 4 },
+  { w: /randi|rand/i, lang: "hi", cat: "vulgar", level: 4 },
+  { w: /badtameez|bad.tameez/i, lang: "hi", cat: "mild_insult", level: 2 },
+  { w: /bdsk|bds[kc]|badsk|bhadva|bhadwa/i, lang: "hi", cat: "insult", level: 4 },
+  { w: /harami|haram[i]?[kz]ade?|haramkhor/i, lang: "hi", cat: "insult", level: 3 },
+  { w: /kutta|kutte|kutiya/i, lang: "hi", cat: "animal_insult", level: 3 },
+  { w: /suar|suar?ka[!b]/i, lang: "hi", cat: "animal_insult", level: 3 },
+  { w: /ullu|ullu[!k]a[!p]/i, lang: "hi", cat: "mild_insult", level: 2 },
+  { w: /bkl|bhosd[i]*k[il]/i, lang: "hi", cat: "vulgar", level: 4 },
+  { w: /nun[!n]/i, lang: "hi", cat: "vulgar", level: 4 },
+  { w: /maa ki|ma ki|maa ke|ma ke/i, lang: "hi", cat: "mother_insult", level: 4 },
+  { w: /teri maa|teri ma|teri behen|teri bhen/i, lang: "hi", cat: "mother_insult", level: 5 },
+  { w: /machhar ki|machar ki|machhar ki jaat/i, lang: "hi", cat: "mild_insult", level: 1 },
+  { w: /bewakoof|bevakoof|bewakuf|be?w?k[uo]f/i, lang: "hi", cat: "mild_insult", level: 2 },
+  { w: /nalayak|nala[i]*yak/i, lang: "hi", cat: "mild_insult", level: 2 },
+  { w: /pagal|paagal|paga[i]*l/i, lang: "hi", cat: "mild_insult", level: 1 },
+  { w: /jhatu|jhaatu/i, lang: "hi", cat: "vulgar", level: 3 },
+  { w: /bawla|baula/i, lang: "hi", cat: "mild_insult", level: 1 },
+
+  // ── English ──
+  { w: /\bfuck(ing|er|ed|s)?\b/i, lang: "en", cat: "vulgar", level: 5 },
+  { w: /\bshit(ty|t)?\b/i, lang: "en", cat: "vulgar", level: 3 },
+  { w: /\bbitch(es|ing|y)?\b/i, lang: "en", cat: "vulgar", level: 4 },
+  { w: /\bass(hole|holes)?\b/i, lang: "en", cat: "vulgar", level: 3 },
+  { w: /\bdick(head|s)?\b/i, lang: "en", cat: "vulgar", level: 3 },
+  { w: /\bcock(sucker|s)?\b/i, lang: "en", cat: "vulgar", level: 4 },
+  { w: /\bmotherfucker\b/i, lang: "en", cat: "vulgar", level: 5 },
+  { w: /\bson\s*of\s*(a\s*)?bitch\b/i, lang: "en", cat: "vulgar", level: 4 },
+  { w: /\bwhore(s|ish)?\b/i, lang: "en", cat: "vulgar", level: 4 },
+  { w: /\bslut(ty|s)?\b/i, lang: "en", cat: "vulgar", level: 4 },
+  { w: /\bpimp(s)?\b/i, lang: "en", cat: "vulgar", level: 3 },
+  { w: /\bdamn(ed|it)?\b/i, lang: "en", cat: "mild", level: 2 },
+  { w: /\bstupid(ity)?\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\bidiot(s|ic)?\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\bdumb(ass|s)?\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\bcrap(py)?\b/i, lang: "en", cat: "mild", level: 2 },
+  { w: /\bscrew(ed|s|ing|up)?\b/i, lang: "en", cat: "mild", level: 2 },
+  { w: /\bwtf\b|what\s+the\s+fuck/i, lang: "en", cat: "frustration", level: 4 },
+  { w: /\bstfu|shut\s+the\s+fuck/i, lang: "en", cat: "vulgar", level: 4 },
+  { w: /\bsuck(s|er|ed|ing)?\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\b(?:anus|arse|ass)\b/i, lang: "en", cat: "vulgar", level: 2 },
+  { w: /\bhell\b/i, lang: "en", cat: "mild", level: 1 },
+  { w: /\bpiss(ed|ing)?\b/i, lang: "en", cat: "mild", level: 2 },
+  { w: /\bbastard(s)?\b/i, lang: "en", cat: "insult", level: 3 },
+  { w: /\bjerk(s)?\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\bloser(s)?\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\bretard(ed)?\b/i, lang: "en", cat: "insult", level: 3 },
+  { w: /\bpathetic\b/i, lang: "en", cat: "mild_insult", level: 2 },
+  { w: /\bwtf|omg|stfu|af|bs\b/i, lang: "en", cat: "abbreviation", level: 2 },
+
+  // ── Impatience / frustration patterns ──
+  { w: /just\s+(?:show|give|tell|do|answer)/i, lang: "any", cat: "impatience", level: 1 },
+  { w: /(?:stop|enough|basta|chup|chup kar|shut\s*up)/i, lang: "any", cat: "impatience", level: 2 },
+  { w: /(?:already|pehle|pahle|phele)\s+(?:said|told|asked|bata|batai?a|bol)/i, lang: "any", cat: "impatience", level: 2 },
+  { w: /(?:bar bar|barbar|again and again|baar baar)/i, lang: "any", cat: "impatience", level: 2 },
+  { w: /(?:direct|seedha|sidha|seda)\s+(?:answer|jawab|bata|dikha|show)/i, lang: "any", cat: "impatience", level: 2 },
+  { w: /(?:why|kyu|kyun|kyo)\s+(?:are|is)\s+(?:you|it)\s+(?:asking|ask|question)/i, lang: "any", cat: "impatience", level: 1 },
+  { w: /hurry|jaldi|jldi|fast\s*fast/i, lang: "any", cat: "impatience", level: 1 },
+];
+
+// Calming responses per category
+const CALM_RESPONSES = {
+  mother_insult: [
+    "I understand you're frustrated, but let's focus on your inventory. How can I help you today?",
+    "Let's keep things respectful. I'm here to help with your products, stock, and orders. What do you need?",
+    "I'm here to assist, not to argue. Try asking me about your inventory or orders.",
+  ],
+  vulgar: [
+    "Let's keep it professional. I'm your inventory assistant — ask me about products, stock, or orders.",
+    "That language isn't necessary. Tell me what you need — products, warehouse stock, or something else?",
+    "I'm here to help, not to fight. What inventory information do you need?",
+  ],
+  insult: [
+    "I'm an AI assistant here to help with your inventory. Let's stay productive — what do you need?",
+    "Let's focus on what matters — your business. How can I assist with your inventory today?",
+    "I'm here to make your work easier. Try asking me about products, stock, or orders.",
+  ],
+  mild_insult: [
+    "Let's keep it constructive. What inventory information can I help you with?",
+    "I'm here to help. Try me — show products, warehouse stock, or order status?",
+    "Let's stay focused on your business. What do you need to know about your inventory?",
+  ],
+  animal_insult: [
+    "I'm your inventory assistant. Let's be productive — what do you need to check?",
+    "Let's keep things professional. How can I help with your inventory today?",
+    "I'm here to assist with your business. Ask me about products, stock, or orders.",
+  ],
+  impatience: [
+    "I'm processing as fast as I can! Try asking me something specific like **show products** or **warehouse stock**.",
+    "I understand you want quick answers. Let me help — what exactly are you looking for?",
+    "Sorry for the wait! What inventory data do you need right now?",
+  ],
+  mild: [
+    "I'm here to help with your inventory. What would you like to know?",
+    "Let's focus on your business needs. How can I assist with inventory today?",
+  ],
+  abbreviation: [
+    "I'm not sure what you mean. Try asking about products, warehouses, or orders.",
+  ],
+  frustration: [
+    "I understand you're frustrated. Let me help — what inventory data do you need?",
+    "Take a deep breath! I'm here to help. What would you like to check in your inventory?",
+  ],
+};
+
+function getAbuseInfo(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const entry of ABUSE_WORDS) {
+    if (entry.w.test(lower)) {
+      return { matched: entry.w.source, category: entry.cat, level: entry.level, lang: entry.lang };
+    }
+  }
+  return null;
+}
+
+function getCalmResponse(category) {
+  const responses = CALM_RESPONSES[category] || CALM_RESPONSES.frustration;
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
 export function isUserFrustrated(text) {
-  const lower = String(text || "").toLowerCase();
-  // Detect frustration, anger, impatience, or swearing
-  return /abuse|bc|bhenchod|behenchod|bhosdike|bhosda|madarchod|maderchod|chutiya|chut|laud?a|lavde?|gaand|gandu|randi|bitch|fuck|shit|asshole|damn|wtf|stfu|screw|stupid|idiot|dumb|useless|worst|hate|angry|annoy|irritat|frustrat|bdsk|bds[kc]|badsk/i.test(lower) ||
-    /(?:why|kyu|kyun|kyo)\s+(?:are|is)\s+(?:you|it)\s+(?:asking|ask|question)/i.test(lower) ||
-    /just\s+(?:show|give|tell|do|answer)/i.test(lower) ||
-    /(?:stop|enough|basta|chup|chup kar|shut)/i.test(lower) ||
-    /(?:already|pehle|pahle|phele)\s+(?:said|told|asked|bata|batai?a|bol)/i.test(lower) ||
-    /(?:bar bar|barbar|again and again|baar baar)/i.test(lower) ||
-    /(?:direct|seedha|sidha|seda)\s+(?:answer|jawab|bata|dikha|show)/i.test(lower);
+  return getAbuseInfo(text) !== null;
 }
 
 export function detectInventoryGptIntent(question, conversationHistory = []) {
@@ -361,10 +484,12 @@ export function detectInventoryGptIntent(question, conversationHistory = []) {
   }
 
   // ── Frustration / abuse — catch early before product/SKU lookup ──
-  if (isUserFrustrated(raw)) {
+  const abuseInfo = getAbuseInfo(raw);
+  if (abuseInfo) {
     return {
       type: "help_prompt",
       frustration: true,
+      frustrationCategory: abuseInfo.category,
       wantsExport,
     };
   }
@@ -3505,9 +3630,11 @@ export async function tryInventoryGptDeterministicAnswer({
 
   if (intent.type === "help_prompt") {
     if (intent.frustration) {
+      const category = intent.frustrationCategory || "frustration";
+      const calmMsg = getCalmResponse(category);
       return {
         answer:
-          "I'm here to help you with your inventory. Let's keep it professional.\n\n" +
+          `${calmMsg}\n\n` +
           "Try asking:\n" +
           "• **show me all products**\n" +
           "• **show all warehouses**\n" +
