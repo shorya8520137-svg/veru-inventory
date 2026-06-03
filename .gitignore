@@ -49,3 +49,23 @@ Thumbs.db
 
 # Database dumps
 *.sql
+
+# Dev/test artifacts — keep root clean
+*.txt
+*.bat
+*.ps1
+/test-*.js
+/debug-*.js
+/fix-*.js
+/check-*.js
+/analyze-*.js
+/setup-*.js
+/deploy-*.sh
+/*.sql
+*.csv
+database-backup/
+database-migrations/
+database_analysis/
+database_migrations/
+inventoryfullstack.git/
+uploads/
