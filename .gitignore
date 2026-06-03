@@ -69,3 +69,4 @@ database_analysis/
 database_migrations/
 inventoryfullstack.git/
 uploads/
+public/map.json
