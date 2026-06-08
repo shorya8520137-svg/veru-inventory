@@ -56,25 +56,22 @@ export default function OnboardingPage() {
     const loadPermissions = async () => {
         setPermLoading(true);
         try {
-            const token = localStorage.getItem('token');
             const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-            const res = await fetch(`${API_BASE}/api/onboarding/permissions`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_BASE}/api/permissions`);
             const data = await res.json();
             if (data.success) {
-                setAvailablePerms(data.data);
-                // Group by category and initialize all as selected
-                const grouped = {};
+                const perms = data.data.permissions;
+                setAvailablePerms(perms);
+                // Initialize all as selected
                 const expanded = {};
-                for (const perm of data.data) {
-                    if (!grouped[perm.category]) {
-                        grouped[perm.category] = [];
-                        expanded[perm.category] = true;
+                const selected = {};
+                for (const perm of perms) {
+                    if (perm.name) {
+                        selected[perm.name] = true;
+                        if (!expanded[perm.category]) expanded[perm.category] = true;
                     }
-                    grouped[perm.category].push(perm.name);
-                    selectedPerms[perm.name] = true;
                 }
+                setSelectedPerms(selected);
                 setExpandedCategories(expanded);
             }
         } catch (err) {
