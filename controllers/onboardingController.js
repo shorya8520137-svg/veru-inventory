@@ -1,6 +1,7 @@
 const mysql = require('mysql2');
 const db = require('../db/connection');
 const bcrypt = require('bcryptjs');
+const OTPService = require('../services/OTPService');
 
 class OnboardingController {
 
@@ -331,6 +332,44 @@ class OnboardingController {
                 reject(error);
             }
         });
+    }
+
+    static async sendOTP(req, res) {
+        try {
+            const { phone } = req.body;
+            if (!phone) {
+                return res.status(400).json({ success: false, message: 'Phone number is required' });
+            }
+
+            const result = await OTPService.sendAndStoreOTP(phone);
+            if (result.success) {
+                res.json({ success: true, message: 'OTP sent successfully', method: result.method });
+            } else {
+                res.status(500).json({ success: false, message: result.error || 'Failed to send OTP' });
+            }
+        } catch (error) {
+            console.error('Send OTP error:', error);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    }
+
+    static async verifyOTP(req, res) {
+        try {
+            const { phone, otp } = req.body;
+            if (!phone || !otp) {
+                return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
+            }
+
+            const result = await OTPService.verifyOTP(phone, otp);
+            if (result.valid) {
+                res.json({ success: true, message: 'Phone verified successfully' });
+            } else {
+                res.status(400).json({ success: false, message: result.message });
+            }
+        } catch (error) {
+            console.error('Verify OTP error:', error);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
     }
 
     static async listClients(req, res) {

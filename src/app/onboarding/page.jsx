@@ -31,9 +31,12 @@ export default function OnboardingPage() {
     const [loading, setLoading] = useState(false);
     const [clients, setClients] = useState([]);
     const [clientsLoading, setClientsLoading] = useState(false);
-    const [result, setResult] = useState(null);
-    const [error, setError] = useState("");
-    const [tab, setTab] = useState("create");
+            const [result, setResult] = useState(null);
+            const [error, setError] = useState("");
+            const [tab, setTab] = useState("create");
+            const [otpState, setOtpState] = useState('idle'); // idle | sending | sent | verifying | verified | error
+            const [otpInput, setOtpInput] = useState('');
+            const [otpError, setOtpError] = useState('');
 
     // Permission selection state
     const [availablePerms, setAvailablePerms] = useState([]);
@@ -130,6 +133,58 @@ export default function OnboardingPage() {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
+    const handleSendOTP = async () => {
+        if (!form.phone.trim()) return;
+        setOtpError('');
+        setOtpState('sending');
+        try {
+            const token = localStorage.getItem('token');
+            const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+            const res = await fetch(`${API_BASE}/api/onboarding/send-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phone: form.phone.trim() })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOtpState('sent');
+                setOtpInput('');
+            } else {
+                setOtpError(data.message || 'Failed to send OTP');
+                setOtpState('idle');
+            }
+        } catch (err) {
+            setOtpError('Network error. Please try again.');
+            setOtpState('idle');
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (otpInput.length < 6) return;
+        setOtpError('');
+        setOtpState('verifying');
+        try {
+            const token = localStorage.getItem('token');
+            const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+            const res = await fetch(`${API_BASE}/api/onboarding/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phone: form.phone.trim(), otp: otpInput })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOtpState('verified');
+                setOtpInput('');
+            } else {
+                setOtpError(data.message || 'Invalid OTP');
+                setOtpState('sent');
+            }
+        } catch (err) {
+            setOtpError('Network error. Please try again.');
+            setOtpState('sent');
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
@@ -149,6 +204,11 @@ export default function OnboardingPage() {
         }
         if (form.admin_password !== form.confirm_password) {
             setError("Passwords do not match");
+            return;
+        }
+
+        if (form.phone.trim() && otpState !== 'verified') {
+            setError("Verify the phone number with OTP before submitting");
             return;
         }
 
@@ -329,16 +389,74 @@ export default function OnboardingPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                                        Phone (optional)
+                                        Phone <span className="text-xs text-slate-400">(verify with OTP)</span>
                                     </label>
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        value={form.phone}
-                                        onChange={handleChange}
-                                        placeholder="+1 555-0123"
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={form.phone}
+                                            onChange={(e) => {
+                                                handleChange(e);
+                                                if (otpState === 'verified') setOtpState('idle');
+                                            }}
+                                            placeholder="+91 98765 43210"
+                                            disabled={otpState === 'sending' || otpState === 'verifying'}
+                                            className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-50"
+                                        />
+                                        {otpState !== 'verified' && (
+                                            <button
+                                                type="button"
+                                                onClick={handleSendOTP}
+                                                disabled={otpState === 'sending' || !form.phone.trim()}
+                                                className="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                            >
+                                                {otpState === 'sending' ? (
+                                                    <><Loader2 size={14} className="animate-spin" /> Sending...</>
+                                                ) : otpState === 'sent' ? (
+                                                    'Resend OTP'
+                                                ) : (
+                                                    'Send OTP'
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {otpState === 'sent' && (
+                                        <div className="mt-3 flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={otpInput}
+                                                onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                placeholder="Enter 6-digit OTP"
+                                                className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center tracking-widest"
+                                                maxLength={6}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleVerifyOTP}
+                                                disabled={otpInput.length < 6 || otpState === 'verifying'}
+                                                className="px-4 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-xl hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                            >
+                                                {otpState === 'verifying' ? (
+                                                    <><Loader2 size={14} className="animate-spin" /> Verifying...</>
+                                                ) : (
+                                                    'Verify OTP'
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {otpError && (
+                                        <p className="text-xs text-red-500 mt-1">{otpError}</p>
+                                    )}
+                                    {otpState === 'verified' && (
+                                        <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600">
+                                            <CheckCircle size={12} />
+                                            Phone verified
+                                        </div>
+                                    )}
+                                    {otpState === 'sent' && !otpError && (
+                                        <p className="text-xs text-slate-400 mt-1">OTP sent via Telegram. Check your configured chat.</p>
+                                    )}
                                 </div>
                             </div>
 
