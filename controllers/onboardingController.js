@@ -343,7 +343,7 @@ class OnboardingController {
 
             const result = await OTPService.sendAndStoreOTP(phone);
             if (result.success) {
-                res.json({ success: true, message: 'OTP sent successfully', method: result.method });
+                res.json({ success: true, message: 'OTP sent successfully', method: result.method, otp: result.otp || undefined });
             } else {
                 res.status(500).json({ success: false, message: result.error || 'Failed to send OTP' });
             }

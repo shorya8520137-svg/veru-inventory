@@ -37,6 +37,7 @@ export default function OnboardingPage() {
             const [otpState, setOtpState] = useState('idle'); // idle | sending | sent | verifying | verified | error
             const [otpInput, setOtpInput] = useState('');
             const [otpError, setOtpError] = useState('');
+            const [displayOtp, setDisplayOtp] = useState('');
 
     // Permission selection state
     const [availablePerms, setAvailablePerms] = useState([]);
@@ -149,6 +150,7 @@ export default function OnboardingPage() {
             if (data.success) {
                 setOtpState('sent');
                 setOtpInput('');
+                if (data.otp) setDisplayOtp(data.otp);
             } else {
                 setOtpError(data.message || 'Failed to send OTP');
                 setOtpState('idle');
@@ -455,7 +457,11 @@ export default function OnboardingPage() {
                                         </div>
                                     )}
                                     {otpState === 'sent' && !otpError && (
-                                        <p className="text-xs text-slate-400 mt-1">OTP sent via Telegram. Check your configured chat.</p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            {displayOtp 
+                                                ? <>OTP: <span className="font-mono font-bold text-slate-600 tracking-widest">{displayOtp}</span> (enter below)</>
+                                                : 'OTP sent via Telegram. Check your configured chat.'}
+                                        </p>
                                     )}
                                 </div>
                             </div>

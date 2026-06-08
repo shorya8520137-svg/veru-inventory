@@ -34,7 +34,7 @@ class OTPService {
 
         if (!botToken || !chatId) {
             console.log(`[OTP Service] No Telegram configured. OTP for ${phone}: ${otp}`);
-            return { success: true, method: 'console' };
+            return { success: true, method: 'console', otp };
         }
 
         return new Promise((resolve, reject) => {
