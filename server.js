@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: ".env.production" });
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -274,6 +274,9 @@ app.use('/api/timeline', require('./routes/timelineRoutes'));
 
 // store timeline routes
 app.use('/api/store-timeline', require('./routes/storeTimelineRoutes'));
+
+// client onboarding routes (protected - requires CLIENTS_CREATE permission)
+app.use('/api/onboarding', require('./routes/onboardingRoutes'));
 
 // auth routes (no /api prefix for backward compatibility)
 app.use('/auth', require('./routes/authRoutes'));

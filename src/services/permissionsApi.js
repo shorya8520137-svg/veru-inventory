@@ -22,6 +22,7 @@ export class PermissionsAPI {
             // Store JWT token
             if (data.token) {
                 localStorage.setItem('authToken', data.token);
+                localStorage.setItem('token', data.token);
             }
             
             return data;
@@ -73,6 +74,7 @@ export class PermissionsAPI {
             
             if (data.token) {
                 localStorage.setItem('authToken', data.token);
+                localStorage.setItem('token', data.token);
             }
             
             return data;
@@ -246,7 +248,8 @@ export class PermissionsAPI {
     // ================= HELPER METHODS ================= //
     
     static async makeAuthenticatedRequest(endpoint, options = {}) {
-        const token = localStorage.getItem('authToken');
+        // Try authToken first (PermissionsAPI's own token), fall back to main app token
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         
         const defaultOptions = {
             method: 'GET',

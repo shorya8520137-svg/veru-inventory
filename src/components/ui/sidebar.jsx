@@ -708,6 +708,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </MenuItemWithSub>
                     )}
 
+                    {/* CLIENT ONBOARDING */}
+                    {(hasPermission(PERMISSIONS.CLIENTS_CREATE) || hasPermission(PERMISSIONS.CLIENTS_VIEW)) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/onboarding" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/onboarding", collapsed }))}
+                                >
+                                    <Building2 size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Client Onboarding</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
                     {/* PERMISSIONS & USER MANAGEMENT */}
                     {(hasPermission(PERMISSIONS.SYSTEM_USER_MANAGEMENT) || 
                       hasPermission(PERMISSIONS.SYSTEM_ROLE_MANAGEMENT) || 

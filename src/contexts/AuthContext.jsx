@@ -276,6 +276,8 @@ export function AuthProvider({ children }) {
         );
     };
 
+    const apiAvailable = true;
+
     return (
         <AuthContext.Provider
             value={{ 
@@ -285,7 +287,8 @@ export function AuthProvider({ children }) {
                 loading, 
                 hasPermission,
                 hasRole,
-                isAuthenticated
+                isAuthenticated,
+                apiAvailable
             }}
         >
             {children}
