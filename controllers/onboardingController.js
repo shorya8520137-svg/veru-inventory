@@ -121,19 +121,32 @@ class OnboardingController {
                             `;
                             const createdBy = req.user?.id || 1;
 
-                            db.query(insertClientQuery, [company_name, clientDbName, admin_email, phone || null, createdBy], (insertErr, result) => {
-                                clientConn.end();
-
+                            db.query(insertClientQuery, [company_name, clientDbName, admin_email, phone || null, createdBy], async (insertErr, result) => {
                                 if (insertErr) {
+                                    clientConn.end();
                                     console.error('Insert client record error:', insertErr);
                                     return res.status(500).json({ success: false, message: 'Failed to save client record' });
                                 }
+
+                                const clientId = result.insertId;
+
+                                try {
+                                    // Create tenant entry for this client
+                                    await OnboardingController.createTenantAndUser(
+                                        clientId, company_name, admin_email, admin_password
+                                    );
+                                } catch (tenantErr) {
+                                    console.error('Tenant/user creation error:', tenantErr);
+                                    // Non-fatal: client record exists, but login needs manual setup
+                                }
+
+                                clientConn.end();
 
                                 res.json({
                                     success: true,
                                     message: `Client "${company_name}" onboarded successfully`,
                                     data: {
-                                        client_id: result.insertId,
+                                        client_id: clientId,
                                         company_name,
                                         db_name: clientDbName,
                                         admin_email,
@@ -370,6 +383,46 @@ class OnboardingController {
             console.error('Verify OTP error:', error);
             res.status(500).json({ success: false, message: 'Internal server error' });
         }
+    }
+
+    static async createTenantAndUser(clientId, companyName, email, password) {
+        return new Promise((resolve, reject) => {
+            const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+
+            // Create tenant
+            db.query('INSERT INTO tenants (slug, name, is_active) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE name = VALUES(name)',
+                [slug, companyName],
+                (tenantErr, tenantResult) => {
+                    if (tenantErr) return reject(tenantErr);
+
+                    const tenantId = tenantResult.insertId;
+
+                    // Get the admin role id for the main DB
+                    db.query('SELECT id FROM roles WHERE name = ? LIMIT 1', ['admin'],
+                        (roleErr, roles) => {
+                            if (roleErr) return reject(roleErr);
+                            const roleId = roles.length > 0 ? roles[0].id : null;
+
+                            // Hash password and create user in main DB
+                            bcrypt.hash(password, 10, (hashErr, hashedPassword) => {
+                                if (hashErr) return reject(hashErr);
+
+                                db.query(
+                                    `INSERT INTO users (name, email, password, password_hash, role_id, tenant_id, is_active)
+                                     VALUES (?, ?, ?, ?, ?, ?, 1)
+                                     ON DUPLICATE KEY UPDATE tenant_id = VALUES(tenant_id)`,
+                                    [`${companyName} Admin`, email, password, hashedPassword, roleId, tenantId],
+                                    (userErr) => {
+                                        if (userErr) return reject(userErr);
+                                        resolve({ tenantId, roleId });
+                                    }
+                                );
+                            });
+                        }
+                    );
+                }
+            );
+        });
     }
 
     static async listClients(req, res) {

@@ -169,6 +169,29 @@ const InventoryMenu = ({ onOpenOperation }) => {
     const [ordersOpen, setOrdersOpen] = React.useState(true);
     const [supportOpen, setSupportOpen] = React.useState(true);
     const [operationsExpanded, setOperationsExpanded] = React.useState(false);
+    const [clients, setClients] = React.useState([]);
+    const [selectedTenant, setSelectedTenant] = React.useState(
+        typeof window !== 'undefined' ? localStorage.getItem('selectedTenantId') || '' : ''
+    );
+
+    React.useEffect(() => {
+        if (hasPermission(PERMISSIONS.CLIENTS_VIEW)) {
+            const token = localStorage.getItem('token');
+            const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+            fetch(`${API_BASE}/api/onboarding/clients`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(r => r.json()).then(d => {
+                if (d.success) setClients(d.data);
+            }).catch(() => {});
+        }
+    }, [hasPermission]);
+
+    const handleTenantSwitch = (e) => {
+        const val = e.target.value;
+        setSelectedTenant(val);
+        localStorage.setItem('selectedTenantId', val);
+        window.location.reload();
+    };
 
     // Auto-expand if active (but don't auto-close if user opened it)
     React.useEffect(() => {
@@ -815,6 +838,22 @@ const InventoryMenu = ({ onOpenOperation }) => {
             >
                 {!collapsed ? (
                     <div className="space-y-1.5">
+                        {/* Tenant Switcher (super admin only) */}
+                        {hasPermission(PERMISSIONS.CLIENTS_VIEW) && clients.length > 0 && (
+                            <div className="mb-2">
+                                <select
+                                    value={selectedTenant}
+                                    onChange={handleTenantSwitch}
+                                    className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                >
+                                    <option value="">Main Dashboard</option>
+                                    {clients.map(c => (
+                                        <option key={c.id} value={c.id}>{c.company_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         {/* User Role Display */}
                         <motion.div 
                             className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"

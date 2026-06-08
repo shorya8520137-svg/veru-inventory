@@ -25,8 +25,8 @@ async function loadTenants() {
 
 /**
  * Resolve tenant from:
- * 1. Subdomain: client1.yoursaas.com → slug = 'client1'
- * 2. Header: X-Tenant-ID
+ * 1. Header: X-Tenant-ID (overrides JWT — lets super admin switch tenants)
+ * 2. Subdomain: client1.yoursaas.com → slug = 'client1'
  * 3. JWT user.tenant_id
  * 4. Default: tenant_id = 1 (your own company)
  */
@@ -35,13 +35,13 @@ async function tenantMiddleware(req, res, next) {
 
     let tenantId = 1; // default
 
-    // Priority 1: From authenticated user's JWT
-    if (req.user?.tenant_id) {
-        tenantId = req.user.tenant_id;
-    }
-    // Priority 2: From X-Tenant-ID header (for API clients)
-    else if (req.headers['x-tenant-id']) {
+    // Priority 1: From X-Tenant-ID header (overrides JWT — lets super admin switch tenants)
+    if (req.headers['x-tenant-id']) {
         tenantId = parseInt(req.headers['x-tenant-id']) || 1;
+    }
+    // Priority 2: From authenticated user's JWT
+    else if (req.user?.tenant_id) {
+        tenantId = req.user.tenant_id;
     }
     // Priority 3: From subdomain
     else {

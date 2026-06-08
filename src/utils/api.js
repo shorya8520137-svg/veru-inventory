@@ -49,12 +49,14 @@ export const isAuthenticated = () => {
  */
 export const apiRequest = async (endpoint, options = {}) => {
     const token = getToken();
+    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('selectedTenantId') : null;
     const url = `${API_BASE}${endpoint}`;
     
     const config = {
         headers: {
             'Content-Type': 'application/json',
             ...(token && { 'Authorization': `Bearer ${token}` }),
+            ...(tenantId && { 'X-Tenant-ID': tenantId }),
             ...options.headers,
         },
         ...options,
