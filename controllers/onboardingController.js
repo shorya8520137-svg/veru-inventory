@@ -38,7 +38,7 @@ class OnboardingController {
             // Ensure required permissions exist in the main DB
             await OnboardingController.ensurePermissions();
 
-            const { company_name, admin_email, admin_password, phone } = req.body;
+            const { company_name, admin_email, admin_password, phone, permissions: selectedPermissions } = req.body;
 
             if (!company_name || !admin_email || !admin_password) {
                 return res.status(400).json({
@@ -109,7 +109,8 @@ class OnboardingController {
                                 company_name,
                                 admin_email,
                                 admin_password,
-                                phone
+                                phone,
+                                selectedPermissions
                             );
 
                             // Store client record in main DB
@@ -234,51 +235,63 @@ class OnboardingController {
         });
     }
 
-    static async createAdminUser(conn, dbName, companyName, email, password, phone) {
+    static getAvailablePermissions() {
+        return [
+            { name: 'PRODUCTS_VIEW', display_name: 'View Products', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_CREATE', display_name: 'Create Products', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_EDIT', display_name: 'Edit Products', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_DELETE', display_name: 'Delete Products', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_BULK_IMPORT', display_name: 'Bulk Import Products', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_EXPORT', display_name: 'Export Products', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_CATEGORIES', display_name: 'Manage Categories', category: 'PRODUCTS' },
+            { name: 'PRODUCTS_SELF_TRANSFER', display_name: 'Self Transfer Products', category: 'PRODUCTS' },
+            { name: 'INVENTORY_VIEW', display_name: 'View Inventory', category: 'INVENTORY' },
+            { name: 'INVENTORY_EDIT', display_name: 'Edit Inventory', category: 'INVENTORY' },
+            { name: 'INVENTORY_TIMELINE', display_name: 'View Inventory Timeline', category: 'INVENTORY' },
+            { name: 'INVENTORY_ADJUST', display_name: 'Adjust Inventory', category: 'INVENTORY' },
+            { name: 'INVENTORY_TRANSFER', display_name: 'Transfer Inventory', category: 'INVENTORY' },
+            { name: 'INVENTORY_EXPORT', display_name: 'Export Inventory', category: 'INVENTORY' },
+            { name: 'ORDERS_VIEW', display_name: 'View Orders', category: 'ORDERS' },
+            { name: 'ORDERS_CREATE', display_name: 'Create Orders', category: 'ORDERS' },
+            { name: 'ORDERS_EDIT', display_name: 'Edit Orders', category: 'ORDERS' },
+            { name: 'ORDERS_EXPORT', display_name: 'Export Orders', category: 'ORDERS' },
+            { name: 'OPERATIONS_DISPATCH', display_name: 'Dispatch Operations', category: 'OPERATIONS' },
+            { name: 'OPERATIONS_DAMAGE', display_name: 'Damage Operations', category: 'OPERATIONS' },
+            { name: 'OPERATIONS_RETURN', display_name: 'Return Operations', category: 'OPERATIONS' },
+            { name: 'OPERATIONS_BULK', display_name: 'Bulk Upload', category: 'OPERATIONS' },
+            { name: 'OPERATIONS_SELF_TRANSFER', display_name: 'Self Transfer', category: 'OPERATIONS' },
+            { name: 'DASHBOARD_VIEW', display_name: 'View Dashboard', category: 'DASHBOARD' },
+            { name: 'TRACKING_VIEW', display_name: 'View Tracking', category: 'TRACKING' },
+            { name: 'TRACKING_CREATE', display_name: 'Create Tracking', category: 'TRACKING' },
+            { name: 'TRACKING_EDIT', display_name: 'Edit Tracking', category: 'TRACKING' },
+            { name: 'TRACKING_DELETE', display_name: 'Delete Tracking', category: 'TRACKING' },
+            { name: 'TRACKING_EXPORT', display_name: 'Export Tracking', category: 'TRACKING' },
+            { name: 'TRACKING_TIMELINE', display_name: 'Tracking Timeline', category: 'TRACKING' },
+            { name: 'TRACKING_BULK', display_name: 'Bulk Tracking', category: 'TRACKING' },
+            { name: 'MESSAGES_VIEW', display_name: 'View Messages', category: 'MESSAGES' },
+            { name: 'SYSTEM_USER_MANAGEMENT', display_name: 'User Management', category: 'SYSTEM' },
+            { name: 'SYSTEM_ROLE_MANAGEMENT', display_name: 'Role Management', category: 'SYSTEM' },
+            { name: 'SYSTEM_AUDIT_LOG', display_name: 'Audit Log', category: 'SYSTEM' },
+            { name: 'SYSTEM_SETTINGS', display_name: 'System Settings', category: 'SYSTEM' },
+        ];
+    }
+
+    static async listAvailablePermissions(req, res) {
+        res.json({ success: true, data: OnboardingController.getAvailablePermissions() });
+    }
+
+    static async createAdminUser(conn, dbName, companyName, email, password, phone, selectedPermissions) {
         return new Promise(async (resolve, reject) => {
             try {
-                // First, seed all permissions from PermissionsContext
-                const allPermissions = [
-                    { name: 'PRODUCTS_VIEW', display_name: 'View Products', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_CREATE', display_name: 'Create Products', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_EDIT', display_name: 'Edit Products', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_DELETE', display_name: 'Delete Products', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_BULK_IMPORT', display_name: 'Bulk Import Products', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_EXPORT', display_name: 'Export Products', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_CATEGORIES', display_name: 'Manage Categories', category: 'PRODUCTS' },
-                    { name: 'PRODUCTS_SELF_TRANSFER', display_name: 'Self Transfer Products', category: 'PRODUCTS' },
-                    { name: 'INVENTORY_VIEW', display_name: 'View Inventory', category: 'INVENTORY' },
-                    { name: 'INVENTORY_EDIT', display_name: 'Edit Inventory', category: 'INVENTORY' },
-                    { name: 'INVENTORY_TIMELINE', display_name: 'View Inventory Timeline', category: 'INVENTORY' },
-                    { name: 'INVENTORY_ADJUST', display_name: 'Adjust Inventory', category: 'INVENTORY' },
-                    { name: 'INVENTORY_TRANSFER', display_name: 'Transfer Inventory', category: 'INVENTORY' },
-                    { name: 'INVENTORY_EXPORT', display_name: 'Export Inventory', category: 'INVENTORY' },
-                    { name: 'ORDERS_VIEW', display_name: 'View Orders', category: 'ORDERS' },
-                    { name: 'ORDERS_CREATE', display_name: 'Create Orders', category: 'ORDERS' },
-                    { name: 'ORDERS_EDIT', display_name: 'Edit Orders', category: 'ORDERS' },
-                    { name: 'ORDERS_EXPORT', display_name: 'Export Orders', category: 'ORDERS' },
-                    { name: 'OPERATIONS_DISPATCH', display_name: 'Dispatch Operations', category: 'OPERATIONS' },
-                    { name: 'OPERATIONS_DAMAGE', display_name: 'Damage Operations', category: 'OPERATIONS' },
-                    { name: 'OPERATIONS_RETURN', display_name: 'Return Operations', category: 'OPERATIONS' },
-                    { name: 'OPERATIONS_BULK', display_name: 'Bulk Upload', category: 'OPERATIONS' },
-                    { name: 'OPERATIONS_SELF_TRANSFER', display_name: 'Self Transfer', category: 'OPERATIONS' },
-                    { name: 'DASHBOARD_VIEW', display_name: 'View Dashboard', category: 'DASHBOARD' },
-                    { name: 'TRACKING_VIEW', display_name: 'View Tracking', category: 'TRACKING' },
-                    { name: 'TRACKING_CREATE', display_name: 'Create Tracking', category: 'TRACKING' },
-                    { name: 'TRACKING_EDIT', display_name: 'Edit Tracking', category: 'TRACKING' },
-                    { name: 'TRACKING_DELETE', display_name: 'Delete Tracking', category: 'TRACKING' },
-                    { name: 'TRACKING_EXPORT', display_name: 'Export Tracking', category: 'TRACKING' },
-                    { name: 'TRACKING_TIMELINE', display_name: 'Tracking Timeline', category: 'TRACKING' },
-                    { name: 'TRACKING_BULK', display_name: 'Bulk Tracking', category: 'TRACKING' },
-                    { name: 'MESSAGES_VIEW', display_name: 'View Messages', category: 'MESSAGES' },
-                    { name: 'SYSTEM_USER_MANAGEMENT', display_name: 'User Management', category: 'SYSTEM' },
-                    { name: 'SYSTEM_ROLE_MANAGEMENT', display_name: 'Role Management', category: 'SYSTEM' },
-                    { name: 'SYSTEM_AUDIT_LOG', display_name: 'Audit Log', category: 'SYSTEM' },
-                    { name: 'SYSTEM_SETTINGS', display_name: 'System Settings', category: 'SYSTEM' },
-                ];
+                const allPermissions = OnboardingController.getAvailablePermissions();
+
+                // Filter to only selected permissions, or use all if none specified
+                const permsToSeed = selectedPermissions && selectedPermissions.length > 0
+                    ? allPermissions.filter(p => selectedPermissions.includes(p.name))
+                    : allPermissions;
 
                 // Insert permissions
-                const permValues = allPermissions.map(p => [p.name, p.display_name, p.category]);
+                const permValues = permsToSeed.map(p => [p.name, p.display_name, p.category]);
                 const permQuery = 'INSERT IGNORE INTO permissions (name, display_name, category) VALUES ?';
                 conn.query(permQuery, [permValues], (permErr, permResult) => {
                     if (permErr) return reject(permErr);
@@ -294,7 +307,7 @@ class OnboardingController {
 
                             const adminRoleId = roleResult.insertId;
 
-                            // Assign all permissions to admin role
+                            // Assign selected permissions to admin role
                             const rpValues = permissions.map(p => [adminRoleId, p.id]);
                             const rpQuery = 'INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES ?';
                             conn.query(rpQuery, [rpValues], (rpErr) => {

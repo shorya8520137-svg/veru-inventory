@@ -13,6 +13,9 @@ const { authenticateToken, checkPermission } = require('../middleware/auth');
     }
 })();
 
+// GET /api/onboarding/permissions - List available permissions for assignment
+router.get('/permissions', authenticateToken, checkPermission('CLIENTS_CREATE'), OnboardingController.listAvailablePermissions);
+
 // POST /api/onboarding/client - Onboard a new client (create DB + admin user)
 router.post('/client', authenticateToken, checkPermission('CLIENTS_CREATE'), OnboardingController.onboardClient);
 

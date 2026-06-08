@@ -2,7 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { usePermissions, PERMISSIONS } from "@/contexts/PermissionsContext";
-import { Building2, Users, CheckCircle, AlertCircle, Loader2, Eye, EyeOff, Copy, ExternalLink } from "lucide-react";
+import { Building2, Users, CheckCircle, AlertCircle, Loader2, Eye, EyeOff, Copy, ExternalLink, ChevronDown, ChevronRight, Shield } from "lucide-react";
+
+const CATEGORY_LABELS = {
+    PRODUCTS: "Products",
+    INVENTORY: "Inventory",
+    ORDERS: "Orders",
+    OPERATIONS: "Operations",
+    DASHBOARD: "Dashboard",
+    TRACKING: "Tracking",
+    MESSAGES: "Messages",
+    SYSTEM: "System",
+};
 
 export default function OnboardingPage() {
     const { hasPermission, userRole } = usePermissions();
@@ -24,11 +35,80 @@ export default function OnboardingPage() {
     const [error, setError] = useState("");
     const [tab, setTab] = useState("create");
 
+    // Permission selection state
+    const [availablePerms, setAvailablePerms] = useState([]);
+    const [selectedPerms, setSelectedPerms] = useState({});
+    const [permLoading, setPermLoading] = useState(false);
+    const [expandedCategories, setExpandedCategories] = useState({});
+
+    useEffect(() => {
+        if (canCreate) {
+            loadPermissions();
+        }
+    }, [canCreate]);
+
     useEffect(() => {
         if (canView) {
             loadClients();
         }
     }, [canView]);
+
+    const loadPermissions = async () => {
+        setPermLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+            const res = await fetch(`${API_BASE}/api/onboarding/permissions`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setAvailablePerms(data.data);
+                // Group by category and initialize all as selected
+                const grouped = {};
+                const expanded = {};
+                for (const perm of data.data) {
+                    if (!grouped[perm.category]) {
+                        grouped[perm.category] = [];
+                        expanded[perm.category] = true;
+                    }
+                    grouped[perm.category].push(perm.name);
+                    selectedPerms[perm.name] = true;
+                }
+                setExpandedCategories(expanded);
+            }
+        } catch (err) {
+            console.error('Failed to load permissions:', err);
+        } finally {
+            setPermLoading(false);
+        }
+    };
+
+    const togglePermission = (permName) => {
+        setSelectedPerms(prev => ({ ...prev, [permName]: !prev[permName] }));
+    };
+
+    const toggleCategory = (category) => {
+        const permsInCategory = availablePerms.filter(p => p.category === category);
+        const allSelected = permsInCategory.every(p => selectedPerms[p.name]);
+        const newState = {};
+        for (const perm of permsInCategory) {
+            newState[perm.name] = !allSelected;
+        }
+        setSelectedPerms(prev => ({ ...prev, ...newState }));
+    };
+
+    const toggleCategoryExpanded = (category) => {
+        setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }));
+    };
+
+    const selectAllNone = (selectAll) => {
+        const newState = {};
+        for (const perm of availablePerms) {
+            newState[perm.name] = selectAll;
+        }
+        setSelectedPerms(newState);
+    };
 
     const loadClients = async () => {
         setClientsLoading(true);
@@ -75,6 +155,15 @@ export default function OnboardingPage() {
             return;
         }
 
+        const selectedPermissionNames = Object.entries(selectedPerms)
+            .filter(([_, val]) => val)
+            .map(([name]) => name);
+
+        if (selectedPermissionNames.length === 0) {
+            setError("Select at least one permission for the client admin");
+            return;
+        }
+
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -89,7 +178,8 @@ export default function OnboardingPage() {
                     company_name: form.company_name.trim(),
                     admin_email: form.admin_email.trim(),
                     admin_password: form.admin_password,
-                    phone: form.phone.trim()
+                    phone: form.phone.trim(),
+                    permissions: selectedPermissionNames
                 })
             });
             const data = await res.json();
@@ -119,8 +209,15 @@ export default function OnboardingPage() {
         );
     }
 
+    // Group permissions by category
+    const groupedPerms = availablePerms.reduce((acc, perm) => {
+        if (!acc[perm.category]) acc[perm.category] = [];
+        acc[perm.category].push(perm);
+        return acc;
+    }, {});
+
     return (
-        <div className="p-6 max-w-5xl mx-auto">
+        <div className="p-6 max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-3">
@@ -161,7 +258,7 @@ export default function OnboardingPage() {
             {tab === "create" && canCreate && (
                 <>
                     {/* Onboarding Form */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
                         <h2 className="text-lg font-semibold text-slate-900 mb-1">New Client Details</h2>
                         <p className="text-sm text-slate-500 mb-6">A dedicated database will be created for this client automatically.</p>
 
@@ -267,6 +364,90 @@ export default function OnboardingPage() {
                                 )}
                             </button>
                         </form>
+                    </div>
+
+                    {/* Permissions Assignment Section */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Assign Permissions</h2>
+                                <p className="text-sm text-slate-500 mt-0.5">Select which permissions the client admin will have</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => selectAllNone(true)}
+                                    className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                >
+                                    Select All
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => selectAllNone(false)}
+                                    className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 rounded-lg transition-all"
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                        </div>
+
+                        {permLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 size={20} className="animate-spin text-slate-400" />
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {Object.entries(groupedPerms).map(([category, perms]) => (
+                                    <div key={category} className="border border-slate-200 rounded-xl overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleCategoryExpanded(category)}
+                                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {expandedCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                                <Shield size={16} className="text-slate-400" />
+                                                <span className="text-sm font-medium text-slate-700">
+                                                    {CATEGORY_LABELS[category] || category}
+                                                </span>
+                                                <span className="text-xs text-slate-400">
+                                                    ({perms.filter(p => selectedPerms[p.name]).length}/{perms.length})
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); toggleCategory(category); }}
+                                                className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-all ${
+                                                    perms.every(p => selectedPerms[p.name])
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                                }`}
+                                            >
+                                                {perms.every(p => selectedPerms[p.name]) ? "Deselect All" : "Select All"}
+                                            </button>
+                                        </button>
+                                        {expandedCategories[category] && (
+                                            <div className="px-4 py-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                                                {perms.map((perm) => (
+                                                    <label
+                                                        key={perm.name}
+                                                        className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!selectedPerms[perm.name]}
+                                                            onChange={() => togglePermission(perm.name)}
+                                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                                                        />
+                                                        <span className="text-sm text-slate-700">{perm.display_name}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Success Result */}
