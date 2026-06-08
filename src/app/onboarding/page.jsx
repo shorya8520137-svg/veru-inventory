@@ -209,11 +209,6 @@ export default function OnboardingPage() {
             return;
         }
 
-        if (form.phone.trim() && otpState !== 'verified') {
-            setError("Verify the phone number with OTP before submitting");
-            return;
-        }
-
         const selectedPermissionNames = Object.entries(selectedPerms)
             .filter(([_, val]) => val)
             .map(([name]) => name);
@@ -391,7 +386,7 @@ export default function OnboardingPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                                        Phone <span className="text-xs text-slate-400">(verify with OTP)</span>
+                                        Phone <span className="text-xs text-slate-400">(optional)</span>
                                     </label>
                                     <div className="flex gap-2">
                                         <input
