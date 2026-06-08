@@ -29,29 +29,51 @@ class OTPService {
     }
 
     static async sendOTP(phone, otp) {
+        // Try TextBee if configured
+        const textbeeApiKey = process.env.TEXTBEE_API_KEY;
+        const textbeeDeviceId = process.env.TEXTBEE_DEVICE_ID;
+
+        if (textbeeApiKey && textbeeDeviceId) {
+            try {
+                const result = await OTPService.sendViaTextBee(phone, otp, textbeeApiKey, textbeeDeviceId);
+                if (result.success) return result;
+            } catch (e) {
+                console.error('TextBee send failed, falling back:', e.message);
+            }
+        }
+
+        // Try Telegram if configured
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
         const chatId = process.env.TELEGRAM_CHAT_ID;
 
-        if (!botToken || !chatId) {
-            console.log(`[OTP Service] No Telegram configured. OTP for ${phone}: ${otp}`);
-            return { success: true, method: 'console', otp };
+        if (botToken && chatId) {
+            try {
+                const result = await OTPService.sendViaTelegram(phone, otp, botToken, chatId);
+                if (result.success) return result;
+            } catch (e) {
+                console.error('Telegram send failed:', e.message);
+            }
         }
 
-        return new Promise((resolve, reject) => {
-            const message = `🔐 Phone Verification OTP\n\nPhone: ${phone}\nOTP: ${otp}\nExpires: 5 minutes`;
+        // Fallback: show OTP in server logs + return it
+        console.log(`[OTP Service] OTP for ${phone}: ${otp}`);
+        return { success: true, method: 'console', otp };
+    }
 
+    static async sendViaTextBee(phone, otp, apiKey, deviceId) {
+        return new Promise((resolve, reject) => {
             const data = JSON.stringify({
-                chat_id: chatId,
-                text: message,
-                parse_mode: 'HTML'
+                recipients: [phone],
+                message: `Your verification OTP is: ${otp}. Valid for 5 minutes.`
             });
 
             const req = https.request({
-                hostname: 'api.telegram.org',
-                path: `/bot${botToken}/sendMessage`,
+                hostname: 'api.textbee.dev',
+                path: `/api/v1/gateway/devices/${deviceId}/send-sms`,
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
                     'Content-Length': Buffer.byteLength(data)
                 }
             }, (res) => {
@@ -60,11 +82,10 @@ class OTPService {
                 res.on('end', () => {
                     try {
                         const result = JSON.parse(body);
-                        if (result.ok) {
-                            resolve({ success: true, method: 'telegram' });
+                        if (res.statusCode === 200) {
+                            resolve({ success: true, method: 'sms' });
                         } else {
-                            console.error('Telegram API error:', result);
-                            resolve({ success: false, error: result.description });
+                            resolve({ success: false, error: result.message || 'TextBee error' });
                         }
                     } catch (e) {
                         resolve({ success: false, error: e.message });
@@ -72,11 +93,33 @@ class OTPService {
                 });
             });
 
-            req.on('error', (e) => {
-                console.error('Telegram request error:', e);
-                resolve({ success: false, error: e.message });
-            });
+            req.on('error', (e) => reject(e));
+            req.write(data);
+            req.end();
+        });
+    }
 
+    static async sendViaTelegram(phone, otp, botToken, chatId) {
+        return new Promise((resolve, reject) => {
+            const message = `🔐 Phone Verification OTP\n\nPhone: ${phone}\nOTP: ${otp}\nExpires: 5 minutes`;
+            const data = JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' });
+
+            const req = https.request({
+                hostname: 'api.telegram.org',
+                path: `/bot${botToken}/sendMessage`,
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
+            }, (res) => {
+                let body = '';
+                res.on('data', chunk => body += chunk);
+                res.on('end', () => {
+                    try {
+                        const result = JSON.parse(body);
+                        resolve(result.ok ? { success: true, method: 'telegram' } : { success: false, error: result.description });
+                    } catch (e) { resolve({ success: false, error: e.message }); }
+                });
+            });
+            req.on('error', (e) => reject(e));
             req.write(data);
             req.end();
         });
