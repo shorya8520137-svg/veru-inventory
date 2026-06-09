@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const BRAND_PURPLE = "#5850EC";
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.giftgala.in";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://inventory.leadpilot.software";
 
 function authHeaders() {
   if (typeof window === "undefined") return {};

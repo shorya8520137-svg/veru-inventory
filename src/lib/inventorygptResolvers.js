@@ -1,7 +1,7 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.API_BASE ||
-  "https://api.giftgala.in";
+  "";
 
 // ── Shared spelling normalisation map (used by both normalise + intent detect) ──
 const NORM_MAP = [

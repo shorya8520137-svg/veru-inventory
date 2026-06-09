@@ -317,7 +317,7 @@ export function WarehouseIntelligenceCard({ entity, type = 'warehouses', onViewD
       return
     }
 
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in'}/api/inventorygpt/store-intelligence?code=${entity.code}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://inventory.leadpilot.software'}/api/inventorygpt/store-intelligence?code=${entity.code}`)
       .then(r => r.json())
       .then(data => {
         if (data.success) setEnriched(data)
@@ -402,7 +402,7 @@ export function StockAnalysisPanel({ entity, type = 'warehouses', onClose }) {
       setLoading(true)
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''
-        const base = isWh ? '' : (process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in')
+        const base = isWh ? '' : (process.env.NEXT_PUBLIC_API_BASE || 'https://inventory.leadpilot.software')
         const res = await fetch(`${base}${cfg.endpoint}?code=${encodeURIComponent(code)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })

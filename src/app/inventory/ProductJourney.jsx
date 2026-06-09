@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, X, TrendingUp, MapPin, Package } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 const TYPE_BADGE = {
   OPENING:       { label:'OPENING',   bg:'#1e3a5f', color:'#93C5FD' },

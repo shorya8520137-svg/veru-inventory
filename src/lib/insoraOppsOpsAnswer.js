@@ -1,7 +1,7 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.API_BASE ||
-  'https://api.giftgala.in';
+  'https://inventory.leadpilot.software';
 
 function isInternalErrorText(text) {
   return /unknown column|sql|syntax error|er_|errno|processed_by|select\s+.+\s+from/i.test(

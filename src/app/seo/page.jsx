@@ -6,7 +6,7 @@ import {
   Target, TrendingUp, Globe, BookOpen, Zap, Bot, MessageSquare, Activity, Plus, Edit3, Code, Type, List
 } from 'lucide-react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 async function apiPostLLM(path, body) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';

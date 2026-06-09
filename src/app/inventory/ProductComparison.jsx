@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, X, TrendingUp, BarChart3, Package } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 export default function ProductComparison({ initialProduct1, initialProduct2, onClose }) {
   const [p1, setP1] = useState(initialProduct1 || '');

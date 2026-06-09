@@ -11,7 +11,7 @@ const allowedOrigins = [
     'https://inventory.leadpilot.software',
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://api.giftgala.in',
+    'https://inventory.leadpilot.software',
 ];
 
 app.use(cors({

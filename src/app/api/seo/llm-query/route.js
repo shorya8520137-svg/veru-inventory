@@ -5,10 +5,10 @@ const OPENROUTER_API_KEY =
 const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL || "mistralai/mistral-7b-instruct-v0.1";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const API_BASE =
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE ||
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.API_BASE ||
-  "https://api.giftgala.in";
+  "";
 
 async function requestLLM(messages) {
   if (!OPENROUTER_API_KEY) {
