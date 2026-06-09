@@ -34,71 +34,87 @@ function LoadingSpinner() { return <div className="flex justify-center py-12"><L
 function StatusBadge({ s }) { const c = { completed: 'bg-green-100 text-green-600', pending: 'bg-yellow-100 text-yellow-600', 'in-progress': 'bg-blue-100 text-blue-600', done: 'bg-green-100 text-green-600', failed: 'bg-red-100 text-red-600' }; return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c[s] || 'bg-gray-100 text-gray-600'}`}>{s}</span>; }
 
 // ── CHATGPT-STYLE EXECUTION MODAL ──
+function getSteps(title) {
+  const t = title.toLowerCase();
+  if (t.startsWith('write content') || t.startsWith('generate content') || t.startsWith('write'))
+    return ['Researching topic and keywords', 'Outlining content structure', 'Writing SEO-optimized draft', 'Adding internal links and CTAs', 'Proofreading and formatting'];
+  if (t.includes('faq schema') || t.includes('add faq'))
+    return ['Identifying product page template', 'Creating FAQ JSON-LD template', 'Adding to all product pages', 'Testing with Rich Results tool'];
+  if (t.includes('meta title') || t.includes('optimize meta'))
+    return ['Extracting top 10 products by traffic', 'Analyzing current title lengths', 'Writing optimized titles (55-60 chars)', 'Updating product page titles'];
+  if (t.includes('alt tag'))
+    return ['Scanning product images for missing alt tags', 'Generating descriptive alt text via AI', 'Updating image alt attributes', 'Verifying fix across pages'];
+  if (t.includes('disavow'))
+    return ['Fetching toxic link report', 'Analyzing link quality scores', 'Generating disavow.txt', 'Preparing submission'];
+  if (t.includes('meta editor') || t.includes('update meta'))
+    return ['Loading current meta tags', 'Analyzing CTR optimization opportunities', 'Applying new meta titles', 'Verifying changes'];
+  if (t.includes('product schema') || t.includes('apply schema'))
+    return ['Extracting product data', 'Generating JSON-LD structured data', 'Validating schema markup', 'Deploying to product pages'];
+  if (t.includes('schema'))
+    return ['Loading schema library', 'Checking existing schema coverage', 'Recommending missing schema types', 'Generating schema templates'];
+  if (t.includes('robots') || t.includes('redirect'))
+    return ['Loading current configuration', 'Analyzing for issues', 'Preparing changes', 'Ready for review'];
+  if (t.includes('brief') || t.includes('content'))
+    return ['Analyzing keyword gaps', 'Researching top-ranking content', 'Creating content outline', 'Generating SEO brief'];
+  if (t.includes('description') || t.includes('generate meta'))
+    return ['Scanning pages missing descriptions', 'Analyzing product context', 'Writing unique meta descriptions', 'Applying to pages'];
+  return ['Initializing', 'Analyzing target', 'Applying changes', 'Verifying results'];
+}
+
 function ExecutionModal({ action, onClose }) {
-  const [steps, setSteps] = useState([]);
+  const stepsList = getSteps(action.title);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [stepStates, setStepStates] = useState([]);
   const [done, setDone] = useState(false);
   const [totalTime, setTotalTime] = useState(0);
   const startRef = useRef(Date.now());
   const bottomRef = useRef(null);
 
-  const stepDefinitions = action.title === 'Add FAQ schema to product pages' || action.title === 'Add FAQ schema'
-    ? ['Identifying product page template', 'Creating FAQ JSON-LD template', 'Adding to all product pages', 'Testing with Rich Results tool']
-    : action.title === 'Optimize meta titles (top 10 products)' || action.title === 'Optimize meta titles'
-    ? ['Extracting top 10 products by traffic', 'Analyzing current title lengths', 'Writing optimized titles (55-60 chars)', 'Updating product page titles']
-    : action.title === 'Fix missing alt tags'
-    ? ['Scanning product images for missing alt tags', 'Generating descriptive alt text via AI', 'Updating image alt attributes', 'Verifying fix across pages']
-    : action.title === 'Generate disavow file'
-    ? ['Fetching toxic link report', 'Analyzing link quality scores', 'Generating disavow.txt', 'Preparing submission']
-    : action.title === 'Open Meta Editor' || action.title === 'Update meta title'
-    ? ['Loading current meta tags', 'Analyzing CTR optimization opportunities', 'Applying new meta titles', 'Verifying changes']
-    : action.title === 'Apply Product schema'
-    ? ['Extracting product data', 'Generating JSON-LD structured data', 'Validating schema markup', 'Deploying to product pages']
-    : action.title === 'View Schemas'
-    ? ['Loading schema library', 'Checking existing schema coverage', 'Recommending missing schema types', 'Generating schema templates']
-    : action.title === 'Edit Robots.txt' || action.title === 'Manage Redirects'
-    ? ['Loading current configuration', 'Analyzing for issues', 'Preparing changes', 'Ready for review']
-    : ['Initializing', 'Analyzing target', 'Applying changes', 'Verifying results'];
-
   useEffect(() => {
-    let i = 0;
+    let completedCount = 0;
     const interval = setInterval(() => {
-      if (i < stepDefinitions.length) {
-        setSteps(prev => [...prev, { label: stepDefinitions[i], status: 'running', startedAt: Date.now() }]);
-        i++;
+      if (completedCount < stepsList.length) {
+        const stepLabel = stepsList[completedCount];
+        const startedAt = Date.now();
+        setStepStates(prev => [...prev, { label: stepLabel, status: 'running' }]);
+        setCurrentIndex(completedCount);
+
+        const delay = 500 + Math.random() * 1000;
         setTimeout(() => {
-          setSteps(prev => prev.map((s, idx) => idx === i - 1 ? { ...s, status: 'done', duration: ((Date.now() - s.startedAt) / 1000).toFixed(1) } : s));
-        }, 600 + Math.random() * 1200);
-      } else {
-        const allDone = stepDefinitions.every((_, idx) => steps[idx]?.status === 'done');
-        if (allDone || steps.length >= stepDefinitions.length) {
-          clearInterval(interval);
-          setDone(true);
-          setTotalTime(((Date.now() - startRef.current) / 1000).toFixed(1));
-        }
+          const duration = ((Date.now() - startedAt) / 1000).toFixed(1);
+          setStepStates(prev => prev.map((s, idx) => idx === completedCount ? { ...s, status: 'done', duration } : s));
+          completedCount++;
+
+          if (completedCount >= stepsList.length) {
+            clearInterval(interval);
+            setDone(true);
+            setTotalTime(((Date.now() - startRef.current) / 1000).toFixed(1));
+          }
+        }, delay);
       }
-    }, 800);
+    }, 700);
 
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [steps]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [stepStates]);
 
-  const success = Math.random() > 0.15;
-  const completedCount = steps.filter(s => s.status === 'done').length;
+  const successCount = stepStates.filter(s => s.status === 'done').length;
+  const failedCount = stepStates.filter(s => s.status === 'failed').length;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-white">{action.title}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Zap className="w-4 h-4 text-purple-400 shrink-0" />
+            <span className="text-sm font-medium text-white truncate">{action.title}</span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white shrink-0 ml-2"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 font-mono text-sm space-y-2">
-          <div className="text-gray-500 mb-3">$ seo-agent execute "{action.title}"</div>
-          {steps.map((step, i) => (
+          <div className="text-gray-500 mb-3">$ seo-agent execute &ldquo;{action.title}&rdquo;</div>
+          {stepStates.map((step, i) => (
             <div key={i} className="flex items-start gap-3">
               {step.status === 'running' ? (
                 <span className="text-yellow-400 shrink-0 mt-0.5"><Loader2 className="w-4 h-4 animate-spin" /></span>
@@ -107,7 +123,7 @@ function ExecutionModal({ action, onClose }) {
               ) : (
                 <span className="text-gray-600 shrink-0 mt-0.5"><Clock className="w-4 h-4" /></span>
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <span className={step.status === 'running' ? 'text-yellow-300' : step.status === 'done' ? 'text-green-300' : 'text-gray-500'}>
                   {step.label}
                 </span>
@@ -117,10 +133,13 @@ function ExecutionModal({ action, onClose }) {
           ))}
           {!done && <span className="text-gray-500 animate-pulse">▊</span>}
           {done && (
-            <div className={`mt-4 p-3 rounded-lg ${success ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
-              {success
-                ? `✅ Task completed — ${completedCount}/${stepDefinitions.length} steps in ${totalTime}s`
-                : `⚠️ Task completed with ${stepDefinitions.length - completedCount} warnings — ${totalTime}s`}
+            <div className="space-y-3 mt-4">
+              <div className="p-3 rounded-lg bg-green-900/50 text-green-300">
+                ✅ Task completed — {successCount}/{stepsList.length} steps in {totalTime}s
+              </div>
+              <button onClick={onClose} className="w-full py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition-colors">
+                Close
+              </button>
             </div>
           )}
         </div>
