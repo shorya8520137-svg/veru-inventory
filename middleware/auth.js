@@ -18,6 +18,7 @@ const generateToken = (user) => {
         tenant_id: user.tenant_id || 1,   // ← multi-tenant
         iat: Math.floor(Date.now() / 1000)
     };
+    if (user.client_db) payload.client_db = user.client_db;
 
     return jwt.sign(payload, JWT_SECRET, { 
         expiresIn: JWT_EXPIRES_IN,

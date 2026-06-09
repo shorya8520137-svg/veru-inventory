@@ -1,7 +1,9 @@
 const mysql = require('mysql2');
+const { AsyncLocalStorage } = require('async_hooks');
 require('dotenv').config();
 
-// Database connection pool
+const als = new AsyncLocalStorage();
+
 const dbConfig = {
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'inventory_user',
@@ -20,11 +22,13 @@ console.log(`   Port: ${dbConfig.port}`);
 console.log(`   Database: ${dbConfig.database}`);
 console.log(`   User: ${dbConfig.user}`);
 
-// Create a connection pool instead of a single connection
-const pool = mysql.createPool(dbConfig);
+const mainPool = mysql.createPool(dbConfig);
 
-// Test the pool connection
-pool.getConnection((err, connection) => {
+// Cache client DB pools
+const clientPools = {};
+
+// Test the main pool connection
+mainPool.getConnection((err, connection) => {
     if (err) {
         console.error('❌ Database pool connection failed:', err.message);
         if (err.code === 'ECONNREFUSED') {
@@ -36,8 +40,52 @@ pool.getConnection((err, connection) => {
         }
     } else {
         console.log('✅ Database connected successfully (Pool Connection)');
-        connection.release(); // Release the test connection back to the pool
+        connection.release();
     }
 });
 
-module.exports = pool;
+function getActivePool() {
+    const ctx = als.getStore();
+    if (ctx && ctx.clientDb) {
+        if (!clientPools[ctx.clientDb]) {
+            clientPools[ctx.clientDb] = mysql.createPool({
+                ...dbConfig,
+                database: ctx.clientDb,
+            });
+            console.log(`✅ Created connection pool for client DB: ${ctx.clientDb}`);
+        }
+        return clientPools[ctx.clientDb];
+    }
+    return mainPool;
+}
+
+// Context-aware DB wrapper — routes queries to the correct pool per request
+const db = {
+    query: (...args) => getActivePool().query(...args),
+    execute: (...args) => getActivePool().execute(...args),
+    promise: () => {
+        const activePool = getActivePool();
+        const pp = activePool.promise();
+        return new Proxy(pp, {
+            get(target, prop) {
+                const val = target[prop];
+                return typeof val === 'function' ? val.bind(target) : val;
+            }
+        });
+    },
+    getConnection: (...args) => getActivePool().getConnection(...args),
+    end: (...args) => getActivePool().end(...args),
+};
+
+// Middleware: set client DB context from authenticated user
+function setClientDbContext(req, res, next) {
+    const ctx = {};
+    if (req.user && req.user.client_db) {
+        ctx.clientDb = req.user.client_db;
+    }
+    als.run(ctx, () => next());
+}
+
+module.exports = db;
+module.exports.setClientDbContext = setClientDbContext;
+module.exports.als = als;

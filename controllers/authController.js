@@ -130,6 +130,7 @@ async function authenticateAgainstClientDB(req, res, client, identifier, passwor
                         role_id: user.role_id,
                         role_name: user.role_name,
                         tenant_id: tenantId,
+                        client_db: client.db_name,
                     });
 
                     clientConn.end();
