@@ -98,6 +98,7 @@ function setClientDbContext(req, res, next) {
     if (req.user) {
         if (req.user.client_db) {
             ctx.clientDb = req.user.client_db;
+            console.log(`🔀 Client DB routing: ${ctx.clientDb} (from JWT)`);
         } else if (req.user.email) {
             // Fallback: check if this user is a client user (handles stale tokens without client_db)
             const pool = getActivePool();
@@ -107,14 +108,20 @@ function setClientDbContext(req, res, next) {
                 (err, rows) => {
                     if (!err && rows && rows.length > 0) {
                         ctx.clientDb = rows[0].db_name;
+                        console.log(`🔀 Client DB routing: ${ctx.clientDb} (fallback from email)`);
                         als.run(ctx, () => next());
                     } else {
+                        console.log(`🔀 No client DB for ${req.user.email} — using main DB`);
                         als.run(ctx, () => next());
                     }
                 }
             );
             return;
+        } else {
+            console.log(`🔀 User has no email or client_db — using main DB`);
         }
+    } else {
+        console.log(`🔀 No req.user — using main DB`);
     }
 
     als.run(ctx, () => next());
