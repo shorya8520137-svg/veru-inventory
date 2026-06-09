@@ -27,7 +27,6 @@ const mainPool = mysql.createPool(dbConfig);
 // Cache client DB pools
 const clientPools = {};
 
-// Test the main pool connection
 mainPool.getConnection((err, connection) => {
     if (err) {
         console.error('❌ Database pool connection failed:', err.message);
@@ -59,17 +58,60 @@ function getActivePool() {
     return mainPool;
 }
 
+function isMissingTable(err) {
+    return err && (err.errno === 1146 || err.code === 'ER_NO_SUCH_TABLE' || err.sqlMessage?.includes("doesn't exist"));
+}
+
 // Context-aware DB wrapper — routes queries to the correct pool per request
 const db = {
-    query: (...args) => getActivePool().query(...args),
-    execute: (...args) => getActivePool().execute(...args),
+    query: (...args) => {
+        const pool = getActivePool();
+        const last = args[args.length - 1];
+        if (typeof last === 'function') {
+            const cb = last;
+            const queryArgs = args.slice(0, -1);
+            pool.query(...queryArgs, (err, results, fields) => {
+                if (isMissingTable(err)) return cb(null, []);
+                cb(err, results, fields);
+            });
+        } else {
+            pool.query(...args);
+        }
+    },
+    execute: (...args) => {
+        const pool = getActivePool();
+        const last = args[args.length - 1];
+        if (typeof last === 'function') {
+            const cb = last;
+            const queryArgs = args.slice(0, -1);
+            pool.execute(...queryArgs, (err, results, fields) => {
+                if (isMissingTable(err)) return cb(null, []);
+                cb(err, results, fields);
+            });
+        } else {
+            return pool.execute(...args).catch(err => {
+                if (isMissingTable(err)) return [[]];
+                throw err;
+            });
+        }
+    },
     promise: () => {
         const activePool = getActivePool();
         const pp = activePool.promise();
         return new Proxy(pp, {
             get(target, prop) {
                 const val = target[prop];
-                return typeof val === 'function' ? val.bind(target) : val;
+                if (typeof val !== 'function') return val;
+                return (...args) => {
+                    const result = val.apply(target, args);
+                    if (result && typeof result.catch === 'function') {
+                        return result.catch(err => {
+                            if (isMissingTable(err)) return [[]];
+                            throw err;
+                        });
+                    }
+                    return result;
+                };
             }
         });
     },
