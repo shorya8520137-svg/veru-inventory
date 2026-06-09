@@ -825,26 +825,7 @@ export default function Home() {
               </p>
             </motion.div>
 
-            {/* Nikhil Sharma */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="group relative bg-white border border-slate-200 rounded-2xl p-8 hover:border-emerald-400/50 hover:shadow-lg transition-all duration-300 text-center"
-            >
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-cyan-500/20">
-                <span className="text-2xl font-bold text-white">NS</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">Nikhil Sharma</h3>
-              <div className="text-xs font-bold tracking-widest text-emerald-600 uppercase mt-1 mb-3">Co-Founder</div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full mb-4">
-                Cyber Security Analyst
-              </div>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                Secures every layer of the Insora ecosystem — from 2FA authentication and role-based access controls to encrypted data pipelines and real-time threat detection. Nikhil ensures that client operations stay protected at scale.
-              </p>
-            </motion.div>
+
 
             {/* Bhushan Geidhar */}
             <motion.div
@@ -864,7 +845,7 @@ export default function Home() {
                 />
               </div>
               <h3 className="text-xl font-bold text-slate-900">Bhushan Geidhar</h3>
-              <div className="text-xs font-bold tracking-widest text-emerald-600 uppercase mt-1 mb-3">COO</div>
+              <div className="text-xs font-bold tracking-widest text-emerald-600 uppercase mt-1 mb-3">Co-Founder</div>
               <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full mb-4">
                 Business Operations
               </div>
