@@ -10,5 +10,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://13.62.99.152:5000/api/:path*"
+    }
   ]
 }
