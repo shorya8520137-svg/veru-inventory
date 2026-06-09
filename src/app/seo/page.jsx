@@ -8,6 +8,15 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
 
+async function apiPostLLM(path, body) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+  const res = await fetch(`${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, authToken: token }),
+  });
+  return res.json();
+}
+
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'audit', label: 'Audit', icon: Shield },
@@ -370,8 +379,13 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
   async function askInventoryGPT() {
     if (!query.trim()) return;
     setQuerying(true);
-    const d = await apiPost('/inventorygpt-query', { query });
-    if (d.success) setQueryResult(d.data);
+    const llm = await apiPostLLM('/api/seo/llm-query', { query });
+    if (llm.success) {
+      setQueryResult({ type: 'llm', answer: llm.data.answer, model: llm.data.model });
+    } else {
+      const d = await apiPost('/inventorygpt-query', { query });
+      if (d.success) setQueryResult({ type: 'rule', ...d.data });
+    }
     setQuerying(false);
     loadExecLog();
   }
@@ -400,13 +414,25 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
         </div>
         {queryResult && (
           <div className="mt-4 space-y-2">
-            <p className="text-xs text-gray-400">Found {queryResult.productCount} products, {queryResult.categoryCount} categories</p>
-            {queryResult.insights.map((ins, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                <div className="flex-1"><p className="text-sm font-medium">{ins.title}</p><p className="text-xs text-gray-500">{ins.reason}</p><span className="text-xs text-green-600">{ins.impact}</span></div>
-                <button onClick={() => startExecution({ title: ins.action, reason: ins.reason })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600 ml-2">Run</button>
+            {queryResult.type === 'llm' ? (
+              <div className="bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl p-4 border border-purple-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bot className="w-4 h-4 text-purple-500" />
+                  <span className="text-xs text-purple-600 font-medium">LLM Response ({queryResult.model})</span>
+                </div>
+                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{queryResult.answer}</div>
               </div>
-            ))}
+            ) : (
+              <>
+                <p className="text-xs text-gray-400">Found {queryResult.productCount} products, {queryResult.categoryCount} categories</p>
+                {queryResult.insights?.map((ins, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                    <div className="flex-1"><p className="text-sm font-medium">{ins.title}</p><p className="text-xs text-gray-500">{ins.reason}</p><span className="text-xs text-green-600">{ins.impact}</span></div>
+                    <button onClick={() => startExecution({ title: ins.action, reason: ins.reason })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600 ml-2">Run</button>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
