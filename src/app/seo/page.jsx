@@ -99,8 +99,8 @@ export default function SEOPage() {
     setCopilotActivity(a => [...a, { ...action, time: new Date().toLocaleTimeString(), status: 'running' }]);
     showToast(`Executing: ${action.title}...`);
 
-    if (action.taskId || action.id) {
-      const d = await apiPost(`/tasks/${action.taskId || action.id}/execute`);
+    if (action.taskId && action.taskId >= 1 && action.taskId <= 6) {
+      const d = await apiPost(`/tasks/${action.taskId}/execute`);
       if (d.success) {
         setCopilotActivity(a => a.map(x => x.id === action.id ? { ...x, status: 'done', result: d.data } : x));
         showToast(`Done: ${action.title}`, 'success');
