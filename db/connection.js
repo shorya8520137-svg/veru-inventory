@@ -58,10 +58,6 @@ function getActivePool() {
     return mainPool;
 }
 
-function isMissingTable(err) {
-    return err && (err.errno === 1146 || err.code === 'ER_NO_SUCH_TABLE' || err.sqlMessage?.includes("doesn't exist"));
-}
-
 // Context-aware DB wrapper — routes queries to the correct pool per request
 const db = {
     query: (...args) => {
@@ -71,7 +67,6 @@ const db = {
             const cb = last;
             const queryArgs = args.slice(0, -1);
             pool.query(...queryArgs, (err, results, fields) => {
-                if (isMissingTable(err)) return cb(null, []);
                 cb(err, results, fields);
             });
         } else {
@@ -85,36 +80,13 @@ const db = {
             const cb = last;
             const queryArgs = args.slice(0, -1);
             pool.execute(...queryArgs, (err, results, fields) => {
-                if (isMissingTable(err)) return cb(null, []);
                 cb(err, results, fields);
             });
         } else {
-            return pool.execute(...args).catch(err => {
-                if (isMissingTable(err)) return [[]];
-                throw err;
-            });
+            return pool.execute(...args);
         }
     },
-    promise: () => {
-        const activePool = getActivePool();
-        const pp = activePool.promise();
-        return new Proxy(pp, {
-            get(target, prop) {
-                const val = target[prop];
-                if (typeof val !== 'function') return val;
-                return (...args) => {
-                    const result = val.apply(target, args);
-                    if (result && typeof result.catch === 'function') {
-                        return result.catch(err => {
-                            if (isMissingTable(err)) return [[]];
-                            throw err;
-                        });
-                    }
-                    return result;
-                };
-            }
-        });
-    },
+    promise: () => getActivePool().promise(),
     getConnection: (...args) => getActivePool().getConnection(...args),
     end: (...args) => getActivePool().end(...args),
 };

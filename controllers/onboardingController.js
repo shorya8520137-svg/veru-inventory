@@ -182,79 +182,34 @@ class OnboardingController {
 
     static async createClientSchema(conn) {
         return new Promise((resolve, reject) => {
-            // Create core tables for the client database
-            const schema = `
-                CREATE TABLE IF NOT EXISTS permissions (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    name VARCHAR(100) NOT NULL UNIQUE,
-                    display_name VARCHAR(255),
-                    category VARCHAR(100),
-                    description TEXT,
-                    is_active BOOLEAN DEFAULT true,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            // Get list of all base tables (not views) in the main DB
+            const mainDb = process.env.DB_NAME || 'inventory_db';
+            db.query(
+                `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'`,
+                [mainDb],
+                (err, tables) => {
+                    if (err) return reject(err);
 
-                CREATE TABLE IF NOT EXISTS roles (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    name VARCHAR(100) NOT NULL UNIQUE,
-                    display_name VARCHAR(255),
-                    description TEXT,
-                    color VARCHAR(7) DEFAULT '#64748b',
-                    priority INT DEFAULT 999,
-                    is_builtin BOOLEAN DEFAULT false,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    const exclude = ['clients', 'tenants', 'phone_otps', 'permissions', 'roles', 'role_permissions', 'users', 'user_sessions'];
+                    const tableNames = tables
+                        .map(t => t.TABLE_NAME)
+                        .filter(name => !exclude.includes(name));
 
-                CREATE TABLE IF NOT EXISTS role_permissions (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    role_id INT NOT NULL,
-                    permission_id INT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-                    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
-                    UNIQUE KEY unique_role_permission (role_id, permission_id)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    if (tableNames.length === 0) return resolve();
 
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    name VARCHAR(255) NOT NULL,
-                    email VARCHAR(255) NOT NULL UNIQUE,
-                    password VARCHAR(255) NOT NULL,
-                    password_hash VARCHAR(255),
-                    phone VARCHAR(50),
-                    role_id INT,
-                    is_active BOOLEAN DEFAULT true,
-                    two_factor_enabled BOOLEAN DEFAULT false,
-                    two_factor_secret VARCHAR(255),
-                    login_count INT DEFAULT 0,
-                    last_login TIMESTAMP NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    // Disable FK checks, create all tables, re-enable FK checks
+                    const stmts = tableNames.map(t =>
+                        `CREATE TABLE IF NOT EXISTS \`${t}\` LIKE \`${mainDb}\`.\`${t}\``
+                    );
+                    const sql = 'SET FOREIGN_KEY_CHECKS = 0; ' + stmts.join('; ') + '; SET FOREIGN_KEY_CHECKS = 1;';
 
-                CREATE TABLE IF NOT EXISTS user_sessions (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    user_id INT NOT NULL,
-                    session_token VARCHAR(500) NOT NULL,
-                    ip_address VARCHAR(45),
-                    user_agent TEXT,
-                    location_country VARCHAR(100),
-                    location_city VARCHAR(100),
-                    is_active BOOLEAN DEFAULT true,
-                    last_activity_at TIMESTAMP NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    expires_at TIMESTAMP NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            `;
-
-            conn.query(schema, (err) => {
-                if (err) return reject(err);
-                resolve();
-            });
+                    conn.query(sql, (createErr) => {
+                        if (createErr) return reject(createErr);
+                        console.log(`✅ Created ${tableNames.length} business tables in client DB`);
+                        resolve();
+                    });
+                }
+            );
         });
     }
 
