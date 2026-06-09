@@ -31,7 +31,7 @@ class OnboardingController {
 
                     // Create a client_user role with no permissions (empty dashboard)
                     db.query(
-                        "INSERT IGNORE INTO roles (name, display_name, description, color, priority, is_builtin) VALUES ('client_user', 'Client User', 'Limited client access', '#3b82f6', 100, true)",
+                        "INSERT IGNORE INTO roles (name, display_name, description, color, priority, is_active) VALUES ('client_user', 'Client User', 'Limited client access', '#3b82f6', 100, true)",
                         (err3) => {
                             if (err3) return reject(err3);
                             resolve();
