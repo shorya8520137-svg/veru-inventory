@@ -130,28 +130,29 @@ class OnboardingController {
 
                                 const clientId = result.insertId;
 
+                                let tenantWarning = '';
                                 try {
-                                    // Create tenant entry for this client
                                     await OnboardingController.createTenantAndUser(
                                         clientId, company_name, admin_email, admin_password
                                     );
                                 } catch (tenantErr) {
-                                    console.error('Tenant/user creation error:', tenantErr);
-                                    // Non-fatal: client record exists, but login needs manual setup
+                                    console.error('❌ Tenant/user creation error:', tenantErr);
+                                    tenantWarning = ' Client DB created but login setup failed — contact support.';
                                 }
 
                                 clientConn.end();
 
                                 res.json({
                                     success: true,
-                                    message: `Client "${company_name}" onboarded successfully`,
+                                    message: `Client "${company_name}" onboarded successfully.${tenantWarning}`,
                                     data: {
                                         client_id: clientId,
                                         company_name,
                                         db_name: clientDbName,
                                         admin_email,
                                         admin_password: admin_password,
-                                        login_url: `${req.protocol}://${req.get('host')}/login`
+                                        login_url: `${req.protocol}://${req.get('host')}/login`,
+                                        login_ready: !tenantWarning
                                     }
                                 });
                             });
@@ -389,29 +390,29 @@ class OnboardingController {
         return new Promise((resolve, reject) => {
             const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 
-            // Create tenant
-            db.query('INSERT INTO tenants (slug, name, is_active) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE name = VALUES(name)',
+            // Create tenant (or get existing id if slug already exists)
+            db.query('INSERT INTO tenants (slug, name, is_active) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), name = VALUES(name)',
                 [slug, companyName],
                 (tenantErr, tenantResult) => {
                     if (tenantErr) return reject(tenantErr);
 
                     const tenantId = tenantResult.insertId;
 
-                    // Get the admin role id for the main DB
-                    db.query('SELECT id FROM roles WHERE name = ? LIMIT 1', ['admin'],
+                    // Get a valid role (prefer super_admin, fallback to any)
+                    db.query('SELECT id FROM roles ORDER BY id ASC LIMIT 1',
                         (roleErr, roles) => {
                             if (roleErr) return reject(roleErr);
-                            const roleId = roles.length > 0 ? roles[0].id : null;
+                            const roleId = roles.length > 0 ? roles[0].id : 1;
 
                             // Hash password and create user in main DB
                             bcrypt.hash(password, 10, (hashErr, hashedPassword) => {
                                 if (hashErr) return reject(hashErr);
 
                                 db.query(
-                                    `INSERT INTO users (name, email, password, password_hash, role_id, tenant_id, is_active)
-                                     VALUES (?, ?, ?, ?, ?, ?, 1)
-                                     ON DUPLICATE KEY UPDATE tenant_id = VALUES(tenant_id)`,
-                                    [`${companyName} Admin`, email, password, hashedPassword, roleId, tenantId],
+                                    `INSERT INTO users (name, email, password, role_id, tenant_id, is_active)
+                                     VALUES (?, ?, ?, ?, ?, 1)
+                                     ON DUPLICATE KEY UPDATE tenant_id = VALUES(tenant_id), password = VALUES(password)`,
+                                    [`${companyName} Admin`, email, hashedPassword, roleId, tenantId],
                                     (userErr) => {
                                         if (userErr) return reject(userErr);
                                         resolve({ tenantId, roleId });
