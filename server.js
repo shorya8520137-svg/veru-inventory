@@ -33,17 +33,19 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
 
-// Disable response caching for API routes
+// Disable response caching and add debugging headers
 app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
     res.set('Surrogate-Control', 'no-store');
+    res.set('X-Debug-Deploy', Date.now().toString());
     next();
 });
 
 // Trust proxy for CloudFlare and other reverse proxies
 app.set('trust proxy', true);
+app.set('etag', false); // disable ETag to prevent 304 caching
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));

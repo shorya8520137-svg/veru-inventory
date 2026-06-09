@@ -120,7 +120,6 @@ function setClientDbContext(req, res, next) {
             ctx.clientDb = req.user.client_db;
             console.log(`🔀 Client DB routing: ${ctx.clientDb} (from JWT)`);
         } else if (req.user.email) {
-            // Fallback: check if this user is a client user (handles stale tokens without client_db)
             const pool = getActivePool();
             pool.query(
                 'SELECT db_name FROM clients WHERE admin_email = ? AND status = "active" LIMIT 1',
@@ -145,6 +144,17 @@ function setClientDbContext(req, res, next) {
     }
 
     als.run(ctx, () => next());
+}
+
+// Middleware: add X-DB header to every response so the browser shows which DB was used
+function dbHeaderMiddleware(req, res, next) {
+    const origJson = res.json.bind(res);
+    res.json = function (body) {
+        const ctx = als.getStore();
+        res.set('X-DB', ctx?.clientDb || 'main');
+        return origJson(body);
+    };
+    next();
 }
 
 module.exports = db;
