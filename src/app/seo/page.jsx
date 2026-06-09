@@ -3,7 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, LayoutDashboard, Search, FileText, Users, Link2, Route, Wrench, BarChart3, Settings,
   Shield, AlertTriangle, CheckCircle, Clock, Play, X, ChevronRight, Loader2,
-  Target, TrendingUp, Globe, BookOpen, Zap, Bot, MessageSquare, Activity, Plus, Edit3, Code, Type, List
+  Target, TrendingUp, Globe, BookOpen, Zap, Bot, MessageSquare, Activity, Plus, Edit3, Code, Type, List,
+  MapPin, ClipboardCheck
 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
@@ -19,11 +20,14 @@ async function apiPostLLM(path, body) {
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'audit', label: 'Audit', icon: Shield },
   { id: 'keywords', label: 'Keywords', icon: Search },
-  { id: 'content', label: 'Content', icon: FileText },
+  { id: 'research', label: 'Research', icon: BookOpen },
   { id: 'competitors', label: 'Competitors', icon: Users },
+  { id: 'content', label: 'Content', icon: FileText },
+  { id: 'technical', label: 'Technical', icon: Shield },
   { id: 'backlinks', label: 'Backlinks', icon: Globe },
+  { id: 'local-seo', label: 'Local SEO', icon: MapPin },
+  { id: 'qa', label: 'QA', icon: ClipboardCheck },
   { id: 'roadmap', label: 'Roadmap', icon: List },
   { id: 'implementation', label: 'Implement', icon: Wrench },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -308,11 +312,14 @@ export default function SEOPage() {
   function renderContent() {
     switch (activeTab) {
       case 'dashboard': return <DashboardTab auditData={auditData} tasks={tasks} copilot={copilot} analytics={analytics} startExecution={startExecution} ScoreRing={ScoreRing} execLog={execLog} loadExecLog={loadExecLog} />;
-      case 'audit': return <AuditTab auditData={auditData} runAudit={runAudit} ScoreRing={ScoreRing} startExecution={startExecution} />;
       case 'keywords': return <KeywordsTab keywords={keywords} loading={loading.keywords} startExecution={startExecution} onAddClick={() => setShowAddKw(true)} />;
-      case 'content': return <ContentPlannerTab startExecution={startExecution} onBriefClick={() => setShowBrief(true)} customBriefs={customBriefs} />;
+      case 'research': return <ResearchTab startExecution={startExecution} />;
       case 'competitors': return <CompetitorsTab competitors={competitors} />;
+      case 'content': return <ContentPlannerTab startExecution={startExecution} onBriefClick={() => setShowBrief(true)} customBriefs={customBriefs} />;
+      case 'technical': return <AuditTab auditData={auditData} runAudit={runAudit} ScoreRing={ScoreRing} startExecution={startExecution} />;
       case 'backlinks': return <BacklinksTab startExecution={startExecution} />;
+      case 'local-seo': return <LocalSEOTab startExecution={startExecution} />;
+      case 'qa': return <QATab startExecution={startExecution} />;
       case 'roadmap': return <RoadmapTab tasks={tasks} startExecution={startExecution} StatusBadge={StatusBadge} />;
       case 'implementation': return <ImplementationTab startExecution={startExecution} onMetaClick={() => setShowMeta(true)} onSchemaClick={() => setShowSchema(true)} />;
       case 'analytics': return <AnalyticsTab analytics={analytics} loading={loading.analytics} />;
@@ -366,6 +373,7 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
   const [query, setQuery] = useState('');
   const [queryResult, setQueryResult] = useState(null);
   const [querying, setQuerying] = useState(false);
+  const [selectedPhase, setSelectedPhase] = useState('0');
   const pending = tasks.filter(t => t.status === 'pending').length;
   const score = auditData?.overall || 0;
   const quickWins = [
@@ -373,15 +381,40 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
     { title: 'Optimize meta titles (top 10 products)', reason: 'Improves CTR from search results', risk: 'LOW', impact: 20 },
     { title: 'Fix missing alt tags', reason: 'Improves image search visibility', risk: 'LOW', impact: 15 },
   ];
+  const PHASES = [
+    { id: '0', label: 'Auto-detect' },
+    { id: '1', label: 'Phase 1: Research & Discovery' },
+    { id: '2', label: 'Phase 2: Documentation' },
+    { id: '3', label: 'Phase 3: Competitor Analysis' },
+    { id: '4', label: 'Phase 4: Keyword Engineering' },
+    { id: '5', label: 'Phase 5: Topical Authority' },
+    { id: '6', label: 'Phase 6: Technical SEO' },
+    { id: '7', label: 'Phase 7: Content Engineering' },
+    { id: '8', label: 'Phase 8: Backlink Engineering' },
+    { id: '9', label: 'Phase 9: Local SEO' },
+    { id: '10', label: 'Phase 10: Execution Plan' },
+    { id: '11', label: 'Phase 11: Implementation' },
+    { id: '12', label: 'Phase 12: Quality Assurance' },
+    { id: '13', label: 'Phase 13: Continuous Learning' },
+  ];
   async function askInventoryGPT() {
     if (!query.trim()) return;
     setQuerying(true);
-    const llm = await apiPost('/llm-query', { query });
-    if (llm.success) {
-      setQueryResult({ type: 'llm', answer: llm.data.answer, model: llm.data.model });
+    if (selectedPhase !== '0') {
+      const llm = await apiPost('/llm-phase', { query, phase: selectedPhase });
+      if (llm.success) {
+        setQueryResult({ type: 'llm', answer: llm.data.answer, model: llm.data.model, phase: selectedPhase });
+      } else {
+        setQueryResult({ type: 'llm', answer: `Phase-specific analysis unavailable: ${llm.message}`, model: 'fallback' });
+      }
     } else {
-      const d = await apiPost('/inventorygpt-query', { query });
-      if (d.success) setQueryResult({ type: 'rule', ...d.data });
+      const llm = await apiPost('/llm-query', { query });
+      if (llm.success) {
+        setQueryResult({ type: 'llm', answer: llm.data.answer, model: llm.data.model });
+      } else {
+        const d = await apiPost('/inventorygpt-query', { query });
+        if (d.success) setQueryResult({ type: 'rule', ...d.data });
+      }
     }
     setQuerying(false);
     loadExecLog();
@@ -403,8 +436,13 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
       <div className="bg-white rounded-xl p-5 shadow-sm border">
         <div className="flex items-center gap-2 mb-3"><Bot className="w-5 h-5 text-purple-500" /><h3 className="font-semibold">Ask InventoryGPT for SEO</h3></div>
         <p className="text-xs text-gray-500 mb-3">Try: "suggest keywords", "optimize meta titles", "check schema", "content ideas", "find technical issues"</p>
-        <div className="flex gap-2">
-          <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && askInventoryGPT()} placeholder="e.g. suggest keywords for my products..." className="flex-1 border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex-1 flex gap-2 min-w-0">
+            <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && askInventoryGPT()} placeholder="e.g. suggest keywords for my products..." className="flex-1 border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-w-0" />
+            <select value={selectedPhase} onChange={e => setSelectedPhase(e.target.value)} className="border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-300 w-44">
+              {PHASES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          </div>
           <button onClick={askInventoryGPT} disabled={querying} className="bg-purple-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-purple-600 disabled:opacity-50 flex items-center gap-2">
             {querying ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}{querying ? 'Analyzing...' : 'Ask'}
           </button>
@@ -415,7 +453,7 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
               <div className="bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl p-4 border border-purple-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Bot className="w-4 h-4 text-purple-500" />
-                  <span className="text-xs text-purple-600 font-medium">LLM Response ({queryResult.model})</span>
+                  <span className="text-xs text-purple-600 font-medium">LLM Response ({queryResult.model}){queryResult.phase ? ` · Phase ${queryResult.phase}` : ''}</span>
                 </div>
                 <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{queryResult.answer}</div>
               </div>
@@ -695,6 +733,140 @@ function AnalyticsTab({ analytics, loading }) {
               <span className="text-sm">{v.label}</span>
               <span className="text-sm font-medium">{v.val}</span>
               <span className={`text-xs px-2 py-0.5 rounded ${v.status === 'Good' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>{v.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── RESEARCH & DISCOVERY (Phase 1-2) ──
+function ResearchTab({ startExecution }) {
+  const [research, setResearch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { (async () => { const d = await apiGet('/research'); if (d.success) setResearch(d.data); setLoading(false); })(); }, []);
+  if (loading) return <LoadingSpinner />;
+  if (!research) return <p className="text-gray-400 text-center py-12">No research data available</p>;
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h3 className="font-semibold mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4 text-purple-500" /> Business Model</h3>
+        <p className="text-sm text-gray-700">{research.business.model}</p>
+        <p className="text-xs text-gray-500 mt-1">Products: {research.business.products}</p>
+        <p className="text-xs text-gray-500">Revenue: {research.business.revenueModel}</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl p-5 shadow-sm border">
+          <h4 className="font-semibold text-sm mb-2">Industry Trends</h4>
+          <p className="text-xs text-gray-500 mb-2">{research.industry.marketSize}</p>
+          <div className="space-y-1">
+            {research.industry.trends.map((t, i) => (<div key={i} className="flex items-center gap-2 text-xs text-gray-600"><TrendingUp className="w-3 h-3 text-green-500" />{t}</div>))}
+          </div>
+          <h4 className="font-semibold text-sm mt-3 mb-2">Opportunities</h4>
+          <div className="space-y-1">
+            {research.industry.opportunities.map((o, i) => (<div key={i} className="flex items-center gap-2 text-xs text-gray-600"><Zap className="w-3 h-3 text-yellow-500" />{o}</div>))}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border">
+          <h4 className="font-semibold text-sm mb-2">Target Audience</h4>
+          <p className="text-xs text-gray-500 mb-2"><span className="font-medium">ICP:</span> {research.audience.icp}</p>
+          <p className="text-xs text-gray-500 mb-2"><span className="font-medium">Pain Points:</span></p>
+          <div className="space-y-1 mb-3">
+            {research.audience.painPoints.map((p, i) => (<div key={i} className="flex items-center gap-2 text-xs text-gray-600"><AlertTriangle className="w-3 h-3 text-red-400" />{p}</div>))}
+          </div>
+          <p className="text-xs text-gray-500"><span className="font-medium">Journey:</span> {research.audience.journey.join(' → ')}</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h4 className="font-semibold text-sm mb-2">Quick Actions</h4>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => startExecution({ title: 'Deep dive competitor analysis', reason: 'Research competitors' })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Competitor Deep Dive</button>
+          <button onClick={() => startExecution({ title: 'Generate market research report', reason: 'Market analysis' })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Market Report</button>
+          <button onClick={() => startExecution({ title: 'Build audience persona', reason: 'Audience analysis' })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Audience Persona</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── LOCAL SEO (Phase 9) ──
+function LocalSEOTab({ startExecution }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { (async () => { const d = await apiGet('/local-seo'); if (d.success) setData(d.data); setLoading(false); })(); }, []);
+  if (loading) return <LoadingSpinner />;
+  if (!data) return <p className="text-gray-400 text-center py-12">No local SEO data available</p>;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">GBP Claimed</p><p className="text-lg font-bold">{data.googleBusiness.claimed ? 'Yes' : 'No'}</p></div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">GBP Verified</p><p className="text-lg font-bold">{data.googleBusiness.verified ? 'Yes' : 'No'}</p></div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">Total Citations</p><p className="text-lg font-bold">{data.citations.total}</p></div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">Reviews</p><p className="text-lg font-bold">{data.reviews.total}</p></div>
+      </div>
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h4 className="font-semibold text-sm mb-3">NAP Consistency</h4>
+        <p className="text-sm text-gray-500">{data.nap.consistency} — {data.nap.sources.length} sources checked</p>
+      </div>
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h4 className="font-semibold text-sm mb-3">Recommendations</h4>
+        <div className="space-y-2">
+          {data.recommendations.map((r, i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex-1"><p className="text-sm font-medium">{r.action}</p><span className={`text-xs px-1.5 py-0.5 rounded ${r.priority === 'HIGH' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>{r.priority}</span></div>
+              <div className="flex items-center gap-2"><span className="text-xs text-green-600">{r.impact}</span><button onClick={() => startExecution({ title: r.action, reason: r.impact })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Execute</button></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h4 className="font-semibold text-sm mb-2">Top Citation Directories</h4>
+        <div className="flex flex-wrap gap-2">
+          {data.citations.topDirectories.map((d, i) => (<span key={i} className="text-xs bg-gray-100 px-2 py-1 rounded">{d}</span>))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── QUALITY ASSURANCE (Phase 12) ──
+function QATab({ startExecution }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { (async () => { const d = await apiGet('/quality-assurance'); if (d.success) setData(d.data); setLoading(false); })(); }, []);
+  if (loading) return <LoadingSpinner />;
+  if (!data) return <p className="text-gray-400 text-center py-12">No QA data available</p>;
+  const statusColor = { pass: 'bg-green-100 text-green-600', warning: 'bg-yellow-100 text-yellow-600', fail: 'bg-red-100 text-red-600', 'needs-work': 'bg-orange-100 text-orange-600' };
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Compliance Overview</h3>
+          <span className={`text-sm px-2 py-1 rounded font-medium ${data.overallCompliance === 'Pass' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>{data.overallCompliance}</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {data.checks.map((c, i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                {c.status === 'pass' ? <CheckCircle className="w-4 h-4 text-green-500" /> : c.status === 'warning' ? <AlertTriangle className="w-4 h-4 text-yellow-500" /> : c.status === 'fail' ? <X className="w-4 h-4 text-red-500" /> : <AlertTriangle className="w-4 h-4 text-orange-500" />}
+                <div><p className="text-sm font-medium">{c.name}</p><p className="text-xs text-gray-500">{c.detail}</p></div>
+              </div>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${statusColor[c.status] || 'bg-gray-100 text-gray-600'}`}>{c.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h4 className="font-semibold text-sm mb-3">Remediation Plan</h4>
+        <div className="space-y-2">
+          {data.recommendations.map((r, i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex-1"><p className="text-sm font-medium">{r.issue}</p><p className="text-xs text-gray-500">{r.fix}</p></div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${r.priority === 'HIGH' ? 'bg-red-100 text-red-600' : r.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>{r.priority}</span>
+                <button onClick={() => startExecution({ title: r.fix, reason: r.issue })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Fix</button>
+              </div>
             </div>
           ))}
         </div>

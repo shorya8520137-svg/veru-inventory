@@ -24,6 +24,10 @@ router.get('/copilot/history', authenticateToken, SEOController.getCopilotHistor
 
 router.post('/inventorygpt-query', authenticateToken, SEOController.inventorygptQuery);
 router.post('/llm-query', authenticateToken, SEOController.llmQuery);
+router.post('/llm-phase', authenticateToken, SEOController.llmPhaseQuery);
+router.get('/research', authenticateToken, SEOController.getResearch);
+router.get('/local-seo', authenticateToken, SEOController.getLocalSEO);
+router.get('/quality-assurance', authenticateToken, SEOController.getQualityAssurance);
 
 router.get('/execution-log', authenticateToken, SEOController.getExecutionLog);
 router.get('/execution-stats', authenticateToken, SEOController.getExecutionStats);
