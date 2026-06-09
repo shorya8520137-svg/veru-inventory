@@ -7,11 +7,21 @@ const app = express();
 // ===============================
 // MIDDLEWARE
 // ===============================
+const allowedOrigins = [
+    'https://inventory.leadpilot.software',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://api.giftgala.in',
+];
+
 app.use(cors({
-    origin: "*",
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(null, true); // allow all in dev; tighten for prod
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-InventoryGPT-Token"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-InventoryGPT-Token", "X-Tenant-ID"],
     preflightContinue: false,
     optionsSuccessStatus: 204
 }));
