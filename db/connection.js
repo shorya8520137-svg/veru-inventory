@@ -58,10 +58,24 @@ function getActivePool() {
     return mainPool;
 }
 
+let queryCounter = 0;
+
+function logPool(sql) {
+    const ctx = als.getStore();
+    const dbName = ctx?.clientDb || 'main';
+    const short = sql?.substring(0, 60).replace(/\n/g, ' ');
+    queryCounter++;
+    if (queryCounter <= 15 || ctx?.clientDb) {
+        console.log(`💾 [${queryCounter}] DB: ${dbName} | ${short}`);
+    }
+}
+
 // Context-aware DB wrapper — routes queries to the correct pool per request
 const db = {
     query: (...args) => {
         const pool = getActivePool();
+        const sql = typeof args[0] === 'string' ? args[0] : '';
+        logPool(sql);
         const last = args[args.length - 1];
         if (typeof last === 'function') {
             const cb = last;
@@ -75,6 +89,8 @@ const db = {
     },
     execute: (...args) => {
         const pool = getActivePool();
+        const sql = typeof args[0] === 'string' ? args[0] : '';
+        logPool(sql);
         const last = args[args.length - 1];
         if (typeof last === 'function') {
             const cb = last;
@@ -86,7 +102,11 @@ const db = {
             return pool.execute(...args);
         }
     },
-    promise: () => getActivePool().promise(),
+    promise: () => {
+        const pool = getActivePool();
+        logPool('promise()');
+        return pool.promise();
+    },
     getConnection: (...args) => getActivePool().getConnection(...args),
     end: (...args) => getActivePool().end(...args),
 };
