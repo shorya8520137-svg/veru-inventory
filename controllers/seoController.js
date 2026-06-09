@@ -385,9 +385,9 @@ Current date: ${new Date().toLocaleDateString()}`;
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const models = [
-        process.env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct-v0.1',
-        'mistralai/mistral-7b-instruct',
-        'openchat/openchat-7b:free',
+        process.env.OPENROUTER_MODEL || 'openai/gpt-chat-latest',
+        'google/gemini-3.5-flash',
+        'google/gemini-3.1-flash-lite',
       ].filter((v, i, a) => a.indexOf(v) === i);
 
       let lastError = null;
@@ -395,7 +395,7 @@ Current date: ${new Date().toLocaleDateString()}`;
 
       for (const model of models) {
         try {
-          const response = await fetch('https://api.openrouter.ai/v1/chat/completions', {
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
             body: JSON.stringify({ model, temperature: 0.3, max_tokens: 2000, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }] }),

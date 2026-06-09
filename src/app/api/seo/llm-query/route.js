@@ -4,7 +4,7 @@ const OPENROUTER_API_KEY =
   process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY;
 const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL || "mistralai/mistral-7b-instruct-v0.1";
-const OPENROUTER_URL = "https://api.openrouter.ai/v1/chat/completions";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.API_BASE ||
@@ -20,10 +20,9 @@ async function requestLLM(messages) {
 
   let lastError = null;
   const modelsToTry = [
-    OPENROUTER_MODEL,
-    "mistralai/mistral-7b-instruct",
-    "openchat/openchat-7b:free",
-    "cognitivecomputations/dolphin-mixtral-8x7b:free",
+    OPENROUTER_MODEL || "openai/gpt-chat-latest",
+    "google/gemini-3.5-flash",
+    "google/gemini-3.1-flash-lite",
   ].filter(Boolean);
 
   const seen = new Set();
