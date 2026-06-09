@@ -295,6 +295,9 @@ app.use('/api/store-timeline', require('./routes/storeTimelineRoutes'));
 // client onboarding routes (protected - requires CLIENTS_CREATE permission)
 app.use('/api/onboarding', require('./routes/onboardingRoutes'));
 
+// SEO agent routes
+app.use('/api/seo', require('./routes/seoRoutes'));
+
 // auth routes (no /api prefix for backward compatibility)
 app.use('/auth', require('./routes/authRoutes'));
 

@@ -512,7 +512,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </SidebarMenuItem>
                     )}
 
-                    {/* SEO CONTENT GENERATOR */}
+                    {/* SEO AGENT */}
                     {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
                         <SidebarMenuItem>
                             <motion.div
@@ -524,7 +524,7 @@ const InventoryMenu = ({ onOpenOperation }) => {
                                     className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/seo"), collapsed }))}
                                 >
                                     <Sparkles size={collapsed ? 16 : 16} />
-                                    {!collapsed && <span>SEO</span>}
+                                    {!collapsed && <span>SEO Agent</span>}
                                 </Link>
                             </motion.div>
                         </SidebarMenuItem>
