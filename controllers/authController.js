@@ -371,7 +371,8 @@ async function authenticateAgainstMainDB(req, res, identifier, password, two_fac
                         email: user.email,
                         role: user.role_name,
                         role_display: user.role_display_name,
-                        permissions: permissions.map(p => p.name)
+                        permissions: permissions.map(p => p.name),
+                        tenant_id: user.tenant_id,
                     }
                 });
 
