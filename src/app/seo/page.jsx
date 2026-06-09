@@ -273,6 +273,7 @@ export default function SEOPage() {
 
   async function loadCopilotStatus() { const d = await apiGet('/copilot/status'); if (d.success) setCopilot(d.data); }
   async function loadAudit() { const d = await apiGet('/audit/status'); if (d.success) setAuditData(d.data); }
+  async function runAudit() { const d = await apiPost('/audit/run'); if (d.success) setAuditData(d.data); showToast('Audit complete!'); loadExecLog(); }
   async function loadKeywords() { setLoading(k => ({ ...k, keywords: true })); const d = await apiGet('/keywords'); if (d.success) setKeywords(d.data); setLoading(k => ({ ...k, keywords: false })); }
   async function loadCompetitors() { const d = await apiGet('/competitors'); if (d.success) setCompetitors(d.data); }
   async function loadTasks() { const d = await apiGet('/tasks'); if (d.success) setTasks(d.data); }
@@ -307,7 +308,7 @@ export default function SEOPage() {
   function renderContent() {
     switch (activeTab) {
       case 'dashboard': return <DashboardTab auditData={auditData} tasks={tasks} copilot={copilot} analytics={analytics} startExecution={startExecution} ScoreRing={ScoreRing} execLog={execLog} loadExecLog={loadExecLog} />;
-      case 'audit': return <AuditTab auditData={auditData} loadAudit={loadAudit} ScoreRing={ScoreRing} startExecution={startExecution} />;
+      case 'audit': return <AuditTab auditData={auditData} runAudit={runAudit} ScoreRing={ScoreRing} startExecution={startExecution} />;
       case 'keywords': return <KeywordsTab keywords={keywords} loading={loading.keywords} startExecution={startExecution} onAddClick={() => setShowAddKw(true)} />;
       case 'content': return <ContentPlannerTab startExecution={startExecution} onBriefClick={() => setShowBrief(true)} customBriefs={customBriefs} />;
       case 'competitors': return <CompetitorsTab competitors={competitors} />;
@@ -336,11 +337,7 @@ export default function SEOPage() {
 
       <div className="bg-white border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg"><Sparkles className="w-5 h-5 text-white" /></div>
-              <h1 className="text-xl font-bold text-gray-800">SEO Agent</h1>
-            </div>
+          <div className="flex items-center justify-end py-3">
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">Copilot</span>
               <button onClick={toggleCopilot} className={`relative w-10 h-5 rounded-full transition-colors ${copilot.copilotMode ? 'bg-purple-500' : 'bg-gray-300'}`}>
@@ -472,7 +469,7 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
 }
 
 // ── AUDIT ──
-function AuditTab({ auditData, loadAudit, ScoreRing, startExecution }) {
+function AuditTab({ auditData, runAudit, ScoreRing, startExecution }) {
   const categories = auditData ? Object.entries(auditData).filter(([k]) => k !== 'overall' && k !== 'lastRun' && k !== 'issues') : [];
   const issues = [
     { problem: 'Missing meta descriptions on 12 pages', severity: 'Warning', fix: 'Generate meta descriptions' },
@@ -481,7 +478,7 @@ function AuditTab({ auditData, loadAudit, ScoreRing, startExecution }) {
   ];
   return (
     <div className="space-y-6">
-      <button onClick={loadAudit} className="bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-600 flex items-center gap-2"><Play className="w-4 h-4" /> Run Audit</button>
+      <button onClick={runAudit} className="bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-600 flex items-center gap-2"><Play className="w-4 h-4" /> Run Audit</button>
       {auditData ? (
         <>
           <div className="flex items-center gap-6 mb-4"><div className="relative"><ScoreRing score={auditData.overall} size={120} /></div><p className="text-sm text-gray-500">Last run: {new Date(auditData.lastRun).toLocaleString()}</p></div>
