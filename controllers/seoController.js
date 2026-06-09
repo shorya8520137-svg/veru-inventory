@@ -229,16 +229,16 @@ class SEOController {
 
       const pool = db;
       const [products] = await pool.promise().query(
-        'SELECT name, short_name, sku, category_id, price, mrp, description FROM dispatch_product WHERE status = 1 LIMIT 20'
+        'SELECT product_name, barcode, category_id, price, description FROM dispatch_product WHERE is_active = 1 LIMIT 20'
       );
       const [categories] = await pool.promise().query(
-        'SELECT id, name FROM dispatch_category LIMIT 20'
+        'SELECT id, name FROM product_categories WHERE is_active = 1 LIMIT 20'
       );
       const [stockCount] = await pool.promise().query(
         'SELECT COUNT(*) as total FROM stock_batches'
       );
 
-      const productNames = products.map(p => p.name).filter(Boolean);
+      const productNames = products.map(p => p.product_name).filter(Boolean);
       const categoryNames = categories.map(c => c.name).filter(Boolean);
       const q = query.toLowerCase();
 
@@ -296,10 +296,10 @@ class SEOController {
       }
 
       if (q.includes('alt') || q.includes('image') || q.includes('technical')) {
-        const noAlt = products.filter(p => !p.description || p.description.length < 20).length;
+        const noDesc = products.filter(p => !p.description || p.description.length < 20).length;
         insights.push({
           type: 'technical',
-          title: `${noAlt} products missing descriptions`,
+          title: `${noDesc} products missing descriptions`,
           reason: 'Products without descriptions miss SEO opportunities',
           action: 'Generate product descriptions',
           impact: '+5-15% organic rankings',
@@ -326,7 +326,7 @@ class SEOController {
           categoryCount: categoryNames.length,
           stockCount: stockCount[0]?.total || 0,
           insights: insights.slice(0, 10),
-          products: products.slice(0, 5).map(p => ({ name: p.name, sku: p.sku, price: p.price })),
+          products: products.slice(0, 5).map(p => ({ name: p.product_name, sku: p.barcode, price: p.price })),
         }
       });
     } catch (e) {
