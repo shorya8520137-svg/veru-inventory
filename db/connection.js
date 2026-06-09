@@ -94,9 +94,29 @@ const db = {
 // Middleware: set client DB context from authenticated user
 function setClientDbContext(req, res, next) {
     const ctx = {};
-    if (req.user && req.user.client_db) {
-        ctx.clientDb = req.user.client_db;
+
+    if (req.user) {
+        if (req.user.client_db) {
+            ctx.clientDb = req.user.client_db;
+        } else if (req.user.email) {
+            // Fallback: check if this user is a client user (handles stale tokens without client_db)
+            const pool = getActivePool();
+            pool.query(
+                'SELECT db_name FROM clients WHERE admin_email = ? AND status = "active" LIMIT 1',
+                [req.user.email],
+                (err, rows) => {
+                    if (!err && rows && rows.length > 0) {
+                        ctx.clientDb = rows[0].db_name;
+                        als.run(ctx, () => next());
+                    } else {
+                        als.run(ctx, () => next());
+                    }
+                }
+            );
+            return;
+        }
     }
+
     als.run(ctx, () => next());
 }
 
