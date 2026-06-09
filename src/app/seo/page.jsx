@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import {
   Sparkles, LayoutDashboard, Search, FileText, Users, Link2, Route, Wrench, BarChart3, Settings,
   Shield, AlertTriangle, CheckCircle, Clock, Play, Pause, X, ChevronRight, Loader2,
-  Target, TrendingUp, Globe, BookOpen, Zap, ExternalLink, Copy, Download, Eye, EyeOff
+  Target, TrendingUp, Globe, BookOpen, Zap, ExternalLink, Copy, Download, Eye, EyeOff,
+  Bot, MessageSquare, List, Activity
 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.giftgala.in';
@@ -49,8 +50,8 @@ function LoadingSpinner() {
 }
 
 function StatusBadge({ status }) {
-  const colors = { completed: 'bg-green-100 text-green-600', pending: 'bg-yellow-100 text-yellow-600', 'in-progress': 'bg-blue-100 text-blue-600' };
-  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[status] || colors.pending}`}>{status}</span>;
+  const colors = { completed: 'bg-green-100 text-green-600', pending: 'bg-yellow-100 text-yellow-600', 'in-progress': 'bg-blue-100 text-blue-600', done: 'bg-green-100 text-green-600', failed: 'bg-red-100 text-red-600' };
+  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[status] || 'bg-gray-100 text-gray-600'}`}>{status}</span>;
 }
 
 export default function SEOPage() {
@@ -61,17 +62,19 @@ export default function SEOPage() {
   const [competitors, setCompetitors] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [execLog, setExecLog] = useState({ data: [], stats: {} });
   const [loading, setLoading] = useState({});
   const [toast, setToast] = useState(null);
   const [approvalCard, setApprovalCard] = useState(null);
   const [copilotActivity, setCopilotActivity] = useState([]);
+  const [expandedTask, setExpandedTask] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  useEffect(() => { loadCopilotStatus(); loadAudit(); loadKeywords(); loadCompetitors(); loadTasks(); loadAnalytics(); }, []);
+  useEffect(() => { loadCopilotStatus(); loadAudit(); loadKeywords(); loadCompetitors(); loadTasks(); loadAnalytics(); loadExecLog(); }, []);
 
   async function loadCopilotStatus() { const d = await apiGet('/copilot/status'); if (d.success) setCopilot(d.data); }
   async function loadAudit() { const d = await apiGet('/audit/status'); if (d.success) setAuditData(d.data); }
@@ -79,33 +82,46 @@ export default function SEOPage() {
   async function loadCompetitors() { const d = await apiGet('/competitors'); if (d.success) setCompetitors(d.data); }
   async function loadTasks() { const d = await apiGet('/tasks'); if (d.success) setTasks(d.data); }
   async function loadAnalytics() { const d = await apiGet('/analytics/dashboard'); if (d.success) setAnalytics(d.data); }
+  async function loadExecLog() { const d = await apiGet('/execution-log?limit=20'); if (d.success) setExecLog(d); }
 
   async function toggleCopilot() {
     const d = await apiPost('/copilot/toggle');
-    if (d.success) { setCopilot(c => ({ ...c, copilotMode: d.copilotMode })); showToast(d.copilotMode ? 'Copilot ON' : 'Copilot OFF'); }
+    if (d.success) { setCopilot(c => ({ ...c, copilotMode: d.copilotMode })); showToast(d.copilotMode ? 'Copilot ON' : 'Copilot OFF'); loadExecLog(); }
   }
 
   function queueAction(action) {
-    setApprovalCard(action);
     if (copilot.copilotMode) { executeAction(action); return; }
+    setApprovalCard(action);
   }
 
   async function executeAction(action) {
     setApprovalCard(null);
     setCopilotActivity(a => [...a, { ...action, time: new Date().toLocaleTimeString(), status: 'running' }]);
     showToast(`Executing: ${action.title}...`);
+
+    if (action.taskId || action.id) {
+      const d = await apiPost(`/tasks/${action.taskId || action.id}/execute`);
+      if (d.success) {
+        setCopilotActivity(a => a.map(x => x.id === action.id ? { ...x, status: 'done', result: d.data } : x));
+        showToast(`Done: ${action.title}`, 'success');
+        loadTasks();
+        loadExecLog();
+        return;
+      }
+    }
+
     setTimeout(() => {
       setCopilotActivity(a => a.map(x => x.id === action.id ? { ...x, status: 'done' } : x));
       showToast(`Done: ${action.title}`, 'success');
+      loadExecLog();
     }, 1500);
   }
 
-  // ── Score ring SVG ──
   function ScoreRing({ score, size = 100, label }) {
     const r = 42, circ = 2 * Math.PI * r, offset = circ - (score / 100) * circ;
     const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : score >= 40 ? '#f97316' : '#ef4444';
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center relative">
         <svg width={size} height={size} className="transform -rotate-90">
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e5e7eb" strokeWidth="8" />
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="8" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
@@ -118,19 +134,18 @@ export default function SEOPage() {
     );
   }
 
-  // ── RENDER TABS ──
   function renderContent() {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab auditData={auditData} tasks={tasks} copilot={copilot} analytics={analytics} queueAction={queueAction} ScoreRing={ScoreRing} />;
+      case 'dashboard': return <DashboardTab auditData={auditData} tasks={tasks} copilot={copilot} analytics={analytics} queueAction={queueAction} ScoreRing={ScoreRing} execLog={execLog} loadExecLog={loadExecLog} expandedTask={expandedTask} setExpandedTask={setExpandedTask} />;
       case 'audit': return <AuditTab auditData={auditData} loadAudit={loadAudit} ScoreRing={ScoreRing} queueAction={queueAction} />;
-      case 'keywords': return <KeywordsTab keywords={keywords} loading={loading.keywords} QueueAction={queueAction} />;
+      case 'keywords': return <KeywordsTab keywords={keywords} loading={loading.keywords} queueAction={queueAction} />;
       case 'content': return <ContentPlannerTab queueAction={queueAction} />;
       case 'competitors': return <CompetitorsTab competitors={competitors} />;
       case 'backlinks': return <BacklinksTab queueAction={queueAction} />;
       case 'roadmap': return <RoadmapTab tasks={tasks} queueAction={queueAction} StatusBadge={StatusBadge} />;
       case 'implementation': return <ImplementationTab queueAction={queueAction} />;
       case 'analytics': return <AnalyticsTab analytics={analytics} loading={loading.analytics} />;
-      case 'settings': return <SettingsTab copilot={copilot} toggleCopilot={toggleCopilot} />;
+      case 'settings': return <SettingsTab copilot={copilot} toggleCopilot={toggleCopilot} loadExecLog={loadExecLog} execLog={execLog} />;
       default: return null;
     }
   }
@@ -143,7 +158,6 @@ export default function SEOPage() {
         </div>
       )}
 
-      {/* Approval Card */}
       {approvalCard && (
         <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center" onClick={() => setApprovalCard(null)}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
@@ -165,7 +179,6 @@ export default function SEOPage() {
         </div>
       )}
 
-      {/* Copilot Activity Feed */}
       {copilot.copilotMode && copilotActivity.length > 0 && (
         <div className="fixed bottom-4 right-4 z-30 w-80 bg-white rounded-xl shadow-2xl border p-3">
           <div className="flex items-center justify-between mb-2">
@@ -183,7 +196,6 @@ export default function SEOPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="bg-white border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between py-3">
@@ -198,7 +210,6 @@ export default function SEOPage() {
               </button>
             </div>
           </div>
-          {/* Tab Nav */}
           <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-none">
             {TABS.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -210,15 +221,17 @@ export default function SEOPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">{renderContent()}</div>
     </div>
   );
 }
 
-// ── TAB COMPONENTS ──
+// ── DASHBOARD ──
+function DashboardTab({ auditData, tasks, copilot, analytics, queueAction, ScoreRing, execLog, loadExecLog, expandedTask, setExpandedTask }) {
+  const [query, setQuery] = useState('');
+  const [queryResult, setQueryResult] = useState(null);
+  const [querying, setQuerying] = useState(false);
 
-function DashboardTab({ auditData, tasks, copilot, analytics, queueAction, ScoreRing }) {
   const pending = tasks.filter(t => t.status === 'pending').length;
   const score = auditData?.overall || 0;
   const quickWins = [
@@ -227,8 +240,18 @@ function DashboardTab({ auditData, tasks, copilot, analytics, queueAction, Score
     { title: 'Fix missing alt tags', reason: 'Improves image search visibility', risk: 'LOW', impact: 15 },
   ];
 
+  async function askInventoryGPT() {
+    if (!query.trim()) return;
+    setQuerying(true);
+    const d = await apiPost('/inventorygpt-query', { query });
+    if (d.success) setQueryResult(d.data);
+    setQuerying(false);
+    loadExecLog();
+  }
+
   return (
     <div className="space-y-6">
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border flex items-center gap-3">
           <div className="relative"><ScoreRing score={score} size={80} /></div>
@@ -236,9 +259,56 @@ function DashboardTab({ auditData, tasks, copilot, analytics, queueAction, Score
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">Tasks Queued</p><p className="text-2xl font-bold">{pending}</p></div>
         <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">Copilot Mode</p><p className="text-2xl font-bold">{copilot.copilotMode ? 'ON' : 'OFF'}</p></div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">Organic Traffic</p><p className="text-2xl font-bold">{analytics?.organicTraffic?.monthly?.toLocaleString() || '—'}</p></div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border"><p className="text-xs text-gray-500">Executions</p><p className="text-2xl font-bold">{execLog.stats?.total || 0}</p></div>
       </div>
 
+      {/* Ask InventoryGPT */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <div className="flex items-center gap-2 mb-3">
+          <Bot className="w-5 h-5 text-purple-500" />
+          <h3 className="font-semibold">Ask InventoryGPT for SEO</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">Try: "suggest keywords", "optimize meta titles", "check schema", "content ideas", "find technical issues"</p>
+        <div className="flex gap-2">
+          <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && askInventoryGPT()} placeholder="e.g. suggest keywords for my products..." className="flex-1 border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
+          <button onClick={askInventoryGPT} disabled={querying} className="bg-purple-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-purple-600 disabled:opacity-50 flex items-center gap-2">
+            {querying ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+            {querying ? 'Analyzing...' : 'Ask'}
+          </button>
+        </div>
+
+        {queryResult && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-gray-400">Found {queryResult.productCount} products, {queryResult.categoryCount} categories</p>
+            {queryResult.insights.map((ins, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{ins.title}</p>
+                  <p className="text-xs text-gray-500">{ins.reason}</p>
+                  <span className="text-xs text-green-600">{ins.impact}</span>
+                </div>
+                <button onClick={() => queueAction({ id: Date.now() + i, title: ins.action, reason: ins.reason, risk: 'LOW', impact: parseInt(ins.impact) || 15 })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600 ml-2">Execute</button>
+              </div>
+            ))}
+            {queryResult.products?.length > 0 && (
+              <details className="mt-2">
+                <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">View product data used</summary>
+                <div className="mt-2 space-y-1">
+                  {queryResult.products.map((p, i) => (
+                    <div key={i} className="text-xs text-gray-500 flex items-center gap-2 p-1.5 bg-gray-50 rounded">
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-gray-400">SKU: {p.sku}</span>
+                      <span className="text-gray-400">₹{p.price}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Quick Wins */}
       <div className="bg-white rounded-xl p-5 shadow-sm border">
         <h3 className="font-semibold text-gray-800 mb-3">Quick Wins</h3>
         <div className="space-y-2">
@@ -258,6 +328,29 @@ function DashboardTab({ auditData, tasks, copilot, analytics, queueAction, Score
         </div>
       </div>
 
+      {/* Execution Log */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold flex items-center gap-2"><Activity className="w-4 h-4 text-purple-500" /> Recent Execution Log</h3>
+          <button onClick={loadExecLog} className="text-xs text-purple-500 hover:text-purple-700">Refresh</button>
+        </div>
+        {execLog.data.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4">No executions yet. Run a task or ask InventoryGPT to get started.</p>
+        ) : (
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {execLog.data.map((log, i) => (
+              <div key={log.id || i} className="flex items-center gap-2 p-2 text-xs text-gray-600 hover:bg-gray-50 rounded">
+                <div className={`w-1.5 h-1.5 rounded-full ${log.status === 'completed' || log.status === 'done' ? 'bg-green-500' : log.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                <span className="text-gray-400 w-16 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                <span className="font-medium text-gray-700">{log.action}</span>
+                <span className="truncate flex-1">{log.details}</span>
+                {log.duration && <span className="text-gray-400 shrink-0">{(log.duration / 1000).toFixed(1)}s</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {copilot.copilotMode && (
         <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
           <p className="text-sm text-purple-700 flex items-center gap-2"><Zap className="w-4 h-4" /> Copilot is active — low-risk tasks will auto-execute</p>
@@ -267,6 +360,7 @@ function DashboardTab({ auditData, tasks, copilot, analytics, queueAction, Score
   );
 }
 
+// ── AUDIT ──
 function AuditTab({ auditData, loadAudit, ScoreRing, queueAction }) {
   const categories = auditData ? Object.entries(auditData).filter(([k]) => k !== 'overall' && k !== 'lastRun' && k !== 'issues') : [];
   const issues = [
@@ -314,6 +408,7 @@ function AuditTab({ auditData, loadAudit, ScoreRing, queueAction }) {
   );
 }
 
+// ── KEYWORDS ──
 function KeywordsTab({ keywords, loading, queueAction }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border">
@@ -348,6 +443,7 @@ function KeywordsTab({ keywords, loading, queueAction }) {
   );
 }
 
+// ── CONTENT ──
 function ContentPlannerTab({ queueAction }) {
   const briefs = [
     { title: 'Ultimate Guide to Personalised Gifts', keyword: 'personalised gifts', status: 'draft', roi: '+180%' },
@@ -379,6 +475,7 @@ function ContentPlannerTab({ queueAction }) {
   );
 }
 
+// ── COMPETITORS ──
 function CompetitorsTab({ competitors }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border">
@@ -404,6 +501,7 @@ function CompetitorsTab({ competitors }) {
   );
 }
 
+// ── BACKLINKS ──
 function BacklinksTab({ queueAction }) {
   return (
     <div className="space-y-4">
@@ -421,6 +519,7 @@ function BacklinksTab({ queueAction }) {
   );
 }
 
+// ── ROADMAP ──
 function RoadmapTab({ tasks, queueAction, StatusBadge }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border">
@@ -438,7 +537,7 @@ function RoadmapTab({ tasks, queueAction, StatusBadge }) {
               </div>
             </div>
             {t.status === 'pending' && (
-              <button onClick={() => queueAction({ id: t.id, title: t.title, reason: `Impact +${t.impact}%`, risk: t.priority === 'HIGH' ? 'HIGH' : 'MEDIUM', impact: t.impact })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Execute</button>
+              <button onClick={() => queueAction({ taskId: t.id, id: t.id, title: t.title, reason: `Impact +${t.impact}%`, risk: t.priority === 'HIGH' ? 'HIGH' : 'MEDIUM', impact: t.impact })} className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg hover:bg-purple-600">Execute</button>
             )}
           </div>
         ))}
@@ -447,6 +546,7 @@ function RoadmapTab({ tasks, queueAction, StatusBadge }) {
   );
 }
 
+// ── IMPLEMENTATION ──
 function ImplementationTab({ queueAction }) {
   return (
     <div className="space-y-4">
@@ -468,6 +568,7 @@ function ImplementationTab({ queueAction }) {
   );
 }
 
+// ── ANALYTICS ──
 function AnalyticsTab({ analytics, loading }) {
   if (!analytics) return <LoadingSpinner />;
   return (
@@ -515,7 +616,8 @@ function AnalyticsTab({ analytics, loading }) {
   );
 }
 
-function SettingsTab({ copilot, toggleCopilot }) {
+// ── SETTINGS ──
+function SettingsTab({ copilot, toggleCopilot, execLog }) {
   return (
     <div className="max-w-lg space-y-6">
       <div className="bg-white rounded-xl p-5 shadow-sm border">
@@ -525,6 +627,14 @@ function SettingsTab({ copilot, toggleCopilot }) {
           <button onClick={toggleCopilot} className={`relative w-12 h-6 rounded-full transition-colors ${copilot.copilotMode ? 'bg-purple-500' : 'bg-gray-300'}`}>
             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${copilot.copilotMode ? 'translate-x-6' : 'translate-x-0.5'}`} />
           </button>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl p-5 shadow-sm border">
+        <h3 className="font-semibold mb-4">Execution Stats</h3>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="text-center p-3 bg-gray-50 rounded-lg"><p className="text-2xl font-bold">{execLog.stats?.total || 0}</p><p className="text-xs text-gray-500">Total</p></div>
+          <div className="text-center p-3 bg-green-50 rounded-lg"><p className="text-2xl font-bold text-green-600">{execLog.stats?.succeeded || 0}</p><p className="text-xs text-green-600">Succeeded</p></div>
+          <div className="text-center p-3 bg-red-50 rounded-lg"><p className="text-2xl font-bold text-red-600">{execLog.stats?.failed || 0}</p><p className="text-xs text-red-600">Failed</p></div>
         </div>
       </div>
       <div className="bg-white rounded-xl p-5 shadow-sm border">
