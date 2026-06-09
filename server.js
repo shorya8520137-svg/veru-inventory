@@ -182,8 +182,9 @@ const tenantMiddleware = require('./middleware/tenant');
 app.use('/api', tenantMiddleware);
 
 // ── CLIENT DB ROUTING — route queries to client's own DB ──
-const { setClientDbContext } = require('./db/connection');
+const { setClientDbContext, dbHeaderMiddleware } = require('./db/connection');
 app.use('/api', setClientDbContext);
+app.use('/api', dbHeaderMiddleware);
 
 app.use("/api/dispatch", require("./routes/dispatchRoutes"));
 app.use("/api/dispatch-beta", require("./routes/dispatchRoutes")); // existing

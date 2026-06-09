@@ -159,4 +159,5 @@ function dbHeaderMiddleware(req, res, next) {
 
 module.exports = db;
 module.exports.setClientDbContext = setClientDbContext;
+module.exports.dbHeaderMiddleware = dbHeaderMiddleware;
 module.exports.als = als;
