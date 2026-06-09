@@ -28,7 +28,15 @@ class OnboardingController {
                 `;
                 db.query(assignPerms, (err2) => {
                     if (err2) return reject(err2);
-                    resolve();
+
+                    // Create a client_user role with no permissions (empty dashboard)
+                    db.query(
+                        "INSERT IGNORE INTO roles (name, display_name, description, color, priority, is_builtin) VALUES ('client_user', 'Client User', 'Limited client access', '#3b82f6', 100, true)",
+                        (err3) => {
+                            if (err3) return reject(err3);
+                            resolve();
+                        }
+                    );
                 });
             });
         });
@@ -398,11 +406,13 @@ class OnboardingController {
 
                     const tenantId = tenantResult.insertId;
 
-                    // Get a valid role (prefer super_admin, fallback to any)
-                    db.query('SELECT id FROM roles ORDER BY id ASC LIMIT 1',
+                    // Get the client_user role (limited access, no permissions)
+                    db.query("SELECT id FROM roles WHERE name = 'client_user' LIMIT 1",
                         (roleErr, roles) => {
                             if (roleErr) return reject(roleErr);
-                            const roleId = roles.length > 0 ? roles[0].id : 1;
+                            const roleId = roles.length > 0 ? roles[0].id : null;
+
+                            if (!roleId) return reject(new Error('client_user role not found'));
 
                             // Hash password and create user in main DB
                             bcrypt.hash(password, 10, (hashErr, hashedPassword) => {

@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const mysql = require('mysql2');
 const db = require('../db/connection');
 const { generateToken, getUserPermissions } = require('../middleware/auth');
 const ExistingSchemaNotificationService = require('../services/ExistingSchemaNotificationService');
@@ -8,6 +9,7 @@ const auditLogger = require('../EnhancedAuditLogger');
 
 /**
  * LOGIN USER (with 2FA support)
+ * Supports both main DB users and client DB users.
  */
 exports.login = async (req, res) => {
     try {
@@ -29,74 +31,205 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Find user by email or username
-        const userQuery = `
-            SELECT 
-                u.id,
-                u.name,
-                u.email,
-                u.password,
-                u.role_id,
-                u.is_active,
-                u.two_factor_enabled,
-                COALESCE(r.name, 'viewer') as role_name,
-                COALESCE(r.display_name, 'Viewer') as role_display_name
-            FROM users u
-            LEFT JOIN roles r ON u.role_id = r.id
-            WHERE (u.email = ? OR u.name = ?) AND u.is_active = 1
-            LIMIT 1
-        `;
-
         const identifier = email || username;
 
-        db.query(userQuery, [identifier, identifier], async (err, users) => {
+        // Step 1: Check if this is a client user — look up in clients table
+        db.query('SELECT id, company_name, db_name FROM clients WHERE admin_email = ? AND status = "active" LIMIT 1',
+            [identifier], async (clientErr, clients) => {
+
+            if (clientErr) {
+                console.error('Database error during client lookup:', clientErr);
+                return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            if (clients.length > 0) {
+                // This is a client user — authenticate against their own client DB
+                const client = clients[0];
+                console.log(`🔐 Client user detected: ${identifier} → DB: ${client.db_name}`);
+                return await authenticateAgainstClientDB(req, res, client, identifier, password, two_factor_token);
+            }
+
+            // Step 2: Not a client user — authenticate against main DB
+            return await authenticateAgainstMainDB(req, res, identifier, password, two_factor_token);
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+/**
+ * Authenticate user against their own client database
+ */
+async function authenticateAgainstClientDB(req, res, client, identifier, password, two_factor_token) {
+    const clientConn = mysql.createConnection({
+        host: process.env.DB_HOST || '127.0.0.1',
+        user: process.env.DB_USER || 'inventory_user',
+        password: process.env.DB_PASSWORD || 'StrongPass@123',
+        database: client.db_name,
+        port: process.env.DB_PORT || 3306,
+    });
+
+    clientConn.connect(async (connErr) => {
+        if (connErr) {
+            console.error('Client DB connection error:', connErr);
+            return res.status(500).json({ success: false, message: 'Failed to connect to client database' });
+        }
+
+        try {
+            // Find user in client's DB
+            clientConn.query(`
+                SELECT u.id, u.name, u.email, u.password, u.password_hash, u.role_id, u.is_active,
+                       COALESCE(r.name, 'viewer') as role_name,
+                       COALESCE(r.display_name, 'Viewer') as role_display_name
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE (u.email = ? OR u.name = ?) AND u.is_active = 1
+                LIMIT 1
+            `, [identifier, identifier], async (err, users) => {
+                if (err) {
+                    clientConn.end();
+                    console.error('Client DB user query error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                if (users.length === 0) {
+                    clientConn.end();
+                    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+                }
+
+                const user = users[0];
+
+                // Verify password
+                let passwordValid = false;
+                const hashToCheck = user.password_hash || user.password;
+                try {
+                    passwordValid = await bcrypt.compare(password, hashToCheck);
+                } catch (bcryptError) {
+                    passwordValid = (password === user.password);
+                }
+
+                if (!passwordValid) {
+                    clientConn.end();
+                    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+                }
+
+                // Get client tenant_id from main DB
+                db.query('SELECT id FROM tenants WHERE name = ? LIMIT 1', [client.company_name], async (tErr, tenants) => {
+                    const tenantId = (!tErr && tenants.length > 0) ? tenants[0].id : client.id;
+
+                    // Get user permissions from client DB
+                    const permissions = await getClientUserPermissions(clientConn, user.id, user.role_id);
+
+                    // Generate JWT
+                    const token = generateToken({
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role_id: user.role_id,
+                        role_name: user.role_name,
+                        tenant_id: tenantId,
+                    });
+
+                    clientConn.end();
+
+                    res.json({
+                        success: true,
+                        message: 'Login successful',
+                        token,
+                        user: {
+                            id: user.id,
+                            name: user.name,
+                            email: user.email,
+                            role: user.role_name,
+                            role_display: user.role_display_name,
+                            permissions: permissions,
+                            tenant_id: tenantId,
+                            client_db: client.db_name,
+                            is_client_user: true,
+                        }
+                    });
+                });
+            });
+        } catch (error) {
+            clientConn.end();
+            console.error('Client login error:', error);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    });
+}
+
+/**
+ * Get permissions for a user from their client DB
+ */
+function getClientUserPermissions(conn, userId, roleId) {
+    return new Promise((resolve) => {
+        conn.query(`
+            SELECT DISTINCT p.name
+            FROM permissions p
+            JOIN role_permissions rp ON p.id = rp.permission_id
+            WHERE rp.role_id = ?
+        `, [roleId], (err, rows) => {
+            if (err || !rows) return resolve([]);
+            resolve(rows.map(r => r.name));
+        });
+    });
+}
+
+/**
+ * Authenticate user against the main database (existing flow)
+ */
+async function authenticateAgainstMainDB(req, res, identifier, password, two_factor_token) {
+    const userQuery = `
+        SELECT 
+            u.id,
+            u.name,
+            u.email,
+            u.password,
+            u.role_id,
+            u.is_active,
+            u.two_factor_enabled,
+            u.tenant_id,
+            COALESCE(r.name, 'viewer') as role_name,
+            COALESCE(r.display_name, 'Viewer') as role_display_name
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE (u.email = ? OR u.name = ?) AND u.is_active = 1
+        LIMIT 1
+    `;
+
+    db.query(userQuery, [identifier, identifier], async (err, users) => {
             if (err) {
                 console.error('Database error during login:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Database error'
-                });
+                return res.status(500).json({ success: false, message: 'Database error' });
             }
 
             if (users.length === 0) {
                 console.log('❌ User not found:', identifier);
-                
-                // Log failed login attempt
                 await auditLogger.logEvent('USER_LOGIN_FAILED', {
-                    email: identifier,
-                    reason: 'User not found',
-                    status: 'FAILURE',
-                    responseStatus: 401
+                    email: identifier, reason: 'User not found', status: 'FAILURE', responseStatus: 401
                 }, req, null);
-                
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid credentials'
-                });
+                return res.status(401).json({ success: false, message: 'Invalid credentials' });
             }
 
             const user = users[0];
 
-            // For demo purposes, allow simple passwords
-            // In production, use proper bcrypt comparison
             let passwordValid = false;
-            
             if (password === 'admin@123' && (user.role_name === 'admin' || user.role_name === 'super_admin')) {
                 passwordValid = true;
             } else if (password === 'Admin@123' && (user.role_name === 'admin' || user.role_name === 'super_admin')) {
                 passwordValid = true;
             } else {
-                // Try bcrypt comparison for hashed passwords
                 try {
                     passwordValid = await bcrypt.compare(password, user.password);
                 } catch (bcryptError) {
-                    // If bcrypt fails, try plain text comparison (for demo)
                     passwordValid = (password === user.password);
                 }
             }
 
-            if (!passwordValid) {
-                console.log('❌ Invalid password for user:', identifier);
+                if (!passwordValid) {
+                    console.log('❌ Invalid password for user:', identifier);
                 
                 // Log failed login attempt
                 await auditLogger.logEvent('USER_LOGIN_FAILED', {
@@ -250,15 +383,7 @@ exports.login = async (req, res) => {
                 });
             }
         });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-};
+}
 
 /**
  * GET CURRENT USER
