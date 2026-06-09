@@ -379,7 +379,7 @@ function DashboardTab({ auditData, tasks, copilot, analytics, startExecution, Sc
   async function askInventoryGPT() {
     if (!query.trim()) return;
     setQuerying(true);
-    const llm = await apiPostLLM('/api/seo/llm-query', { query });
+    const llm = await apiPost('/llm-query', { query });
     if (llm.success) {
       setQueryResult({ type: 'llm', answer: llm.data.answer, model: llm.data.model });
     } else {

@@ -334,6 +334,98 @@ class SEOController {
     }
   }
 
+  // ── LLM-POWERED SEO QUERY (via OpenRouter) ──
+  static async llmQuery(req, res) {
+    try {
+      const { query } = req.body;
+      if (!query) return res.status(400).json({ success: false, message: 'Query is required' });
+
+      const pool = db;
+      const [products] = await pool.promise().query(
+        'SELECT product_name, barcode, category_id, price, description FROM dispatch_product WHERE is_active = 1 LIMIT 15'
+      );
+      const [categories] = await pool.promise().query(
+        'SELECT id, name FROM product_categories WHERE is_active = 1 LIMIT 10'
+      );
+
+      let productContext = '';
+      if (products.length > 0) {
+        productContext = 'Current products in the store:\n';
+        products.forEach(p => {
+          productContext += `- ${p.product_name} (Price: ₹${p.price || 0})\n`;
+        });
+      }
+      if (categories.length > 0) {
+        const catNames = categories.map(c => c.name).filter(Boolean);
+        productContext += `\nCategories: ${catNames.join(', ')}\n`;
+      }
+
+      const systemPrompt = `You are an expert SEO strategist for an e-commerce store.
+
+Give concrete, actionable SEO recommendations based on the query and product data.
+
+Rules:
+- Suggest specific keywords relevant to their actual products
+- Write actual meta title/description examples (55-60 chars for titles, 150-160 for descriptions)
+- Specify which schema types to add and what properties to include
+- Prioritize quick wins (high impact, low effort)
+- Keep responses concise with bullet points where helpful
+- Suggest specific blog/content topics based on their products
+
+${productContext || 'No product data available.'}
+
+Current date: ${new Date().toLocaleDateString()}`;
+
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        return res.json({ success: false, message: 'LLM not configured on server' });
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const models = [
+        process.env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct-v0.1',
+        'mistralai/mistral-7b-instruct',
+        'openchat/openchat-7b:free',
+      ].filter((v, i, a) => a.indexOf(v) === i);
+
+      let lastError = null;
+      let result = null;
+
+      for (const model of models) {
+        try {
+          const response = await fetch('https://api.openrouter.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({ model, temperature: 0.3, max_tokens: 2000, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }] }),
+            signal: controller.signal,
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) { lastError = data?.error?.message || `HTTP ${response.status}`; continue; }
+          const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+          if (content) { result = { content, model }; break; }
+          lastError = 'Empty response';
+        } catch (e) {
+          lastError = e?.message || 'Unknown error';
+          if (e?.name === 'AbortError') lastError = 'Timed out';
+        }
+      }
+
+      clearTimeout(timeoutId);
+
+      if (!result) {
+        return res.json({ success: false, message: `LLM unavailable: ${lastError}` });
+      }
+
+      addLog({ action: 'LLM_QUERY', details: `Query: "${query.substring(0, 60)}..." — model: ${result.model}` });
+
+      res.json({ success: true, data: { answer: result.content, model: result.model, query } });
+    } catch (e) {
+      res.status(500).json({ success: false, message: e.message });
+    }
+  }
+
   // ── INSIGHTS ──
   static async generateInsight(req, res) {
     const { context } = req.body;

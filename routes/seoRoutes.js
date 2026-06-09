@@ -23,6 +23,7 @@ router.post('/copilot/pause', authenticateToken, SEOController.pauseCopilot);
 router.get('/copilot/history', authenticateToken, SEOController.getCopilotHistory);
 
 router.post('/inventorygpt-query', authenticateToken, SEOController.inventorygptQuery);
+router.post('/llm-query', authenticateToken, SEOController.llmQuery);
 
 router.get('/execution-log', authenticateToken, SEOController.getExecutionLog);
 router.get('/execution-stats', authenticateToken, SEOController.getExecutionStats);
