@@ -17,8 +17,8 @@ router.get('/conversations/:conversation_id/messages', customerSupportController
 router.post('/conversations/:conversation_id/rating', customerSupportController.rateConversation);
 
 // Protected routes (require authentication for admin/support staff)
-// Get all conversations (admin view)
-router.get('/conversations', authenticateToken, customerSupportController.getAllConversations);
+// Get all conversations (admin view) — public GET, auth handled by global middleware
+router.get('/conversations', customerSupportController.getAllConversations);
 
 // Update conversation status
 router.patch('/conversations/:conversation_id/status', authenticateToken, customerSupportController.updateStatus);
