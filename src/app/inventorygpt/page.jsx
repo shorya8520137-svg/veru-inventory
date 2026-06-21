@@ -1630,7 +1630,7 @@ export default function InventoryGPTPage() {
         setProducts(inv.length ? inv : disp.length ? disp : web);
       }
       const apiBase =
-        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+        process.env.NEXT_PUBLIC_API_BASE || "";
       const h = catalogAuthHeaders();
 
       // Fetch REGULAR products AND website products

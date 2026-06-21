@@ -1,7 +1,7 @@
 ﻿'use client';
 import {useState,useEffect} from 'react';
 
-const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'https://api.insora.in';
+const API_BASE=process.env.NEXT_PUBLIC_API_BASE||'';
 
 const BarChart=({data})=>{
   const max=Math.max(...data);

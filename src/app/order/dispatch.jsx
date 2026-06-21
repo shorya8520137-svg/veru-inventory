@@ -9,7 +9,7 @@ import { api } from "../../utils/api";
  * ✅ Backend AWS
  * ❌ No window
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || '';
 
 export default function DispatchForm() {
     const initialState = {

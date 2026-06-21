@@ -28,7 +28,7 @@ const ProfilePage = () => {
     const [tickets, setTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
     useEffect(() => {
         fetchUserData();

@@ -7,7 +7,7 @@ export default function OrdersFixed() {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        const apiUrl = 'https://api.insora.in/api/website/orders?page=1&limit=10';
+        const apiUrl = '/api/website/orders?page=1&limit=10';
         
         console.log('ðŸš€ NEW ORDERS PAGE - CALLING API:', apiUrl);
         

@@ -1,7 +1,7 @@
 ﻿"use client";
 import React, { useEffect, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 export default function OrdersNew() {
     const [orders, setOrders] = useState([]);

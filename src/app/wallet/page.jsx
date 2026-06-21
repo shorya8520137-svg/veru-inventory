@@ -17,7 +17,7 @@ import {
   Wallet
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+const API = process.env.NEXT_PUBLIC_API_BASE || '';
 
 const fallbackHistory = [
   {

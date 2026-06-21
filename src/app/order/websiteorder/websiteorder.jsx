@@ -9,7 +9,7 @@ import { Download, X } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // FORCE HTTPS API URL - SECURITY FIX
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 const API = `${API_BASE}/api/website/orders`;
 const ROWS_PER_PAGE = 6;
 

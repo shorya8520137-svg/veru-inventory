@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import styles from "./selfTransfer.module.css";
 
-const API_BASE = "https://api.insora.in";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
 const MOVEMENT_META = {
     OPENING: { label: "Opening", color: "#22c55e" },

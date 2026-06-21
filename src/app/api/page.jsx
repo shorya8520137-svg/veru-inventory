@@ -566,8 +566,8 @@ const ApiPage = () => {
                     
                     <div className={styles.endpoint}>
                         <strong>Get Product Timeline:</strong>
-                        <code>GET https://api.insora.in/api/timeline/[productCode]</code>
-                        <button onClick={() => copyToClipboard('https://api.insora.in/api/timeline/{productCode}')}>
+                        <code>GET https://inventory.leadpilot.software/api/timeline/[productCode]</code>
+                        <button onClick={() => copyToClipboard('https://inventory.leadpilot.software/api/timeline/{productCode}')}>
                             <Copy size={14} />
                         </button>
                         <div className={styles.endpointDetails}>
@@ -579,8 +579,8 @@ const ApiPage = () => {
                     
                     <div className={styles.endpoint}>
                         <strong>Get Timeline Summary:</strong>
-                        <code>GET https://api.insora.in/api/timeline</code>
-                        <button onClick={() => copyToClipboard('https://api.insora.in/api/timeline')}>
+                        <code>GET https://inventory.leadpilot.software/api/timeline</code>
+                        <button onClick={() => copyToClipboard('https://inventory.leadpilot.software/api/timeline')}>
                             <Copy size={14} />
                         </button>
                         <div className={styles.endpointDetails}>
@@ -727,24 +727,24 @@ const ApiPage = () => {
                         <h4>Timeline API</h4>
                         <div className={styles.usage}>
                             <strong>Get product timeline:</strong>
-                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"</code>
-                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"')}>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://inventory.leadpilot.software/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://inventory.leadpilot.software/api/timeline/XYZ789?warehouse=BLR_WH&dateFrom=2025-01-01&dateTo=2025-01-31&limit=50"')}>
                                 <Copy size={14} />
                             </button>
                         </div>
                         
                         <div className={styles.usage}>
                             <strong>Get timeline summary by product:</strong>
-                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?groupBy=product&dateFrom=2025-01-01"</code>
-                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?groupBy=product&dateFrom=2025-01-01"')}>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://inventory.leadpilot.software/api/timeline?groupBy=product&dateFrom=2025-01-01"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://inventory.leadpilot.software/api/timeline?groupBy=product&dateFrom=2025-01-01"')}>
                                 <Copy size={14} />
                             </button>
                         </div>
                         
                         <div className={styles.usage}>
                             <strong>Get warehouse timeline:</strong>
-                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"</code>
-                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://api.insora.in/api/timeline?warehouse=BLR_WH&groupBy=warehouse"')}>
+                            <code>curl -H "Authorization: Bearer YOUR_TOKEN" "https://inventory.leadpilot.software/api/timeline?warehouse=BLR_WH&groupBy=warehouse"</code>
+                            <button onClick={() => copyToClipboard('curl -H "Authorization: Bearer YOUR_TOKEN" "https://inventory.leadpilot.software/api/timeline?warehouse=BLR_WH&groupBy=warehouse"')}>
                                 <Copy size={14} />
                             </button>
                         </div>

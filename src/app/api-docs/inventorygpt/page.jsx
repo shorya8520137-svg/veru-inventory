@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import styles from './inventorygpt-docs.module.css';
 
-const API_BASE = 'https://api.insora.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://inventory.leadpilot.software';
 
 const endpoints = [
     {

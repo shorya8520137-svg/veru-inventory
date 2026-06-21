@@ -18,7 +18,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }) {
 
         try {
             const token = localStorage.getItem('token');
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
 
             const response = await fetch(`${apiBase}/api/2fa/setup`, {
                 method: 'POST',
@@ -58,7 +58,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }) {
 
         try {
             const token = localStorage.getItem('token');
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
 
             const response = await fetch(`${apiBase}/api/2fa/verify-enable`, {
                 method: 'POST',

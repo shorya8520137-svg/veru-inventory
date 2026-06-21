@@ -16,7 +16,7 @@ export default function SimpleLoginPage() {
         setDebugInfo("Form submitted! Starting login process...");
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             setDebugInfo(`API Base: ${apiBase}`);
 
             const requestBody = { email, password };

@@ -10,6 +10,7 @@
 
 const db = require('../db/connection');
 const http = require('http');
+const LeadAnalysisService = require('../services/LeadAnalysisService');
 
 const WEBHOOK_HOST = '13.215.172.213';
 const WEBHOOK_PORT = 5678;
@@ -280,6 +281,7 @@ class CustomerSupportController {
                 console.log(`[DB] customer: original="${message}" english="${englishForAdmin}"`);
                 // message = English (admin sees this), message_original = Tamil (widget shows this)
                 await insertMessage(conversation_id, 'customer', sender_name||'Customer', englishForAdmin, message, englishForAdmin);
+                LeadAnalysisService.analyzeMessage(conversation_id, message, { name: sender_name }).catch(() => {});
                 return res.json({ success:true, data:{ original:message, translated:englishForAdmin } });
             }
 

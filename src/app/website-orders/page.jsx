@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ShoppingBag, Clock, CreditCard, DollarSign, Filter, Plus, MoreVertical } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 export default function WebsiteOrders() {
     const [orders, setOrders] = useState([]);

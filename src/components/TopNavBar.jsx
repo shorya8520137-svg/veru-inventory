@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 function getAvatarUrl(path) {
     if (!path) return '';
@@ -165,6 +165,7 @@ export default function TopNavBar({ onTransferStock }) {
     return (
         <div style={{ 
             height: '64px', 
+            zIndex: 100,
             background: 'rgba(255,255,255,0.92)',
             backdropFilter: 'blur(18px)',
             WebkitBackdropFilter: 'blur(18px)',

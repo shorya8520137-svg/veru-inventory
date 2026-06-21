@@ -26,7 +26,7 @@ export default function SecurityPage() {
     const checkTwoFactorStatus = async () => {
         try {
             const token = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             
             const response = await fetch(`${apiBase}/api/2fa/status`, {
                 headers: {
@@ -50,7 +50,7 @@ export default function SecurityPage() {
         
         try {
             const token = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             
             const response = await fetch(`${apiBase}/api/2fa/setup`, {
                 method: 'POST',
@@ -88,7 +88,7 @@ export default function SecurityPage() {
         
         try {
             const token = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             
             const response = await fetch(`${apiBase}/api/2fa/verify-enable`, {
                 method: 'POST',
@@ -132,7 +132,7 @@ export default function SecurityPage() {
         
         try {
             const authToken = getToken();
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             
             const response = await fetch(`${apiBase}/api/2fa/disable`, {
                 method: 'POST',

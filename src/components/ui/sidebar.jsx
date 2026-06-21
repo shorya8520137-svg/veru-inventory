@@ -28,7 +28,8 @@ import {
     Clock,
     ShoppingBag,
     Wallet,
-    BookOpen
+    BookOpen,
+    FolderTree
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { motion, AnimatePresence } from "framer-motion";
@@ -338,6 +339,24 @@ const InventoryMenu = ({ onOpenOperation }) => {
                         </SidebarMenuItem>
                     )}
 
+                    {/* CATEGORIES */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/categories" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname === "/categories", collapsed }))}
+                                >
+                                    <FolderTree size={collapsed ? 16 : 16} />
+                                    {!collapsed && <span>Categories</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
                     {/* AMAZON MARKETPLACE */}
                     {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
                         <SidebarMenuItem>
@@ -423,6 +442,26 @@ const InventoryMenu = ({ onOpenOperation }) => {
                                 >
                                     <MessageSquare size={collapsed ? 16 : 16} />
                                     {!collapsed && <span>Customer Support</span>}
+                                </Link>
+                            </motion.div>
+                        </SidebarMenuItem>
+                    )}
+
+                    {/* LEAD INTELLIGENCE */}
+                    {hasPermission(PERMISSIONS.PRODUCTS_VIEW) && (
+                        <SidebarMenuItem>
+                            <motion.div
+                                whileHover={{ scale: 1.02, x: 2 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Link 
+                                    href="/lead-intelligence" 
+                                    className={cn(sidebarMenuButtonVariants({ active: pathname.startsWith("/lead-intelligence"), collapsed }))}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                                    </svg>
+                                    {!collapsed && <span>Lead Intelligence</span>}
                                 </Link>
                             </motion.div>
                         </SidebarMenuItem>

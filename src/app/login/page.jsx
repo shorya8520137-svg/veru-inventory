@@ -36,7 +36,7 @@ export default function LoginPage() {
         console.log("🚀 Form submitted - JavaScript is working!");
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             console.log("🔗 API Base:", apiBase);
 
             // Prepare request body
@@ -127,7 +127,7 @@ export default function LoginPage() {
         setError("");
         
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             
             // First login to get token
             const loginResponse = await fetch(`${apiBase}/api/auth/login`, {
@@ -189,7 +189,7 @@ export default function LoginPage() {
         setError("");
         
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             
             // Login again to get fresh token
             const loginResponse = await fetch(`${apiBase}/api/auth/login`, {

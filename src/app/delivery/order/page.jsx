@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useState, useEffect, useRef } from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+const API = process.env.NEXT_PUBLIC_API_BASE || '';
 
 const inp = {
   width:'100%', padding:'9px 12px', borderRadius:8,

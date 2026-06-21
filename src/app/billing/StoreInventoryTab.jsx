@@ -6,7 +6,7 @@ import ProductLedger from "../inventory/ProductLedger";
 import ProductJourney from "../inventory/ProductJourney";
 import ProductComparison from "../inventory/ProductComparison";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 const PAGE_SIZE = 20;
 
 export default function StoreInventoryTab() {

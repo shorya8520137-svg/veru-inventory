@@ -322,9 +322,8 @@ class ExistingSchemaNotificationService {
                 const query = `
                     SELECT n.*, u.name as sender_name
                     FROM notifications n
-                    LEFT JOIN users u ON JSON_UNQUOTE(JSON_EXTRACT(n.data, '$.user_id')) = CAST(u.id AS CHAR)
+                    LEFT JOIN users u ON n.user_id = u.id
                     WHERE (n.user_id = ? OR n.user_id IS NULL)
-                      AND (n.data IS NULL OR n.data = '' OR JSON_VALID(n.data))
                     ORDER BY n.created_at DESC
                     LIMIT ? OFFSET ?
                 `;

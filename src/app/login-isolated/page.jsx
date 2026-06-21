@@ -18,7 +18,7 @@ export default function IsolatedLoginPage() {
         console.log("ðŸš€ Form submitted - JavaScript is working!");
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.insora.in";
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
             console.log("ðŸ”— API Base:", apiBase);
 
             const requestBody = { email, password };

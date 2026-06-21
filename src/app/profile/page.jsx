@@ -39,7 +39,7 @@ import {
 } from 'recharts';
 import styles from './profile.module.css';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 const apiDocs = [
     {
         title: 'Authentication',

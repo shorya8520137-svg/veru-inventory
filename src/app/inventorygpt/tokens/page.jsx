@@ -21,7 +21,7 @@ const InventoryGptTokensPage = () => {
         expires_in_days: 90
     });
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.insora.in';
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
     
     // Clear alerts after 5 seconds
     useEffect(() => {

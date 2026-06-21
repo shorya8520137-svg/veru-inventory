@@ -134,7 +134,10 @@ app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/auth') || 
         req.path.startsWith('/users') || 
         req.path.startsWith('/roles') || 
-        req.path.startsWith('/permissions')) {
+        req.path.startsWith('/permissions') ||
+        req.path.startsWith('/customer-support') ||
+        req.path.startsWith('/debug') ||
+        req.path.startsWith('/omnichannel')) {
         console.log('✅ Skipping auth for auth/user routes');
         return next();
     }
@@ -271,6 +274,12 @@ app.use('/api/website-auth', require('./routes/websiteAuthRoutes'));
 // customer support chat routes
 app.use('/api/customer-support', require('./routes/customerSupportRoutes'));
 
+// lead intelligence routes
+app.use('/api/lead-intelligence', require('./routes/leadIntelligenceRoutes'));
+
+// omnichannel routes
+app.use('/api/omnichannel', require('./routes/omnichannelRoutes'));
+
 // warehouse management routes
 app.use('/api/warehouse-management', require('./routes/warehouseManagementRoutes'));
 
@@ -297,6 +306,12 @@ app.use('/api/onboarding', require('./routes/onboardingRoutes'));
 
 // SEO agent routes
 app.use('/api/seo', require('./routes/seoRoutes'));
+
+// AI Agent routes (used by customer support conversation page)
+app.use('/api/ai-agent', require('./routes/aiAgentRoutes'));
+
+// Category management routes
+app.use('/api/categories', require('./routes/categoryRoutes'));
 
 // auth routes (no /api prefix for backward compatibility)
 app.use('/auth', require('./routes/authRoutes'));
