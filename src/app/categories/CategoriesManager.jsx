@@ -155,7 +155,7 @@ export default function CategoriesManager() {
           </div>
           <h1 style={{ fontSize: 14, fontWeight: 700, color: '#111827', margin: 0 }}>Category Builder</h1>
           <span style={{ fontSize: 10, color: '#9CA3AF', background: '#F3F4F6', padding: '2px 8px', borderRadius: 10 }}>{categories.length} cats</span>
-          <span style={{ fontSize: 10, color: '#9CA3AF' }}|</span>
+          <span style={{ fontSize: 10, color: '#9CA3AF' }}>{' | '}</span>
           <span style={{ fontSize: 10, color: '#6B7280' }}>Drag cards to arrange · Move button to reassign</span>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
